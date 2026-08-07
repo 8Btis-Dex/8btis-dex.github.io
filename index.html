@@ -317,6 +317,20 @@
     margin-bottom: 6px;
   }
   .trueque-sleeve .exp-badge img { width: 14px; height: 14px; object-fit: contain; }
+  .trueque-delete-btn {
+    display: block;
+    width: 100%;
+    margin-top: 6px;
+    background: rgba(229,115,115,0.15);
+    border: 1px solid rgba(229,115,115,0.4);
+    color: #ff8a80;
+    font-size: 0.7rem;
+    font-weight: 700;
+    padding: 6px 8px;
+    border-radius: 7px;
+    cursor: pointer;
+  }
+  .trueque-delete-btn:hover { background: rgba(229,115,115,0.28); }
   .trueque-sleeve a.wa {
     display: inline-block;
     font-size: 0.75rem;
@@ -6636,7 +6650,7 @@ function trueqeFiltrar(f, btn) {
   trueqeRenderBinder();
 }
 
-function trueqeSleeveHtml(c) {
+function trueqeSleeveHtml(c, showDelete) {
   const texto = 'Hola ' + c.userNombre + ', vi que ' + (c.tipo === 'tengo' ? 'tienes' : 'buscas') + ' ' + c.nombreCarta + ' en el tablón de trueques.';
   const waLink = 'https://wa.me/' + c.userWhatsapp + '?text=' + encodeURIComponent(texto);
   return `<div class="trueque-sleeve">
@@ -6647,7 +6661,23 @@ function trueqeSleeveHtml(c) {
     ${c.notas ? `<div class="notes">${trueqeEsc(c.notas)}</div>` : ''}
     <div class="owner">${trueqeEsc(c.userNombre)}</div>
     <a class="wa" href="${waLink}" target="_blank" rel="noopener">Escribir por WhatsApp</a>
+    ${showDelete ? `<button class="trueque-delete-btn" onclick="trueqeEliminarCarta('${c.id}')">🗑️ Eliminar (ya se cerró el trueque)</button>` : ''}
   </div>`;
+}
+
+async function trueqeEliminarCarta(cardId) {
+  if (!window._fbDb || !trueqeUser) return;
+  const carta = trueqeCards.find(c => c.id === cardId);
+  if (!carta || carta.userId !== trueqeUser.id) return; // solo se pueden borrar publicaciones propias
+  if (!confirm('¿Eliminar esta publicación? No se puede deshacer.')) return;
+  try {
+    await window._fbDb.collection('trueques_cartas').doc(cardId).delete();
+    showToast('🗑️ Publicación eliminada');
+    trueqeFetchCards();
+  } catch (e) {
+    showToast('❌ No se pudo eliminar. Intenta de nuevo.', true);
+    console.error(e);
+  }
 }
 
 function trueqeRenderBinder() {
@@ -6657,13 +6687,13 @@ function trueqeRenderBinder() {
   if (term) list = list.filter(c => c.nombreCarta.toLowerCase().includes(term));
   document.getElementById('trueque-count').textContent = trueqeCards.length;
   const binder = document.getElementById('trueque-binder');
-  binder.innerHTML = list.length ? list.map(trueqeSleeveHtml).join('') : '<div class="mazo-empty-hint">Nada por aquí todavía. Sé el primero en publicar una carta.</div>';
+  binder.innerHTML = list.length ? list.map(c => trueqeSleeveHtml(c, false)).join('') : '<div class="mazo-empty-hint">Nada por aquí todavía. Sé el primero en publicar una carta.</div>';
 }
 
 function trueqeRenderMine() {
   const mine = trueqeCards.filter(c => c.userId === trueqeUser.id);
   const el = document.getElementById('trueque-mine');
-  el.innerHTML = mine.length ? mine.map(trueqeSleeveHtml).join('') : '<div class="mazo-empty-hint">Aún no has publicado ninguna carta.</div>';
+  el.innerHTML = mine.length ? mine.map(c => trueqeSleeveHtml(c, true)).join('') : '<div class="mazo-empty-hint">Aún no has publicado ninguna carta.</div>';
 }
 
 // ── TOAST ──────────────────────────────────────────────────────────────────
