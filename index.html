@@ -226,6 +226,97 @@
   .trueque-sleeve .name { font-weight: 800; font-size: 0.95rem; margin-bottom: 4px; }
   .trueque-sleeve .notes { font-size: 0.75rem; color: var(--muted); margin-bottom: 6px; }
   .trueque-sleeve .owner { font-size: 0.75rem; color: var(--muted); margin-bottom: 8px; }
+  /* Autocompletado de cartas TCG Pocket con miniaturas */
+  .trueque-card-field { position: relative; flex: 1; min-width: 140px; }
+  .trueque-autocomplete {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    z-index: 40;
+    background: var(--dark-card);
+    border: 1px solid rgba(255,255,255,0.15);
+    border-radius: 10px;
+    margin-top: 4px;
+    max-height: 260px;
+    overflow-y: auto;
+    box-shadow: 0 8px 20px rgba(0,0,0,0.4);
+  }
+  .trueque-autocomplete-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 10px;
+    cursor: pointer;
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+  }
+  .trueque-autocomplete-item:last-child { border-bottom: none; }
+  .trueque-autocomplete-item:hover { background: rgba(255,255,255,0.08); }
+  .trueque-autocomplete-item img.thumb {
+    width: 34px;
+    height: 47px;
+    object-fit: cover;
+    border-radius: 4px;
+    background: rgba(255,255,255,0.05);
+    flex-shrink: 0;
+  }
+  .trueque-autocomplete-item .ac-name { font-weight: 700; font-size: 0.82rem; }
+  .trueque-autocomplete-item .ac-set { font-size: 0.68rem; color: var(--muted); display: flex; align-items: center; gap: 5px; }
+  .trueque-autocomplete-item .ac-set img { width: 14px; height: 14px; object-fit: contain; }
+  .trueque-autocomplete-loading, .trueque-autocomplete-empty {
+    padding: 10px;
+    font-size: 0.78rem;
+    color: var(--muted);
+    text-align: center;
+  }
+  .trueque-selected-preview {
+    display: none;
+    align-items: center;
+    gap: 10px;
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 10px;
+    padding: 8px 10px;
+    margin-bottom: 10px;
+  }
+  .trueque-selected-preview.active { display: flex; }
+  .trueque-selected-preview img.thumb {
+    width: 42px;
+    height: 58px;
+    object-fit: cover;
+    border-radius: 5px;
+    flex-shrink: 0;
+  }
+  .trueque-selected-preview .sp-info { flex: 1; min-width: 0; }
+  .trueque-selected-preview .sp-name { font-weight: 800; font-size: 0.85rem; }
+  .trueque-selected-preview .sp-set { font-size: 0.72rem; color: var(--muted); display: flex; align-items: center; gap: 5px; margin-top: 2px; }
+  .trueque-selected-preview .sp-set img { width: 16px; height: 16px; object-fit: contain; }
+  .trueque-selected-preview button {
+    background: none;
+    border: 1px solid rgba(255,255,255,0.25);
+    color: var(--text);
+    font-size: 0.75rem;
+    padding: 4px 9px;
+    border-radius: 6px;
+    cursor: pointer;
+    flex-shrink: 0;
+  }
+  .trueque-sleeve img.card-thumb {
+    width: 100%;
+    max-width: 120px;
+    border-radius: 8px;
+    margin-bottom: 8px;
+    display: block;
+  }
+  .trueque-sleeve .exp-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 0.68rem;
+    color: var(--muted);
+    margin-bottom: 6px;
+  }
+  .trueque-sleeve .exp-badge img { width: 14px; height: 14px; object-fit: contain; }
   .trueque-sleeve a.wa {
     display: inline-block;
     font-size: 0.75rem;
@@ -2539,7 +2630,19 @@
             <option value="tengo">Tengo</option>
             <option value="busco">Busco</option>
           </select>
-          <input class="trueque-input" id="trueque-card-name" type="text" placeholder="Ej. Charizard ex">
+          <div class="trueque-card-field">
+            <input class="trueque-input" id="trueque-card-name" type="text" placeholder="Ej. Charizard ex" autocomplete="off"
+              oninput="trueqeOnCardNameInput()" onfocus="trueqeOnCardNameInput()" onblur="trueqeHideAutocompleteDelayed()">
+            <div class="trueque-autocomplete" id="trueque-autocomplete" style="display:none"></div>
+          </div>
+        </div>
+        <div class="trueque-selected-preview" id="trueque-selected-preview">
+          <img class="thumb" id="trueque-selected-thumb" src="" alt="">
+          <div class="sp-info">
+            <div class="sp-name" id="trueque-selected-name"></div>
+            <div class="sp-set" id="trueque-selected-set"></div>
+          </div>
+          <button onclick="trueqeClearSelectedCard()">Quitar</button>
         </div>
         <input class="trueque-input" id="trueque-card-notes" type="text" placeholder="Notas (opcional, ej. set B4, brillante)">
         <button class="btn btn-primary" onclick="trueqeAgregarCarta()">Publicar</button>
@@ -5445,6 +5548,14 @@ function pick(obj, keys, fallback) {
   return fallback;
 }
 
+// Ayudante genérico para pedir JSON a una API (usado por TCGdex y por el
+// autocompletado de cartas en trueques).
+async function fetchJson(url) {
+  const res = await fetch(url);
+  if (!res.ok) throw new Error('Error de red (' + res.status + ') al pedir ' + url);
+  return res.json();
+}
+
 
 // ── TCG POCKET (TCGdex) ─────────────────────────────────────────────────────
 const TCGDEX_SET_NAME_ES = {
@@ -6196,6 +6307,158 @@ function trueqeEsc(s) {
 
 function trueqeNormWa(v) { return (v || '').replace(/\D/g, ''); }
 
+// ── AUTOCOMPLETADO DE CARTAS (TCGdex) ──────────────────────────────────────
+// Arma un índice local con todas las cartas de TCG Pocket (nombre, imagen,
+// expansión y logo de la expansión) consultando la misma API que ya usa el
+// resto de la app. Se guarda en localStorage para no volver a descargarlo
+// cada vez que se abre la sección de trueques.
+const TRUEQUE_CARD_INDEX_CACHE_KEY = 'trueque_card_index_v1';
+const TRUEQUE_CARD_INDEX_MAX_AGE = 1000 * 60 * 60 * 24 * 3; // 3 días
+let TRUEQUE_CARD_INDEX = null; // null = todavía no cargado
+let trueqeCardIndexLoading = null; // Promise en curso, para no duplicar pedidos
+let trueqeSelectedCard = null; // carta elegida desde el autocompletado
+
+function trueqeNormalizeSearch(s) {
+  return (s || '')
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '') // saca acentos
+    .toLowerCase()
+    .trim();
+}
+
+async function trueqeBuildCardIndex() {
+  const index = [];
+  const sets = await fetchTcgPocketSetsFromApi();
+  for (const s of sets) {
+    try {
+      const cards = await fetchTcgPocketSetCards(s.id);
+      const setNameEs = TCGDEX_SET_NAME_ES[s.name] || s.name;
+      cards.forEach(card => {
+        if (!card || !card.name || !card.image) return;
+        if (card.category && card.category !== 'Pokemon') return;
+        index.push({
+          name: card.name,
+          image: `${card.image}/low.webp`,
+          setName: setNameEs,
+          setLogo: s.logo ? `${s.logo}.png` : '',
+          localId: card.localId || card.id || ''
+        });
+      });
+    } catch (e) {
+      // si falla una expansión particular, seguimos con las demás
+    }
+  }
+  return index;
+}
+
+async function trueqeGetCardIndex() {
+  if (TRUEQUE_CARD_INDEX) return TRUEQUE_CARD_INDEX;
+  if (trueqeCardIndexLoading) return trueqeCardIndexLoading;
+
+  // Intenta usar el caché guardado si todavía es reciente.
+  try {
+    const cached = JSON.parse(localStorage.getItem(TRUEQUE_CARD_INDEX_CACHE_KEY) || 'null');
+    if (cached && Array.isArray(cached.data) && (Date.now() - cached.ts) < TRUEQUE_CARD_INDEX_MAX_AGE) {
+      TRUEQUE_CARD_INDEX = cached.data;
+      return TRUEQUE_CARD_INDEX;
+    }
+  } catch (e) { /* caché corrupto, se ignora */ }
+
+  trueqeCardIndexLoading = trueqeBuildCardIndex()
+    .then(index => {
+      TRUEQUE_CARD_INDEX = index;
+      try {
+        localStorage.setItem(TRUEQUE_CARD_INDEX_CACHE_KEY, JSON.stringify({ ts: Date.now(), data: index }));
+      } catch (e) { /* si no entra en localStorage, no pasa nada grave */ }
+      return index;
+    })
+    .catch(e => {
+      console.log('No se pudo armar el índice de cartas para trueques', e);
+      TRUEQUE_CARD_INDEX = [];
+      return TRUEQUE_CARD_INDEX;
+    })
+    .finally(() => { trueqeCardIndexLoading = null; });
+
+  return trueqeCardIndexLoading;
+}
+
+async function trueqeOnCardNameInput() {
+  const input = document.getElementById('trueque-card-name');
+  const box = document.getElementById('trueque-autocomplete');
+  const q = trueqeNormalizeSearch(input.value);
+
+  if (trueqeSelectedCard && input.value !== trueqeSelectedCard.name) {
+    trueqeClearSelectedCard(); // si edita el texto, se invalida la selección previa
+  }
+
+  if (!q) { box.style.display = 'none'; box.innerHTML = ''; return; }
+
+  box.style.display = 'block';
+  box.innerHTML = '<div class="trueque-autocomplete-loading">Buscando cartas...</div>';
+
+  const index = await trueqeGetCardIndex();
+  // Puede que el texto haya cambiado mientras cargaba el índice.
+  if (trueqeNormalizeSearch(document.getElementById('trueque-card-name').value) !== q) return;
+
+  const seen = new Set();
+  const matches = [];
+  for (const c of index) {
+    const norm = trueqeNormalizeSearch(c.name);
+    if (!norm.includes(q)) continue;
+    const key = c.name + '|' + c.setName;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    matches.push(c);
+    if (matches.length >= 12) break;
+  }
+
+  if (!matches.length) {
+    box.innerHTML = '<div class="trueque-autocomplete-empty">No se encontraron cartas con ese nombre.</div>';
+    return;
+  }
+
+  box.innerHTML = matches.map((c, i) => `
+    <div class="trueque-autocomplete-item" onmousedown="trueqeSelectCard(${i})">
+      <img class="thumb" src="${trueqeEsc(c.image)}" alt="" onerror="this.style.visibility='hidden'">
+      <div>
+        <div class="ac-name">${trueqeEsc(c.name)}</div>
+        <div class="ac-set">${c.setLogo ? `<img src="${trueqeEsc(c.setLogo)}" onerror="this.style.display='none'">` : ''}${trueqeEsc(c.setName)}</div>
+      </div>
+    </div>
+  `).join('');
+  trueqeAutocompleteMatches = matches;
+}
+
+let trueqeAutocompleteMatches = [];
+
+function trueqeSelectCard(i) {
+  const card = trueqeAutocompleteMatches[i];
+  if (!card) return;
+  trueqeSelectedCard = card;
+  document.getElementById('trueque-card-name').value = card.name;
+  document.getElementById('trueque-autocomplete').style.display = 'none';
+
+  const preview = document.getElementById('trueque-selected-preview');
+  preview.classList.add('active');
+  document.getElementById('trueque-selected-thumb').src = card.image;
+  document.getElementById('trueque-selected-name').textContent = card.name;
+  document.getElementById('trueque-selected-set').innerHTML =
+    (card.setLogo ? `<img src="${trueqeEsc(card.setLogo)}" onerror="this.style.display='none'">` : '') + trueqeEsc(card.setName);
+}
+
+function trueqeClearSelectedCard() {
+  trueqeSelectedCard = null;
+  document.getElementById('trueque-selected-preview').classList.remove('active');
+}
+
+function trueqeHideAutocompleteDelayed() {
+  // El "onmousedown" del ítem se dispara antes que este blur, así que el
+  // pequeño delay evita que el clic se pierda al ocultar la lista.
+  setTimeout(() => {
+    const box = document.getElementById('trueque-autocomplete');
+    if (box) box.style.display = 'none';
+  }, 150);
+}
+
 function loadTrueques() {
   if (trueqeUser) {
     document.getElementById('trueque-auth-card').style.display = 'none';
@@ -6256,13 +6519,20 @@ async function trueqeAgregarCarta() {
   const nombreCarta = document.getElementById('trueque-card-name').value.trim();
   const notas = document.getElementById('trueque-card-notes').value.trim();
   if (!nombreCarta) return;
+  // Si el nombre coincide con la carta seleccionada del autocompletado, se
+  // guardan también su imagen y expansión para mostrarlas en el tablón.
+  const cardData = (trueqeSelectedCard && trueqeSelectedCard.name === nombreCarta) ? trueqeSelectedCard : null;
   await window._fbDb.collection('trueques_cartas').add({
     tipo, nombreCarta, notas,
+    imagen: cardData ? cardData.image : '',
+    expansion: cardData ? cardData.setName : '',
+    expansionLogo: cardData ? cardData.setLogo : '',
     userId: trueqeUser.id,
     userNombre: trueqeUser.nombre,
     userWhatsapp: trueqeUser.whatsapp,
     creado: firebase.firestore.FieldValue.serverTimestamp()
   });
+  trueqeClearSelectedCard();
   document.getElementById('trueque-card-name').value = '';
   document.getElementById('trueque-card-notes').value = '';
   trueqeFetchCards();
@@ -6288,8 +6558,10 @@ function trueqeSleeveHtml(c) {
   const texto = 'Hola ' + c.userNombre + ', vi que ' + (c.tipo === 'tengo' ? 'tienes' : 'buscas') + ' ' + c.nombreCarta + ' en el tablón de trueques.';
   const waLink = 'https://wa.me/' + c.userWhatsapp + '?text=' + encodeURIComponent(texto);
   return `<div class="trueque-sleeve">
+    ${c.imagen ? `<img class="card-thumb" src="${trueqeEsc(c.imagen)}" alt="" onerror="this.style.display='none'">` : ''}
     <span class="kind ${c.tipo}">${c.tipo}</span>
     <div class="name">${trueqeEsc(c.nombreCarta)}</div>
+    ${c.expansion ? `<div class="exp-badge">${c.expansionLogo ? `<img src="${trueqeEsc(c.expansionLogo)}" onerror="this.style.display='none'">` : ''}${trueqeEsc(c.expansion)}</div>` : ''}
     ${c.notas ? `<div class="notes">${trueqeEsc(c.notas)}</div>` : ''}
     <div class="owner">${trueqeEsc(c.userNombre)}</div>
     <a class="wa" href="${waLink}" target="_blank" rel="noopener">Escribir por WhatsApp</a>
