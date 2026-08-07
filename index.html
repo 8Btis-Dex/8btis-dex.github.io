@@ -3808,6 +3808,26 @@ function migrarNombresExpansionesTcg() {
   return cambios;
 }
 
+// Elimina de dataChampions/dataGO/dataTCG/dataTCGLive las entradas cuyo
+// nombre ya no está en la lista de Pokémon correspondiente. Estas entradas
+// "huérfanas" pueden aparecer si, por ejemplo, la lista y los datos guardados
+// en Firestore se desincronizaron en algún momento; sin esta limpieza, cosas
+// como "Sugerir para los vacíos" terminaban generando datos para Pokémon que
+// ya no existían en la tabla.
+function podarDatosHuerfanos() {
+  const pares = [
+    [dataChampions, POKEMON_LISTS.champions],
+    [dataGO, POKEMON_LISTS.go],
+    [dataTCG, POKEMON_LISTS.tcg],
+    [dataTCGLive, POKEMON_LISTS.tcglive]
+  ];
+  pares.forEach(([dict, lista]) => {
+    if (!dict || !lista) return;
+    const setLista = new Set(lista);
+    Object.keys(dict).forEach(k => { if (!setLista.has(k)) delete dict[k]; });
+  });
+}
+
 let EXPANSIONES_SUGERIDAS = {
   tcg: EXPANSIONES_DEFAULT.map(e => ({ ...e })),
   tcglive: [] // TCG Live: el admin agrega manualmente las expansiones que le interesan
@@ -4080,6 +4100,7 @@ async function championsSugerirVacios() {
   championsSugerirEnCurso = true;
   const status = document.getElementById('champions-sugerir-status');
   const pendientes = Object.keys(dataChampions).filter(name => {
+    if (!POKEMON_LISTS.champions.includes(name)) return false; // descarta huérfanos
     const d = dataChampions[name];
     return !d.ataque1 && !d.ataque2 && !d.ataque3 && !d.ataque4 && !d.naturaleza;
   });
@@ -4476,6 +4497,7 @@ function loadFromStorage() {
     // Corrige nombres de expansiones de TCG Pocket que hayan quedado
     // guardados de versiones viejas (mal traducidos o incompletos).
     migrarNombresExpansionesTcg();
+    podarDatosHuerfanos();
   } catch(e) {}
 }
 loadFromStorage();
@@ -4645,6 +4667,7 @@ function initFirebaseSync() {
       if (latestDocs['expansiones']) { anyExists = true; applyExpansionesDoc(latestDocs['expansiones']); }
 
       if (!anyExists) return;
+      podarDatosHuerfanos();
       const huboMigracion = migrarNombresExpansionesTcg();
       persistLocalOnly();
       if (huboMigracion && typeof pushToFirestore === 'function') pushToFirestore();
@@ -5333,7 +5356,7 @@ async function getPokemonPrimaryType(name) {
 // expansiones que ya usa la app (TCGdex), cacheado 7 días en localStorage.
 let TCG_TRAINER_POOL = { tcg: null, tcglive: null };
 let tcgTrainerPoolLoading = { tcg: null, tcglive: null };
-const TCG_TRAINER_POOL_CACHE_KEY = { tcg: 'tcg_trainer_pool_v1', tcglive: 'tcglive_trainer_pool_v1' };
+const TCG_TRAINER_POOL_CACHE_KEY = { tcg: 'tcg_trainer_pool_v2', tcglive: 'tcglive_trainer_pool_v2' };
 const TCG_TRAINER_POOL_MAX_AGE = 1000 * 60 * 60 * 24 * 7; // 7 días
 
 const TCG_RARITY_STAPLE_ORDER = [
@@ -5349,14 +5372,25 @@ function rarityStapleRank(r) {
 
 async function buildTrainerPool(tcgKey) {
   const pool = [];
+  // TCGdex no manda un campo "category" en el listado resumido de cartas por
+  // expansión (solo en el detalle completo de cada carta, que sería carísimo
+  // de pedir una por una). Por eso, para saber si una carta es de Entrenador,
+  // usamos la misma lógica que ya usa el resto de la app para identificar
+  // cartas Pokémon (comparar el nombre contra la lista de Pokémon conocidos)
+  // pero invertida: si el nombre de la carta NO coincide con ningún Pokémon
+  // de nuestra lista, la tratamos como carta de Entrenador/Energía.
   if (tcgKey === 'tcg') {
+    const slugToName = {};
+    POKEMON_LISTS.tcg.forEach(name => { slugToName[getPokemonSlug(name)] = name; });
     const sets = await fetchTcgPocketSetsFromApi();
     for (const s of sets) {
       try {
         const cards = await fetchTcgPocketSetCards(s.id);
         const setNameEs = TCGDEX_SET_NAME_ES[s.id] || TCGDEX_SET_NAME_ES[s.name] || s.name;
         cards.forEach(card => {
-          if (!card || card.category !== 'Trainer' || !card.name) return;
+          if (!card || !card.name) return;
+          const slug = getPokemonSlug(normalizeCardPokemonName(card.name));
+          if (slugToName[slug]) return; // es una carta Pokémon, no de Entrenador
           pool.push({
             name: card.name,
             image: card.image ? `${card.image}/low.webp` : '',
@@ -5367,15 +5401,27 @@ async function buildTrainerPool(tcgKey) {
       } catch (e) { /* seguimos con las demás expansiones */ }
     }
   } else {
-    const catalog = await fetchTcgLiveSetsCatalog();
+    const slugToName = {};
+    POKEMON_LISTS.tcglive.forEach(name => { slugToName[getPokemonSlug(name)] = name; });
+    let catalog = null;
     for (const exp of EXPANSIONES_SUGERIDAS.tcglive) {
-      const set = catalog.find(s => s.name.toLowerCase() === exp.name.toLowerCase());
-      if (!set) continue;
+      // Preferimos el setId guardado al importar (confiable); si la
+      // expansión viene de una versión vieja sin setId, buscamos por nombre
+      // en el catálogo general como respaldo.
+      let setId = exp.setId;
+      if (!setId) {
+        if (!catalog) catalog = await fetchTcgLiveSetsCatalog();
+        const found = catalog.find(s => s.name.toLowerCase() === exp.name.toLowerCase());
+        if (!found) continue;
+        setId = found.id;
+      }
       try {
-        const data = await fetchJson(`https://api.tcgdex.net/v2/en/sets/${set.id}`);
+        const data = await fetchJson(`https://api.tcgdex.net/v2/en/sets/${setId}`);
         const cards = Array.isArray(data.cards) ? data.cards : [];
         cards.forEach(card => {
-          if (!card || card.category !== 'Trainer' || !card.name) return;
+          if (!card || !card.name) return;
+          const slug = getPokemonSlug(normalizeCardPokemonName(card.name));
+          if (slugToName[slug]) return; // es una carta Pokémon, no de Entrenador
           pool.push({
             name: card.name,
             image: card.image ? `${card.image}/low.webp` : '',
@@ -6325,9 +6371,10 @@ async function importTcgLiveSet(setId, btn) {
 
     const palette = ['#d62828','#003049','#f77f00','#588157','#6a4c93','#1d3557','#e76f51','#264653','#8338ec','#fb5607'];
     if (!EXPANSIONES_SUGERIDAS.tcglive.some(e => e.name.toLowerCase() === setName.toLowerCase())) {
-      EXPANSIONES_SUGERIDAS.tcglive.push({ name: setName, color: palette[EXPANSIONES_SUGERIDAS.tcglive.length % palette.length] });
+      EXPANSIONES_SUGERIDAS.tcglive.push({ name: setName, color: palette[EXPANSIONES_SUGERIDAS.tcglive.length % palette.length], setId });
     }
     const expInfo = EXPANSIONES_SUGERIDAS.tcglive.find(e => e.name === setName);
+    if (expInfo && !expInfo.setId) expInfo.setId = setId; // completa el id si venía de una versión vieja
 
     const slugToName = {};
     POKEMON_LISTS.tcglive.forEach(name => { slugToName[getPokemonSlug(name)] = name; });
