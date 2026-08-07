@@ -340,6 +340,27 @@
     cursor: pointer;
   }
   .trueque-delete-btn:hover { background: rgba(229,115,115,0.28); }
+  /* Sugerencia de mazo nuevo */
+  .sugerir-mazo-section-title {
+    font-size: 0.8rem;
+    font-weight: 800;
+    margin: 12px 0 6px;
+    color: var(--text);
+  }
+  .sugerir-mazo-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(70px, 1fr));
+    gap: 8px;
+  }
+  .sugerir-mazo-item { text-align: center; }
+  .sugerir-mazo-item img {
+    width: 100%;
+    border-radius: 6px;
+    display: block;
+    margin-bottom: 3px;
+  }
+  .sugerir-mazo-item .sm-name { font-size: 0.6rem; color: var(--muted); line-height: 1.1; }
+  .sugerir-mazo-empty { font-size: 0.78rem; color: var(--muted); padding: 6px 0; }
   .trueque-sleeve a.wa {
     display: inline-block;
     font-size: 0.75rem;
@@ -2455,6 +2476,8 @@
     <div class="mode-section active" id="mode-section-champions">
       <div class="translate-moves-toolbar">
         <button class="btn btn-primary" onclick="translateExistingChampionsMoves()">🌐 Traducir campos existentes</button>
+        <button class="btn btn-primary" onclick="championsSugerirVacios()">🪄 Sugerir para los vacíos</button>
+        <span id="champions-sugerir-status" style="font-size:0.78rem;color:var(--muted);align-self:center"></span>
       </div>
       <div class="pokemon-table-wrap">
         <table id="pokemon-table-champions">
@@ -2469,7 +2492,7 @@
               <th>Ataque 2</th>
               <th>Ataque 3</th>
               <th>Ataque 4</th>
-              <th style="text-align:center">Borrar</th>
+              <th style="text-align:center">Acciones</th>
             </tr>
           </thead>
           <tbody id="table-body-champions"></tbody>
@@ -2551,6 +2574,7 @@
     <div class="mode-section" id="mode-section-mazos">
       <div class="mazos-toolbar">
         <button class="btn btn-yellow" onclick="addNuevoMazo('mazos')">➕ Nuevo mazo</button>
+        <button class="btn btn-primary" onclick="abrirSugerirMazo('mazos')">🪄 Sugerir mazo nuevo</button>
       </div>
       <div class="mazos-list" id="mazos-list"></div>
     </div>
@@ -2559,6 +2583,7 @@
     <div class="mode-section" id="mode-section-mazoslive">
       <div class="mazos-toolbar">
         <button class="btn btn-yellow" onclick="addNuevoMazo('mazoslive')">➕ Nuevo mazo</button>
+        <button class="btn btn-primary" onclick="abrirSugerirMazo('mazoslive')">🪄 Sugerir mazo nuevo</button>
       </div>
       <div class="mazos-list" id="mazos-list-live"></div>
     </div>
@@ -2810,6 +2835,29 @@
     </div>
     <div class="modal-btns">
       <button class="btn" style="background:#444;color:#fff" onclick="closeModal('modal-mazo-cards')">Cerrar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL SUGERIR MAZO NUEVO -->
+<div class="modal-overlay" id="modal-sugerir-mazo">
+  <div class="modal" style="max-width:640px">
+    <h3>🪄 SUGERIR MAZO NUEVO</h3>
+    <p style="font-size:0.8rem;color:var(--muted)">
+      Elegí 1 o 2 tipos de Energía y se sugiere un núcleo de Pokémon de ese
+      tipo (según su tipo en los videojuegos, como aproximación) más algunas
+      cartas de Entrenador conocidas. No es un mazo "meta" ni un análisis
+      competitivo — es un punto de partida para armar y ajustar a tu gusto.
+    </p>
+    <div class="trueque-row" style="margin-bottom:10px">
+      <select class="trueque-select" id="sugerir-mazo-tipo1"></select>
+      <select class="trueque-select" id="sugerir-mazo-tipo2"></select>
+      <button class="btn btn-primary" onclick="tcgSugerirMazoGenerar()">Generar sugerencia</button>
+    </div>
+    <div id="sugerir-mazo-status" style="font-size:0.78rem;color:var(--muted);margin-bottom:8px"></div>
+    <div id="sugerir-mazo-resultado"></div>
+    <div class="modal-btns">
+      <button class="btn" style="background:#444;color:#fff" onclick="closeModal('modal-sugerir-mazo')">Cerrar</button>
     </div>
   </div>
 </div>
@@ -3831,6 +3879,22 @@ function translateMoveIfEnglish(value) {
   return found && found !== value ? found : null;
 }
 
+// El diccionario moves-types.json (wikidex.net) usa palabras en español en
+// minúscula y con tilde ("fuego", "eléctrico"), pero los <select> de tipo de
+// esta tabla usan una clave interna distinta, sin tildes y con "Metal" en vez
+// de "Acero" (por compatibilidad con los íconos ya existentes). Sin este mapa
+// intermedio, la traducción automática de tipo nunca coincidía con ninguna
+// opción del desplegable y quedaba en blanco.
+const MOVE_TYPE_TO_INTERNAL_KEY = {
+  'normal': 'Normal', 'fuego': 'Fuego', 'agua': 'Agua',
+  'eléctrico': 'Electrico', 'electrico': 'Electrico',
+  'planta': 'Planta', 'hielo': 'Hielo', 'lucha': 'Lucha',
+  'veneno': 'Veneno', 'tierra': 'Tierra', 'volador': 'Volador',
+  'psíquico': 'Psiquico', 'psiquico': 'Psiquico', 'bicho': 'Bicho',
+  'roca': 'Roca', 'fantasma': 'Fantasma', 'dragón': 'Dragon', 'dragon': 'Dragon',
+  'siniestro': 'Siniestro', 'acero': 'Metal', 'hada': 'Hada'
+};
+
 // Busca el tipo de un movimiento por su nombre (en español o inglés). Primero
 // consulta el diccionario de wikidex.net; si el movimiento no está ahí (por
 // ejemplo, uno que el propio usuario agregó a mano), busca si ese mismo
@@ -3838,7 +3902,10 @@ function translateMoveIfEnglish(value) {
 function getKnownMoveType(moveName) {
   if (!moveName) return null;
   const key = moveName.trim().toLowerCase();
-  if (MOVE_TYPE_LOOKUP_LOWER[key]) return MOVE_TYPE_LOOKUP_LOWER[key];
+  if (MOVE_TYPE_LOOKUP_LOWER[key]) {
+    const raw = MOVE_TYPE_LOOKUP_LOWER[key];
+    return MOVE_TYPE_TO_INTERNAL_KEY[raw.toLowerCase()] || raw;
+  }
   for (const d of Object.values(dataChampions)) {
     if (d.ataque1 && d.ataque1.trim().toLowerCase() === key && d.tipo1) return d.tipo1;
     if (d.ataque2 && d.ataque2.trim().toLowerCase() === key && d.tipo2) return d.tipo2;
@@ -3850,6 +3917,193 @@ function getKnownMoveType(moveName) {
     if (d.movCargado && d.movCargado.trim().toLowerCase() === key && d.tipoCargado) return d.tipoCargado;
   }
   return null;
+}
+
+// ── SUGERENCIAS AUTOMÁTICAS PARA CHAMPIONS ──────────────────────────────────
+// Importante: esto NO es un análisis competitivo de torneo ni un tier list.
+// Es una heurística simple basada en datos reales (estadísticas base, tipos
+// y el conjunto de movimientos real de cada Pokémon, todo consultado en vivo
+// a PokeAPI): a mayor Ataque que Ataque Especial, arquetipo físico; a mayor
+// Velocidad relativa, naturaleza que la potencia; etc. Sirve como punto de
+// partida razonable para completar filas vacías, no como palabra final.
+
+// PokeAPI usa nombres de tipo en inglés; los pasamos a la clave interna que
+// ya usa esta tabla (ver MOVE_TYPE_TO_INTERNAL_KEY más arriba).
+const POKEAPI_TYPE_TO_INTERNAL_KEY = {
+  normal: 'Normal', fire: 'Fuego', water: 'Agua', electric: 'Electrico',
+  grass: 'Planta', ice: 'Hielo', fighting: 'Lucha', poison: 'Veneno',
+  ground: 'Tierra', flying: 'Volador', psychic: 'Psiquico', bug: 'Bicho',
+  rock: 'Roca', ghost: 'Fantasma', dragon: 'Dragon', dark: 'Siniestro',
+  steel: 'Metal', fairy: 'Hada'
+};
+
+// Un puñado de movimientos fuertes y conocidos por cada tipo (slug de PokeAPI
+// + nombre en inglés tal como aparece en moves-es.json + clase de daño). Se
+// contrastan contra el conjunto de movimientos real del Pokémon: solo se
+// sugiere un movimiento si el propio Pokémon puede aprenderlo.
+const CHAMPIONS_STRONG_MOVES_BY_TYPE = {
+  Normal:    [{s:'giga-impact',n:'Giga Impact',c:'physical'},{s:'double-edge',n:'Double-Edge',c:'physical'},{s:'body-slam',n:'Body Slam',c:'physical'},{s:'hyper-voice',n:'Hyper Voice',c:'special'}],
+  Fuego:     [{s:'flare-blitz',n:'Flare Blitz',c:'physical'},{s:'fire-blast',n:'Fire Blast',c:'special'},{s:'flamethrower',n:'Flamethrower',c:'special'},{s:'fire-punch',n:'Fire Punch',c:'physical'}],
+  Agua:      [{s:'hydro-pump',n:'Hydro Pump',c:'special'},{s:'surf',n:'Surf',c:'special'},{s:'waterfall',n:'Waterfall',c:'physical'},{s:'scald',n:'Scald',c:'special'}],
+  Electrico: [{s:'thunderbolt',n:'Thunderbolt',c:'special'},{s:'wild-charge',n:'Wild Charge',c:'physical'},{s:'thunder',n:'Thunder',c:'special'},{s:'volt-switch',n:'Volt Switch',c:'special'}],
+  Planta:    [{s:'leaf-blade',n:'Leaf Blade',c:'physical'},{s:'energy-ball',n:'Energy Ball',c:'special'},{s:'giga-drain',n:'Giga Drain',c:'special'},{s:'power-whip',n:'Power Whip',c:'physical'}],
+  Hielo:     [{s:'ice-beam',n:'Ice Beam',c:'special'},{s:'icicle-crash',n:'Icicle Crash',c:'physical'},{s:'ice-punch',n:'Ice Punch',c:'physical'},{s:'freeze-dry',n:'Freeze-Dry',c:'special'}],
+  Lucha:     [{s:'close-combat',n:'Close Combat',c:'physical'},{s:'superpower',n:'Superpower',c:'physical'},{s:'drain-punch',n:'Drain Punch',c:'physical'},{s:'focus-blast',n:'Focus Blast',c:'special'}],
+  Veneno:    [{s:'sludge-bomb',n:'Sludge Bomb',c:'special'},{s:'gunk-shot',n:'Gunk Shot',c:'physical'},{s:'poison-jab',n:'Poison Jab',c:'physical'},{s:'sludge-wave',n:'Sludge Wave',c:'special'}],
+  Tierra:    [{s:'earthquake',n:'Earthquake',c:'physical'},{s:'earth-power',n:'Earth Power',c:'special'},{s:'high-horsepower',n:'High Horsepower',c:'physical'},{s:'stomping-tantrum',n:'Stomping Tantrum',c:'physical'}],
+  Volador:   [{s:'brave-bird',n:'Brave Bird',c:'physical'},{s:'hurricane',n:'Hurricane',c:'special'},{s:'air-slash',n:'Air Slash',c:'special'},{s:'dragon-ascent',n:'Dragon Ascent',c:'physical'}],
+  Psiquico:  [{s:'psychic',n:'Psychic',c:'special'},{s:'psyshock',n:'Psyshock',c:'special'},{s:'future-sight',n:'Future Sight',c:'special'},{s:'stored-power',n:'Stored Power',c:'special'}],
+  Bicho:     [{s:'x-scissor',n:'X-Scissor',c:'physical'},{s:'megahorn',n:'Megahorn',c:'physical'},{s:'bug-buzz',n:'Bug Buzz',c:'special'},{s:'u-turn',n:'U-turn',c:'physical'}],
+  Roca:      [{s:'stone-edge',n:'Stone Edge',c:'physical'},{s:'rock-slide',n:'Rock Slide',c:'physical'},{s:'power-gem',n:'Power Gem',c:'special'},{s:'head-smash',n:'Head Smash',c:'physical'}],
+  Fantasma:  [{s:'shadow-ball',n:'Shadow Ball',c:'special'},{s:'shadow-claw',n:'Shadow Claw',c:'physical'},{s:'phantom-force',n:'Phantom Force',c:'physical'},{s:'poltergeist',n:'Poltergeist',c:'physical'}],
+  Dragon:    [{s:'dragon-claw',n:'Dragon Claw',c:'physical'},{s:'outrage',n:'Outrage',c:'physical'},{s:'draco-meteor',n:'Draco Meteor',c:'special'},{s:'dragon-pulse',n:'Dragon Pulse',c:'special'}],
+  Siniestro: [{s:'dark-pulse',n:'Dark Pulse',c:'special'},{s:'knock-off',n:'Knock Off',c:'physical'},{s:'crunch',n:'Crunch',c:'physical'},{s:'sucker-punch',n:'Sucker Punch',c:'physical'}],
+  Metal:     [{s:'iron-head',n:'Iron Head',c:'physical'},{s:'flash-cannon',n:'Flash Cannon',c:'special'},{s:'meteor-mash',n:'Meteor Mash',c:'physical'},{s:'heavy-slam',n:'Heavy Slam',c:'physical'}],
+  Hada:      [{s:'moonblast',n:'Moonblast',c:'special'},{s:'dazzling-gleam',n:'Dazzling Gleam',c:'special'},{s:'play-rough',n:'Play Rough',c:'physical'},{s:'draining-kiss',n:'Draining Kiss',c:'special'}]
+};
+
+// Movimientos de apoyo típicos, según si el arquetipo elegido es físico o
+// especial. "protect" (Protección) queda como red de contención casi
+// universal si no aprende ninguno de los de arriba.
+const CHAMPIONS_SETUP_MOVES = {
+  physical: [{s:'swords-dance', n:'Swords Dance'}, {s:'dragon-dance', n:'Dragon Dance'}],
+  special:  [{s:'nasty-plot', n:'Nasty Plot'}, {s:'calm-mind', n:'Calm Mind'}]
+};
+const CHAMPIONS_PROTECT = {s:'protect', n:'Protect'};
+
+function championsSpanishMoveAndType(englishName) {
+  const key = englishName.toLowerCase();
+  const es = MOVES_ES_LOOKUP_LOWER[key] || englishName;
+  const rawType = MOVE_TYPE_LOOKUP_LOWER[key];
+  const tipo = rawType ? (MOVE_TYPE_TO_INTERNAL_KEY[rawType.toLowerCase()] || rawType) : '';
+  return { nombre: es, tipo };
+}
+
+async function championsFetchPokeApiData(name) {
+  const slug = getPokemonSlug(name);
+  const res = await fetch(`https://pokeapi.co/api/v2/pokemon/${slug}`);
+  if (!res.ok) throw new Error('No se encontró en PokeAPI: ' + name);
+  const data = await res.json();
+  const stats = {};
+  data.stats.forEach(s => { stats[s.stat.name] = s.base_stat; });
+  const types = data.types.map(t => POKEAPI_TYPE_TO_INTERNAL_KEY[t.type.name] || null).filter(Boolean);
+  const movepool = new Set(data.moves.map(m => m.move.name));
+  return { stats, types, movepool };
+}
+
+function championsComputeSuggestion({ stats, types, movepool }) {
+  const atk = stats.attack || 0, spa = stats['special-attack'] || 0, spd = stats.speed || 0;
+  const def = stats.defense || 0, spdef = stats['special-defense'] || 0, hp = stats.hp || 0;
+
+  const archetypeFisico = atk >= spa;
+  const promedioOfensivo = (atk + spa) / 2;
+  const promedioDefensivo = (def + spdef + hp) / 3;
+  const esMuralla = promedioDefensivo > promedioOfensivo * 1.15 && spd < 90;
+  const esRapido = spd >= Math.max(atk, spa) * 0.85 || spd >= 100;
+
+  let naturaleza, objeto;
+  if (esMuralla) {
+    naturaleza = def >= spdef ? NATURE_NAME_ES['bold'] : NATURE_NAME_ES['calm'];
+    objeto = 'Restos';
+  } else if (archetypeFisico) {
+    naturaleza = esRapido ? NATURE_NAME_ES['jolly'] : NATURE_NAME_ES['adamant'];
+    objeto = esRapido ? 'Vidasfera' : 'Cinturón de Experto';
+  } else {
+    naturaleza = esRapido ? NATURE_NAME_ES['timid'] : NATURE_NAME_ES['modest'];
+    objeto = esRapido ? 'Vidasfera' : 'Cinturón de Experto';
+  }
+
+  const claseBuscada = archetypeFisico ? 'physical' : 'special';
+  const candidatos = [];
+  types.forEach(t => (CHAMPIONS_STRONG_MOVES_BY_TYPE[t] || []).forEach(m => candidatos.push(m)));
+
+  const elegidos = [];
+  const usados = new Set();
+  function intentar(lista, filtroClase) {
+    for (const m of lista) {
+      if (usados.has(m.s)) continue;
+      if (filtroClase && m.c !== filtroClase) continue;
+      if (!movepool.has(m.s)) continue;
+      elegidos.push(m);
+      usados.add(m.s);
+      return true;
+    }
+    return false;
+  }
+  // 1-2: preferimos golpes STAB de la clase del arquetipo elegido.
+  intentar(candidatos, claseBuscada);
+  intentar(candidatos, claseBuscada);
+  // Si no completó 2 con esa clase, se llena con STAB de la otra clase.
+  while (elegidos.length < 2 && intentar(candidatos, null)) {}
+  // 3: movimiento de apoyo típico del arquetipo, si lo aprende.
+  intentar(CHAMPIONS_SETUP_MOVES[claseBuscada], null);
+  // Si no había de apoyo, un tercer golpe STAB más.
+  if (elegidos.length < 3) intentar(candidatos, null);
+  // 4: Protección como red de contención si la aprende; sino, otro golpe.
+  if (!usados.has(CHAMPIONS_PROTECT.s) && movepool.has(CHAMPIONS_PROTECT.s) && elegidos.length < 4) {
+    elegidos.push(CHAMPIONS_PROTECT); usados.add(CHAMPIONS_PROTECT.s);
+  }
+  if (elegidos.length < 4) intentar(candidatos, null);
+
+  const resultado = { naturaleza, objeto };
+  [1,2,3,4].forEach(i => {
+    const m = elegidos[i-1];
+    if (m) {
+      const { nombre, tipo } = championsSpanishMoveAndType(m.n);
+      resultado['ataque'+i] = nombre;
+      resultado['tipo'+i] = tipo;
+    } else {
+      resultado['ataque'+i] = '';
+      resultado['tipo'+i] = '';
+    }
+  });
+  return resultado;
+}
+
+async function championsSugerirUno(name) {
+  try {
+    const apiData = await championsFetchPokeApiData(name);
+    const sugerido = championsComputeSuggestion(apiData);
+    dataChampions[name] = { ...EMPTY_CHAMPIONS(), ...dataChampions[name], ...sugerido };
+    persistAll();
+    renderTableChampions();
+    showToast('🪄 Sugerencia aplicada a ' + name);
+  } catch (e) {
+    console.error(e);
+    showToast('❌ No se pudo generar una sugerencia para ' + name, true);
+  }
+}
+
+let championsSugerirEnCurso = false;
+async function championsSugerirVacios() {
+  if (championsSugerirEnCurso) return;
+  championsSugerirEnCurso = true;
+  const status = document.getElementById('champions-sugerir-status');
+  const pendientes = Object.keys(dataChampions).filter(name => {
+    const d = dataChampions[name];
+    return !d.ataque1 && !d.ataque2 && !d.ataque3 && !d.ataque4 && !d.naturaleza;
+  });
+  if (!pendientes.length) {
+    if (status) status.textContent = 'No hay filas vacías para completar.';
+    championsSugerirEnCurso = false;
+    return;
+  }
+  let hechos = 0;
+  for (const name of pendientes) {
+    if (status) status.textContent = `Sugiriendo... ${hechos + 1}/${pendientes.length} (${name})`;
+    try {
+      const apiData = await championsFetchPokeApiData(name);
+      const sugerido = championsComputeSuggestion(apiData);
+      dataChampions[name] = { ...EMPTY_CHAMPIONS(), ...dataChampions[name], ...sugerido };
+    } catch (e) {
+      console.log('Sin sugerencia para', name, e);
+    }
+    hechos++;
+  }
+  persistAll();
+  renderTableChampions();
+  if (status) status.textContent = `Listo: se completaron ${hechos} Pokémon.`;
+  championsSugerirEnCurso = false;
 }
 
 const MOVE_FIELD_TO_TYPE_FIELD = {
@@ -4587,7 +4841,10 @@ function renderTableChampions() {
           <span class="move-type-icon-wrap">${typeIconHTML(d.tipo4)}</span>
         </div>
       </td>
-      <td style="text-align:center"><button class="delete-btn" onclick="confirmDelete('${name.replace(/'/g,"\\'")}')">🗑️</button></td>
+      <td style="text-align:center; white-space:nowrap">
+        <button class="delete-btn" title="Sugerir naturaleza, objeto y ataques" onclick="championsSugerirUno('${name.replace(/'/g,"\\'")}')">🪄</button>
+        <button class="delete-btn" onclick="confirmDelete('${name.replace(/'/g,"\\'")}')">🗑️</button>
+      </td>
     </tr>`;
   }).join('');
 
@@ -5009,6 +5266,9 @@ function renderMazos(mode) {
         <button class="delete-btn" onclick="confirmDeleteMazo(${idx}, '${mode}')">🗑️</button>
       </div>
       <div class="mazo-card-thumbs">${thumbsHTML}</div>
+      ${Array.isArray(mazo.entrenadores) && mazo.entrenadores.length ? `
+      <div style="font-size:0.68rem;color:var(--muted);margin:6px 0 2px">🎫 Entrenador sugeridas: ${mazo.entrenadores.map(t => esc(t.nombre)).join(', ')}</div>
+      ` : ''}
       <div class="mazo-card-footer">
         <span class="tcg-cards-summary">${mazo.cartas.length} carta(s)</span>
         <button class="btn btn-primary" style="padding:6px 10px;font-size:0.75rem" onclick="openMazoCardsModal(${idx}, '${mode}')">🗂️ Gestionar cartas</button>
@@ -5031,6 +5291,219 @@ function addNuevoMazo(mode) {
   persistAll();
   renderMazos(mode);
   showToast('✅ Mazo creado');
+}
+
+// ── SUGERIR MAZO NUEVO (TCG Pocket y TCG Live) ──────────────────────────────
+// Importante: NO es un análisis competitivo ni un "mazo meta". El núcleo de
+// Pokémon se elige por tipo compartido (usando el tipo del Pokémon en los
+// videojuegos principales, como aproximación razonable a su tipo real de
+// carta), y las cartas de Entrenador sugeridas son las de menor rareza entre
+// las que ya conocemos de esa colección — es decir, las más comunes y fáciles
+// de conseguir. Sirve como punto de partida, no como palabra final.
+
+function mazosModeToTcgKey(mode) { return mode === 'mazoslive' ? 'tcglive' : 'tcg'; }
+
+// Tipo (clave interna) de cada Pokémon, resuelto una sola vez por nombre y
+// cacheado en localStorage sin vencimiento (el tipo de un Pokémon no cambia).
+let POKEMON_PRIMARY_TYPE_CACHE = {};
+(function loadPrimaryTypeCache() {
+  try {
+    const saved = JSON.parse(localStorage.getItem('pokemon_primary_type_cache_v1') || '{}');
+    if (saved && typeof saved === 'object') POKEMON_PRIMARY_TYPE_CACHE = saved;
+  } catch (e) {}
+})();
+function savePrimaryTypeCache() {
+  try { localStorage.setItem('pokemon_primary_type_cache_v1', JSON.stringify(POKEMON_PRIMARY_TYPE_CACHE)); } catch (e) {}
+}
+async function getPokemonPrimaryType(name) {
+  if (POKEMON_PRIMARY_TYPE_CACHE[name]) return POKEMON_PRIMARY_TYPE_CACHE[name];
+  try {
+    const slug = getPokemonSlug(name);
+    const res = await fetch(`https://pokeapi.co/api/v2/pokemon/${slug}`);
+    if (!res.ok) return null;
+    const data = await res.json();
+    const first = data.types.find(t => t.slot === 1) || data.types[0];
+    const key = first ? (POKEAPI_TYPE_TO_INTERNAL_KEY[first.type.name] || null) : null;
+    if (key) { POKEMON_PRIMARY_TYPE_CACHE[name] = key; savePrimaryTypeCache(); }
+    return key;
+  } catch (e) { return null; }
+}
+
+// Pool de cartas de Entrenador conocidas, armado a partir de las mismas
+// expansiones que ya usa la app (TCGdex), cacheado 7 días en localStorage.
+let TCG_TRAINER_POOL = { tcg: null, tcglive: null };
+let tcgTrainerPoolLoading = { tcg: null, tcglive: null };
+const TCG_TRAINER_POOL_CACHE_KEY = { tcg: 'tcg_trainer_pool_v1', tcglive: 'tcglive_trainer_pool_v1' };
+const TCG_TRAINER_POOL_MAX_AGE = 1000 * 60 * 60 * 24 * 7; // 7 días
+
+const TCG_RARITY_STAPLE_ORDER = [
+  'common', 'uncommon', 'rare', 'rare holo', 'double rare', 'ace spec rare',
+  'ultra rare', 'rare holo v', 'rare holo vmax', 'rare holo vstar',
+  'illustration rare', 'special illustration rare', 'trainer gallery rare holo',
+  'radiant rare', 'shiny rare', 'rare shiny', 'hyper rare'
+];
+function rarityStapleRank(r) {
+  const i = TCG_RARITY_STAPLE_ORDER.indexOf((r || '').toLowerCase());
+  return i === -1 ? 99 : i;
+}
+
+async function buildTrainerPool(tcgKey) {
+  const pool = [];
+  if (tcgKey === 'tcg') {
+    const sets = await fetchTcgPocketSetsFromApi();
+    for (const s of sets) {
+      try {
+        const cards = await fetchTcgPocketSetCards(s.id);
+        const setNameEs = TCGDEX_SET_NAME_ES[s.id] || TCGDEX_SET_NAME_ES[s.name] || s.name;
+        cards.forEach(card => {
+          if (!card || card.category !== 'Trainer' || !card.name) return;
+          pool.push({
+            name: card.name,
+            image: card.image ? `${card.image}/low.webp` : '',
+            expansion: setNameEs,
+            rarity: (card.rarity || '').toLowerCase()
+          });
+        });
+      } catch (e) { /* seguimos con las demás expansiones */ }
+    }
+  } else {
+    const catalog = await fetchTcgLiveSetsCatalog();
+    for (const exp of EXPANSIONES_SUGERIDAS.tcglive) {
+      const set = catalog.find(s => s.name.toLowerCase() === exp.name.toLowerCase());
+      if (!set) continue;
+      try {
+        const data = await fetchJson(`https://api.tcgdex.net/v2/en/sets/${set.id}`);
+        const cards = Array.isArray(data.cards) ? data.cards : [];
+        cards.forEach(card => {
+          if (!card || card.category !== 'Trainer' || !card.name) return;
+          pool.push({
+            name: card.name,
+            image: card.image ? `${card.image}/low.webp` : '',
+            expansion: exp.name,
+            rarity: (card.rarity || '').toLowerCase()
+          });
+        });
+      } catch (e) { /* seguimos con las demás expansiones */ }
+    }
+  }
+  return pool;
+}
+
+async function getTrainerPool(tcgKey) {
+  if (TCG_TRAINER_POOL[tcgKey]) return TCG_TRAINER_POOL[tcgKey];
+  if (tcgTrainerPoolLoading[tcgKey]) return tcgTrainerPoolLoading[tcgKey];
+  try {
+    const cached = JSON.parse(localStorage.getItem(TCG_TRAINER_POOL_CACHE_KEY[tcgKey]) || 'null');
+    if (cached && Array.isArray(cached.data) && (Date.now() - cached.ts) < TCG_TRAINER_POOL_MAX_AGE) {
+      TCG_TRAINER_POOL[tcgKey] = cached.data;
+      return TCG_TRAINER_POOL[tcgKey];
+    }
+  } catch (e) {}
+  tcgTrainerPoolLoading[tcgKey] = buildTrainerPool(tcgKey)
+    .then(pool => {
+      TCG_TRAINER_POOL[tcgKey] = pool;
+      try { localStorage.setItem(TCG_TRAINER_POOL_CACHE_KEY[tcgKey], JSON.stringify({ ts: Date.now(), data: pool })); } catch (e) {}
+      return pool;
+    })
+    .catch(e => { console.log('No se pudo armar el pool de cartas de Entrenador', e); TCG_TRAINER_POOL[tcgKey] = []; return TCG_TRAINER_POOL[tcgKey]; })
+    .finally(() => { tcgTrainerPoolLoading[tcgKey] = null; });
+  return tcgTrainerPoolLoading[tcgKey];
+}
+
+let sugerirMazoModo = 'mazos';
+let sugerirMazoResultado = null; // { tipos, pokemon: [{name, carta}], entrenadores: [...] }
+
+function abrirSugerirMazo(mode) {
+  sugerirMazoModo = mode || 'mazos';
+  sugerirMazoResultado = null;
+  const opciones = '<option value="">— Sin tipo —</option>' + TYPE_LIST.map(t => `<option value="${t}">${typeLabel(t)}</option>`).join('');
+  document.getElementById('sugerir-mazo-tipo1').innerHTML = opciones;
+  document.getElementById('sugerir-mazo-tipo2').innerHTML = opciones;
+  document.getElementById('sugerir-mazo-status').textContent = '';
+  document.getElementById('sugerir-mazo-resultado').innerHTML = '';
+  document.getElementById('modal-sugerir-mazo').classList.add('open');
+}
+
+async function tcgSugerirMazoGenerar() {
+  const tipo1 = document.getElementById('sugerir-mazo-tipo1').value;
+  const tipo2 = document.getElementById('sugerir-mazo-tipo2').value;
+  const tiposElegidos = [...new Set([tipo1, tipo2].filter(Boolean))];
+  const status = document.getElementById('sugerir-mazo-status');
+  const resultado = document.getElementById('sugerir-mazo-resultado');
+  if (!tiposElegidos.length) { showToast('❌ Elegí al menos un tipo', true); return; }
+
+  const tcgKey = mazosModeToTcgKey(sugerirMazoModo);
+  const pokemonList = getMazosPokemonList(sugerirMazoModo);
+  const tcgData = getMazosTcgData(sugerirMazoModo);
+
+  status.textContent = 'Buscando Pokémon de ese tipo dentro de tu colección...';
+  resultado.innerHTML = '';
+
+  // Solo se puede sugerir un Pokémon si ya tiene al menos una carta cargada
+  // (si no, no hay nada para referenciar dentro del mazo).
+  const candidatos = pokemonList.filter(name => tcgData[name] && Array.isArray(tcgData[name].cartas) && tcgData[name].cartas.length);
+
+  const elegidosPokemon = [];
+  for (const name of candidatos) {
+    const tipo = await getPokemonPrimaryType(name);
+    if (tipo && tiposElegidos.includes(tipo)) {
+      elegidosPokemon.push({ name, carta: tcgData[name].cartas[0] });
+    }
+    if (elegidosPokemon.length >= 13) break;
+  }
+
+  status.textContent = 'Buscando cartas de Entrenador conocidas...';
+  const trainerPool = await getTrainerPool(tcgKey);
+  const dedup = {};
+  trainerPool.forEach(t => {
+    if (!dedup[t.name] || rarityStapleRank(t.rarity) < rarityStapleRank(dedup[t.name].rarity)) dedup[t.name] = t;
+  });
+  const trainerOrdenados = Object.values(dedup).sort((a, b) => rarityStapleRank(a.rarity) - rarityStapleRank(b.rarity));
+  const huecos = Math.max(0, 20 - elegidosPokemon.length);
+  const elegidosTrainers = trainerOrdenados.slice(0, huecos);
+
+  status.textContent = '';
+  sugerirMazoResultado = { tipos: tiposElegidos, pokemon: elegidosPokemon, entrenadores: elegidosTrainers };
+
+  const totalCartas = elegidosPokemon.length + elegidosTrainers.length;
+  resultado.innerHTML = `
+    <div style="font-size:0.78rem;color:var(--muted);margin-bottom:6px">Total sugerido: ${totalCartas}/20 cartas</div>
+    <div class="sugerir-mazo-section-title">🔴 Pokémon (${elegidosPokemon.length})</div>
+    <div class="sugerir-mazo-grid">
+      ${elegidosPokemon.length ? elegidosPokemon.map(p => `
+        <div class="sugerir-mazo-item">
+          ${p.carta.imagen ? `<img src="${esc(p.carta.imagen)}" onerror="this.style.display='none'">` : ''}
+          <div class="sm-name">${esc(p.name)}</div>
+        </div>`).join('') : '<div class="sugerir-mazo-empty">No hay Pokémon de ese tipo con cartas ya cargadas en tu colección.</div>'}
+    </div>
+    <div class="sugerir-mazo-section-title">🎫 Entrenador (${elegidosTrainers.length})</div>
+    <div class="sugerir-mazo-grid">
+      ${elegidosTrainers.length ? elegidosTrainers.map(t => `
+        <div class="sugerir-mazo-item">
+          ${t.image ? `<img src="${esc(t.image)}" onerror="this.style.display='none'">` : ''}
+          <div class="sm-name">${esc(t.name)}</div>
+        </div>`).join('') : '<div class="sugerir-mazo-empty">No se encontraron cartas de Entrenador (puede que aún no se haya construido el catálogo).</div>'}
+    </div>
+    <button class="btn btn-primary" style="margin-top:12px;width:100%" onclick="tcgSugerirMazoCrear()">✅ Crear este mazo</button>
+  `;
+}
+
+function tcgSugerirMazoCrear() {
+  if (!sugerirMazoResultado || !sugerirMazoResultado.pokemon.length) {
+    showToast('❌ No hay sugerencia para crear todavía', true);
+    return;
+  }
+  const store = getMazosStore(sugerirMazoModo);
+  const nombreTipos = sugerirMazoResultado.tipos.map(typeLabel).join(' / ');
+  store.push({
+    nombre: `Mazo ${nombreTipos}`,
+    cartas: sugerirMazoResultado.pokemon.map(p => ({ pokemon: p.name, idx: 0 })),
+    entrenadores: sugerirMazoResultado.entrenadores.map(t => ({ nombre: t.name, imagen: t.image }))
+  });
+  persistAll();
+  renderMazos(sugerirMazoModo);
+  closeModal('modal-sugerir-mazo');
+  showToast('✅ Mazo sugerido creado, ya podés ajustarlo a gusto');
 }
 
 async function confirmDeleteMazo(idx, mode) {
