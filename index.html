@@ -3669,16 +3669,74 @@ const EMPTY_TCGLIVE    = () => ({ mazos:'', cartas:[] });
 
 
 const EXPANSIONES_DEFAULT = [
-  { name: 'Génesis Genético',            color: '#3B4CCA' },
-  { name: 'Isla Mítica',                 color: '#2E8B57' },
-  { name: 'Choque Espaciotemporal',      color: '#5B3A99' },
-  { name: 'Luz Triunfal',                color: '#C8A800' },
-  { name: 'Euforia Brillante',           color: '#E91E8C' },
-  { name: 'Guardianes Celestiales',      color: '#00BCD4' },
-  { name: 'Crisis Extradimensional',     color: '#8B00FF' },
-  { name: 'Arboleda Eevee',              color: '#D2691E' },
-  { name: 'Promo-A',                     color: '#888888' }
+  { name: 'Genes Formidables',        color: '#3B4CCA' },
+  { name: 'La Isla Singular',         color: '#2E8B57' },
+  { name: 'Pugna Espaciotemporal',    color: '#5B3A99' },
+  { name: 'Luz Triunfal',             color: '#C8A800' },
+  { name: 'Festival Brillante',       color: '#E91E8C' },
+  { name: 'Guardianes Celestiales',   color: '#00BCD4' },
+  { name: 'Crisis Dimensional',       color: '#8B00FF' },
+  { name: 'Arboleda de Eevee',        color: '#D2691E' },
+  { name: 'Saber Marino y Celeste',   color: '#1E90FF' },
+  { name: 'Manantial Oculto',         color: '#00A99D' },
+  { name: 'Sobre Deluxe ex',          color: '#B8860B' },
+  { name: 'Megaascenso',              color: '#7B2FBE' },
+  { name: 'Fuego Carmesí',            color: '#C1272D' },
+  { name: 'Desfile de Ensueño',       color: '#FF69B4' },
+  { name: 'Encantos de Paldea',       color: '#F4845F' },
+  { name: 'Megavariocolor',           color: '#9B59B6' },
+  { name: 'Aura Pulsante',            color: '#00CED1' },
+  { name: 'Impulso Paradójico',       color: '#FF8C00' },
+  { name: 'Maravillas Cotidianas',    color: '#66BB6A' },
+  { name: 'Dominador de los Cielos',  color: '#4169E1' },
+  { name: 'Promo-A',                  color: '#888888' },
+  { name: 'Promo-B',                  color: '#888888' }
 ];
+// Nombres viejos (mal traducidos o incompletos) que pueden haber quedado
+// guardados en Firestore de versiones anteriores de la app, mapeados a su
+// nombre oficial correcto. Se usa para migrar datos ya guardados sin perder
+// las cartas que el usuario ya haya cargado bajo el nombre viejo.
+const EXPANSIONES_MIGRACION = {
+  'génesis genético': 'Genes Formidables',
+  'isla mítica': 'La Isla Singular',
+  'choque espaciotemporal': 'Pugna Espaciotemporal',
+  'euforia brillante': 'Festival Brillante',
+  'crisis extradimensional': 'Crisis Dimensional',
+  'arboleda eevee': 'Arboleda de Eevee'
+};
+
+function migrarNombresExpansionesTcg() {
+  let cambios = false;
+
+  // 1) Renombra las expansiones ya guardadas en la lista de expansiones.
+  EXPANSIONES_SUGERIDAS.tcg.forEach(exp => {
+    const nuevo = EXPANSIONES_MIGRACION[exp.name.trim().toLowerCase()];
+    if (nuevo && exp.name !== nuevo) { exp.name = nuevo; cambios = true; }
+  });
+
+  // 2) Agrega las expansiones oficiales que todavía no estén en la lista
+  //    (por ejemplo, si la base es vieja y le faltan las últimas).
+  EXPANSIONES_DEFAULT.forEach(def => {
+    if (!EXPANSIONES_SUGERIDAS.tcg.some(e => e.name.toLowerCase() === def.name.toLowerCase())) {
+      EXPANSIONES_SUGERIDAS.tcg.push({ ...def });
+      cambios = true;
+    }
+  });
+
+  // 3) Actualiza el nombre de expansión guardado en cada carta ya cargada.
+  Object.keys(dataTCG).forEach(pokemonName => {
+    const cartas = dataTCG[pokemonName] && dataTCG[pokemonName].cartas;
+    if (!Array.isArray(cartas)) return;
+    cartas.forEach(carta => {
+      if (!carta.expansion) return;
+      const nuevo = EXPANSIONES_MIGRACION[carta.expansion.trim().toLowerCase()];
+      if (nuevo && carta.expansion !== nuevo) { carta.expansion = nuevo; cambios = true; }
+    });
+  });
+
+  return cambios;
+}
+
 let EXPANSIONES_SUGERIDAS = {
   tcg: EXPANSIONES_DEFAULT.map(e => ({ ...e })),
   tcglive: [] // TCG Live: el admin agrega manualmente las expansiones que le interesan
@@ -4137,6 +4195,10 @@ function loadFromStorage() {
     ['champions', 'go', 'tcg', 'tcglive'].forEach(mode => {
       POKEMON_LISTS[mode].sort((a, b) => a.localeCompare(b, 'es', { sensitivity: 'base' }));
     });
+
+    // Corrige nombres de expansiones de TCG Pocket que hayan quedado
+    // guardados de versiones viejas (mal traducidos o incompletos).
+    migrarNombresExpansionesTcg();
   } catch(e) {}
 }
 loadFromStorage();
@@ -4306,7 +4368,9 @@ function initFirebaseSync() {
       if (latestDocs['expansiones']) { anyExists = true; applyExpansionesDoc(latestDocs['expansiones']); }
 
       if (!anyExists) return;
+      const huboMigracion = migrarNombresExpansionesTcg();
       persistLocalOnly();
+      if (huboMigracion && typeof pushToFirestore === 'function') pushToFirestore();
       if (typeof renderCurrentTable === 'function') renderCurrentTable();
       if (typeof ensurePokemonDatalistMazos === 'function') ensurePokemonDatalistMazos(mazoEditingMode);
       const searchInput = document.getElementById('search-input');
@@ -6330,7 +6394,7 @@ function trueqeNormWa(v) { return (v || '').replace(/\D/g, ''); }
 // expansión y logo de la expansión) consultando la misma API que ya usa el
 // resto de la app. Se guarda en localStorage para no volver a descargarlo
 // cada vez que se abre la sección de trueques.
-const TRUEQUE_CARD_INDEX_CACHE_KEY = 'trueque_card_index_v1';
+const TRUEQUE_CARD_INDEX_CACHE_KEY = 'trueque_card_index_v2';
 const TRUEQUE_CARD_INDEX_MAX_AGE = 1000 * 60 * 60 * 24 * 3; // 3 días
 let TRUEQUE_CARD_INDEX = null; // null = todavía no cargado
 let trueqeCardIndexLoading = null; // Promise en curso, para no duplicar pedidos
