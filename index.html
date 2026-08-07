@@ -6223,9 +6223,41 @@ async function fetchTcgPocketSetsFromApi() {
   return sets.filter(s => s && s.id && s.name);
 }
 
+// Pequeña espera entre reintentos (algunos fallos son solo un hipo momentáneo
+// de la red y funcionan bien al segundo intento).
+function esperar(ms) { return new Promise(r => setTimeout(r, ms)); }
+
 async function fetchTcgPocketSetCards(setId) {
-  const data = await fetchJson(`https://api.tcgdex.net/v2/en/sets/${setId}`);
-  return Array.isArray(data.cards) ? data.cards : [];
+  // Primer intento: el detalle del set trae sus cartas embebidas. Si falla,
+  // reintenta una vez más antes de rendirse.
+  let cards = [];
+  let setInfo = null;
+  for (let intento = 0; intento < 2; intento++) {
+    try {
+      setInfo = await fetchJson(`https://api.tcgdex.net/v2/en/sets/${setId}`);
+      cards = Array.isArray(setInfo.cards) ? setInfo.cards : [];
+      break;
+    } catch (e) {
+      if (intento === 0) await esperar(500); else throw e;
+    }
+  }
+
+  // Si el resultado viene más corto de lo esperado (o vacío), probamos una
+  // vía alternativa: pedir las cartas filtrando directamente por expansión,
+  // en vez de depender de que vengan embebidas en el detalle del set. Sirve
+  // como respaldo cuando la primera consulta devuelve datos incompletos.
+  try {
+    const esperadas = setInfo && setInfo.cardCount && (setInfo.cardCount.total || setInfo.cardCount.official);
+    if (esperadas && cards.length < esperadas) {
+      const alt = await fetchJson(`https://api.tcgdex.net/v2/en/cards?set.id=${setId}`);
+      if (Array.isArray(alt) && alt.length > cards.length) {
+        const vistos = new Set(cards.map(c => c.id));
+        alt.forEach(c => { if (c && c.id && !vistos.has(c.id)) { cards.push(c); vistos.add(c.id); } });
+      }
+    }
+  } catch (e) { /* si la vía alternativa también falla, seguimos con lo que ya tenemos */ }
+
+  return cards;
 }
 
 async function updateTcgDataFromApi(status) {
@@ -6937,7 +6969,7 @@ function trueqeNormWa(v) { return (v || '').replace(/\D/g, ''); }
 // expansión y logo de la expansión) consultando la misma API que ya usa el
 // resto de la app. Se guarda en localStorage para no volver a descargarlo
 // cada vez que se abre la sección de trueques.
-const TRUEQUE_CARD_INDEX_CACHE_KEY = 'trueque_card_index_v2';
+const TRUEQUE_CARD_INDEX_CACHE_KEY = 'trueque_card_index_v3';
 const TRUEQUE_CARD_INDEX_MAX_AGE = 1000 * 60 * 60 * 24 * 3; // 3 días
 let TRUEQUE_CARD_INDEX = null; // null = todavía no cargado
 let trueqeCardIndexLoading = null; // Promise en curso, para no duplicar pedidos
