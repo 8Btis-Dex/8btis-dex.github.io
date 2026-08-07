@@ -5558,16 +5558,34 @@ async function fetchJson(url) {
 
 
 // ── TCG POCKET (TCGdex) ─────────────────────────────────────────────────────
+// Nombres oficiales en español (wikidex.net), indexados por el código de
+// expansión (A1, A1a, A2...) en vez de por el nombre en inglés: el código es
+// el mismo que usa TCGdex como "id" del set, así que no depende de que el
+// texto en inglés coincida letra por letra (más confiable y no se rompe con
+// mayúsculas/variantes de redacción).
 const TCGDEX_SET_NAME_ES = {
-  'Genetic Apex': 'Génesis Genético',
-  'Mythical Island': 'Isla Mítica',
-  'Space-Time Smackdown': 'Choque Espaciotemporal',
-  'Triumphant Light': 'Luz Triunfal',
-  'Shining Revelry': 'Euforia Brillante',
-  'Celestial Guardians': 'Guardianes Celestiales',
-  'Extradimensional Crisis': 'Crisis Extradimensional',
-  'Eevee Grove': 'Arboleda Eevee',
-  'Promo-A': 'Promo-A'
+  'A1':  'Genes Formidables',
+  'A1a': 'La Isla Singular',
+  'A2':  'Pugna Espaciotemporal',
+  'A2a': 'Luz Triunfal',
+  'A2b': 'Festival Brillante',
+  'A3':  'Guardianes Celestiales',
+  'A3a': 'Crisis Dimensional',
+  'A3b': 'Arboleda de Eevee',
+  'A4':  'Saber Marino y Celeste',
+  'A4a': 'Manantial Oculto',
+  'A4b': 'Sobre Deluxe ex',
+  'B1':  'Megaascenso',
+  'B1a': 'Fuego Carmesí',
+  'B2':  'Desfile de Ensueño',
+  'B2a': 'Encantos de Paldea',
+  'B2b': 'Megavariocolor',
+  'B3':  'Aura Pulsante',
+  'B3a': 'Impulso Paradójico',
+  'B3b': 'Maravillas Cotidianas',
+  'B4':  'Dominador de los Cielos',
+  'Promo-A': 'Promo-A',
+  'Promo-B': 'Promo-B'
 };
 
 const TCGDEX_RARITY_MAP = {
@@ -5614,7 +5632,7 @@ async function updateTcgDataFromApi(status) {
   let addedExp = 0;
   const setIdToLocalName = {};
   sets.forEach((s, i) => {
-    const localName = TCGDEX_SET_NAME_ES[s.name] || s.name;
+    const localName = TCGDEX_SET_NAME_ES[s.id] || TCGDEX_SET_NAME_ES[s.name] || s.name;
     setIdToLocalName[s.id] = localName;
     if (!EXPANSIONES_SUGERIDAS.tcg.some(e => e.name.toLowerCase() === localName.toLowerCase())) {
       EXPANSIONES_SUGERIDAS.tcg.push({ name: localName, color: palette[i % palette.length] });
@@ -6331,7 +6349,7 @@ async function trueqeBuildCardIndex() {
   for (const s of sets) {
     try {
       const cards = await fetchTcgPocketSetCards(s.id);
-      const setNameEs = TCGDEX_SET_NAME_ES[s.name] || s.name;
+      const setNameEs = TCGDEX_SET_NAME_ES[s.id] || TCGDEX_SET_NAME_ES[s.name] || s.name;
       cards.forEach(card => {
         if (!card || !card.name || !card.image) return;
         if (card.category && card.category !== 'Pokemon') return;
