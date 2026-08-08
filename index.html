@@ -5393,7 +5393,7 @@ async function buildTrainerPool(tcgKey) {
           if (slugToName[slug]) return; // es una carta Pokémon, no de Entrenador
           pool.push({
             name: card.name,
-            image: card.image ? `${card.image}/low.webp` : '',
+            image: card.imageUrl || '',
             expansion: setNameEs,
             rarity: (card.rarity || '').toLowerCase()
           });
@@ -6131,7 +6131,13 @@ document.querySelectorAll('.modal-overlay').forEach(overlay => {
 // Fuentes usadas (todas gratuitas, sin API key, pensadas para uso desde el navegador):
 //  • PokeAPI (https://pokeapi.co) → listado completo y actualizado de especies,
 //                                    para las 4 secciones (Champions/GO/TCG/TCG Live).
-//  • TCGdex  (https://tcgdex.dev) → expansiones y cartas oficiales de TCG Pocket.
+//  • TCGdex  (https://tcgdex.dev) → expansiones y cartas oficiales de TCG Pocket
+//                                    (fuente principal).
+//  • pokemon-tcg-pocket-database (github.com/flibustier/pokemon-tcg-pocket-database,
+//    servida vía jsDelivr) → respaldo automático SOLO para expansiones de TCG
+//    Pocket que TCGdex todavía no cargó (suele ir más al día). Si en el futuro
+//    ninguna de las dos tiene una expansión nueva, no hace falta tocar código:
+//    en cuanto cualquiera de las dos la sume, la app la trae sola.
 // Solo se completan campos que estén VACÍOS: lo que ya cargaste a mano nunca se pisa.
 
 function formatPokemonNameFromApi(rawName) {
@@ -6217,10 +6223,45 @@ function normalizeCardPokemonName(name) {
   return String(name || '').replace(/\s+ex$/i, '').trim();
 }
 
+// ── Fuente de respaldo: pokemon-tcg-pocket-database (flibustier, vía jsDelivr) ─
+// Se usa SOLO cuando TCGdex no tiene una expansión (p.ej. recién salida) o
+// cuando falla la consulta principal. jsDelivr es un CDN público sin límite de
+// pedidos por IP y con CORS habilitado, ideal para consumirlo desde el navegador.
+const FLIB_SETS_URL = 'https://cdn.jsdelivr.net/npm/pokemon-tcg-pocket-database/dist/sets.json';
+const FLIB_CARDS_URL = setId => `https://cdn.jsdelivr.net/npm/pokemon-tcg-pocket-database/dist/cards/${setId}.json`;
+const FLIB_IMAGE_URL = (setId, number) => `https://cdn.jsdelivr.net/npm/pokemon-tcg-pocket-database/dist/cards-by-set/${setId}/${number}.webp`;
+
+// Los códigos de set de esta fuente (A1, A1a, B3b...) ya coinciden con la
+// convención que usa TCGdex, salvo las promos ("PROMO-A" → "Promo-A").
+function normalizeFlibSetId(code) {
+  const m = /^PROMO-([AB])$/i.exec(code || '');
+  return m ? `Promo-${m[1].toUpperCase()}` : code;
+}
+
+async function fetchFlibustierSets() {
+  const data = await fetchJson(FLIB_SETS_URL);
+  const todas = [...(Array.isArray(data.A) ? data.A : []), ...(Array.isArray(data.B) ? data.B : [])];
+  return todas
+    .filter(s => s && s.code && s.name && s.name.en)
+    .map(s => ({ id: normalizeFlibSetId(s.code), name: s.name.en }));
+}
+
 async function fetchTcgPocketSetsFromApi() {
-  const data = await fetchJson('https://api.tcgdex.net/v2/en/series/tcgp');
-  const sets = Array.isArray(data.sets) ? data.sets : [];
-  return sets.filter(s => s && s.id && s.name);
+  // Fuente principal: TCGdex.
+  let sets = [];
+  try {
+    const data = await fetchJson('https://api.tcgdex.net/v2/en/series/tcgp');
+    sets = Array.isArray(data.sets) ? data.sets.filter(s => s && s.id && s.name) : [];
+  } catch (e) { /* seguimos, la fuente de respaldo puede alcanzar igual */ }
+
+  // Fuente de respaldo: se agregan solo las expansiones que TCGdex no tenga.
+  try {
+    const flib = await fetchFlibustierSets();
+    const vistos = new Set(sets.map(s => s.id));
+    flib.forEach(s => { if (!vistos.has(s.id)) { sets.push(s); vistos.add(s.id); } });
+  } catch (e) { /* si también falla la de respaldo, seguimos con lo que haya de TCGdex */ }
+
+  return sets;
 }
 
 // Pequeña espera entre reintentos (algunos fallos son solo un hipo momentáneo
@@ -6228,40 +6269,70 @@ async function fetchTcgPocketSetsFromApi() {
 function esperar(ms) { return new Promise(r => setTimeout(r, ms)); }
 
 async function fetchTcgPocketSetCards(setId) {
-  // Primer intento: el detalle del set trae sus cartas embebidas. Si falla,
-  // reintenta una vez más antes de rendirse.
+  // 1) Fuente principal: TCGdex. El detalle del set trae sus cartas
+  // embebidas; si falla, reintenta una vez más antes de rendirse.
   let cards = [];
   let setInfo = null;
-  for (let intento = 0; intento < 2; intento++) {
-    try {
-      setInfo = await fetchJson(`https://api.tcgdex.net/v2/en/sets/${setId}`);
-      cards = Array.isArray(setInfo.cards) ? setInfo.cards : [];
-      break;
-    } catch (e) {
-      if (intento === 0) await esperar(500); else throw e;
-    }
-  }
-
-  // Si el resultado viene más corto de lo esperado (o vacío), probamos una
-  // vía alternativa: pedir las cartas filtrando directamente por expansión,
-  // en vez de depender de que vengan embebidas en el detalle del set. Sirve
-  // como respaldo cuando la primera consulta devuelve datos incompletos.
   try {
-    const esperadas = setInfo && setInfo.cardCount && (setInfo.cardCount.total || setInfo.cardCount.official);
-    if (esperadas && cards.length < esperadas) {
-      const alt = await fetchJson(`https://api.tcgdex.net/v2/en/cards?set.id=${setId}`);
-      if (Array.isArray(alt) && alt.length > cards.length) {
-        const vistos = new Set(cards.map(c => c.id));
-        alt.forEach(c => { if (c && c.id && !vistos.has(c.id)) { cards.push(c); vistos.add(c.id); } });
+    for (let intento = 0; intento < 2; intento++) {
+      try {
+        setInfo = await fetchJson(`https://api.tcgdex.net/v2/en/sets/${setId}`);
+        cards = Array.isArray(setInfo.cards) ? setInfo.cards : [];
+        break;
+      } catch (e) {
+        if (intento === 0) await esperar(500); else throw e;
       }
     }
-  } catch (e) { /* si la vía alternativa también falla, seguimos con lo que ya tenemos */ }
 
-  return cards;
+    // Si el resultado viene más corto de lo esperado (o vacío), probamos una
+    // vía alternativa: pedir las cartas filtrando directamente por expansión,
+    // en vez de depender de que vengan embebidas en el detalle del set.
+    try {
+      const esperadas = setInfo && setInfo.cardCount && (setInfo.cardCount.total || setInfo.cardCount.official);
+      if (esperadas && cards.length < esperadas) {
+        const alt = await fetchJson(`https://api.tcgdex.net/v2/en/cards?set.id=${setId}`);
+        if (Array.isArray(alt) && alt.length > cards.length) {
+          const vistos = new Set(cards.map(c => c.id));
+          alt.forEach(c => { if (c && c.id && !vistos.has(c.id)) { cards.push(c); vistos.add(c.id); } });
+        }
+      }
+    } catch (e) { /* la vía alternativa de TCGdex también falló, seguimos con lo que haya */ }
+  } catch (e) {
+    cards = []; // TCGdex no tiene este set (p.ej. expansión recién salida)
+  }
+
+  if (cards.length > 0) {
+    // Formato normalizado: da igual de qué fuente venga cada carta, el resto
+    // de la app siempre recibe los mismos campos.
+    return cards.map(c => ({
+      localId: c.localId || c.id,
+      name: c.name,
+      category: c.category,
+      rarity: c.rarity,
+      imageUrl: c.image ? `${c.image}/high.webp` : ''
+    }));
+  }
+
+  // 2) Fuente de respaldo: pokemon-tcg-pocket-database (flibustier), para
+  // expansiones que TCGdex todavía no cargó.
+  try {
+    const flib = await fetchJson(FLIB_CARDS_URL(setId));
+    if (Array.isArray(flib) && flib.length) {
+      return flib.map(c => ({
+        localId: c.number,
+        name: c.name,
+        category: c.image && c.image.startsWith('cTR_') ? 'Trainer' : 'Pokemon',
+        rarity: c.rarity,
+        imageUrl: c.number ? FLIB_IMAGE_URL(setId, c.number) : ''
+      }));
+    }
+  } catch (e) { /* tampoco está en la fuente de respaldo: no hay cartas para este set aún */ }
+
+  return [];
 }
 
 async function updateTcgDataFromApi(status) {
-  status.textContent = 'Consultando expansiones de TCG Pocket (TCGdex)...';
+  status.textContent = 'Consultando expansiones de TCG Pocket (TCGdex + respaldo)...';
   const sets = await fetchTcgPocketSetsFromApi();
 
   // Expansiones: se agregan las que falten, usando el nombre en español cuando
@@ -6297,7 +6368,7 @@ async function updateTcgDataFromApi(status) {
 
         if (!dataTCG[pokemonName]) dataTCG[pokemonName] = EMPTY_TCG();
         const cartas = dataTCG[pokemonName].cartas;
-        const apiId = `${s.id}-${card.localId || card.id}`;
+        const apiId = `${s.id}-${card.localId}`;
         if (cartas.some(c => c.apiId === apiId)) return; // ya se había importado antes
 
         const expName = setIdToLocalName[s.id];
@@ -6307,7 +6378,7 @@ async function updateTcgDataFromApi(status) {
           rareza: mapTcgdexRarity(card.rarity),
           expansion: expName,
           color: expInfo ? expInfo.color : '#888888',
-          imagen: card.image ? `${card.image}/high.webp` : ''
+          imagen: card.imageUrl || ''
         });
         addedCards++;
       });
@@ -6990,14 +7061,14 @@ async function trueqeBuildCardIndex() {
       const cards = await fetchTcgPocketSetCards(s.id);
       const setNameEs = TCGDEX_SET_NAME_ES[s.id] || TCGDEX_SET_NAME_ES[s.name] || s.name;
       cards.forEach(card => {
-        if (!card || !card.name || !card.image) return;
+        if (!card || !card.name || !card.imageUrl) return;
         if (card.category && card.category !== 'Pokemon') return;
         index.push({
           name: card.name,
-          image: `${card.image}/low.webp`,
+          image: card.imageUrl,
           setName: setNameEs,
           setLogo: s.logo ? `${s.logo}.png` : '',
-          localId: card.localId || card.id || ''
+          localId: card.localId || ''
         });
       });
     } catch (e) {
