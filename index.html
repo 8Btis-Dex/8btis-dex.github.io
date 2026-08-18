@@ -1522,19 +1522,19 @@
     margin: 12px auto 0;
     padding: 14px 20px;
     border-radius: 12px;
-    background: var(--purple);
+    background: #6E4895;
     color: var(--white);
     text-decoration: none;
     font-family: 'Nunito', sans-serif;
     font-weight: 800;
     font-size: 0.95rem;
-    box-shadow: 0 4px 14px rgba(155, 89, 182, 0.35);
+    box-shadow: 0 4px 14px rgba(110, 72, 149, 0.35);
     transition: transform 0.15s ease, box-shadow 0.15s ease;
     cursor: pointer;
   }
   .whatsapp-support-btn:hover {
     transform: translateY(-2px);
-    box-shadow: 0 6px 18px rgba(155, 89, 182, 0.5);
+    box-shadow: 0 6px 18px rgba(110, 72, 149, 0.5);
   }
   .whatsapp-logo-img { height: 26px; width: auto; display: block; }
   .mode-card {
@@ -2475,7 +2475,6 @@
     <!-- ===== CHAMPIONS ===== -->
     <div class="mode-section active" id="mode-section-champions">
       <div class="translate-moves-toolbar">
-        <button class="btn btn-primary" onclick="translateExistingChampionsMoves()">🌐 Traducir campos existentes</button>
         <button class="btn btn-primary" onclick="championsSugerirVacios()">🪄 Sugerir para los vacíos</button>
         <span id="champions-sugerir-status" style="font-size:0.78rem;color:var(--muted);align-self:center"></span>
       </div>
@@ -2502,9 +2501,6 @@
 
     <!-- ===== POKÉMON GO ===== -->
     <div class="mode-section" id="mode-section-go">
-      <div class="translate-moves-toolbar">
-        <button class="btn btn-primary" onclick="translateExistingGoMoves()">🌐 Traducir movimientos existentes</button>
-      </div>
       <div class="pokemon-table-wrap">
         <table id="pokemon-table-go">
           <thead>
@@ -4311,46 +4307,6 @@ function bindNatureItemTranslationBlur(tbody) {
       if (input.classList.contains('item-input')) updateItemTooltip(input);
     });
   });
-}
-
-function translateExistingChampionsMoves() {
-  let count = 0, tipos = 0, otros = 0;
-  Object.keys(dataChampions).forEach(name => {
-    const d = dataChampions[name];
-    [['ataque1','tipo1'], ['ataque2','tipo2'], ['ataque3','tipo3'], ['ataque4','tipo4']].forEach(([f, tf]) => {
-      const t = translateMoveIfEnglish(d[f]);
-      if (t) { d[f] = t; count++; }
-      if (!d[tf]) {
-        const knownType = getKnownMoveType(d[f]);
-        if (knownType) { d[tf] = knownType; tipos++; }
-      }
-    });
-    const tn = translateNatureIfEnglish(d.naturaleza);
-    if (tn) { d.naturaleza = tn; otros++; }
-    const ti = translateItemIfEnglish(d.objeto);
-    if (ti) { d.objeto = ti; otros++; }
-  });
-  persistAll();
-  renderTableChampions();
-  showToast(`✅ ${count} ataque(s), ${otros} naturaleza/objeto traducido(s), ${tipos} tipo(s) completado(s)`);
-}
-
-function translateExistingGoMoves() {
-  let count = 0, tipos = 0;
-  Object.keys(dataGO).forEach(name => {
-    const d = dataGO[name];
-    [['movRapido','tipoRapido'], ['movCargado','tipoCargado']].forEach(([f, tf]) => {
-      const t = translateMoveIfEnglish(d[f]);
-      if (t) { d[f] = t; count++; }
-      if (!d[tf]) {
-        const knownType = getKnownMoveType(d[f]);
-        if (knownType) { d[tf] = knownType; tipos++; }
-      }
-    });
-  });
-  persistAll();
-  renderTableGO();
-  showToast(`✅ ${count} movimiento(s) traducido(s), ${tipos} tipo(s) completado(s)`);
 }
 
 function loadFromStorage() {
