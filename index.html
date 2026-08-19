@@ -6231,27 +6231,48 @@ function renamePokemonEntry(oldName, newNameRaw) {
 
   const mode = currentDatosMode; // 'champions' | 'go' | 'tcg' | 'tcglive'
   const list = POKEMON_LISTS[mode];
-  const dataByMode = { champions: dataChampions, go: dataGO, tcg: dataTCG, tcglive: dataTCGLive };
-  const emptyByMode = { champions: EMPTY_CHAMPIONS, go: EMPTY_GO, tcg: EMPTY_TCG, tcglive: EMPTY_TCGLIVE };
+
+  // GO es un caso especial: un mismo nombre puede existir en varias ligas a
+  // la vez (cada una con su propio sub-objeto), así que la validación de
+  // "ya existe" y el renombrado tienen que operar solo sobre la liga que se
+  // está editando, sin pisar los datos que ese nombre tenga en otras ligas.
+  if (mode === 'go') {
+    const liga = datosGoLigaFiltro;
+    const arr = LEAGUE_TOP_NAMES[liga] || [];
+    if (arr.includes(newName)) { showToast('⚠️ Ya existe un Pokémon con ese nombre en esta liga', true); renderCurrentTable(); return; }
+
+    if (!dataGO[newName]) dataGO[newName] = {};
+    dataGO[newName][liga] = (dataGO[oldName] && dataGO[oldName][liga]) || EMPTY_GO_ENTRY();
+    if (dataGO[oldName]) delete dataGO[oldName][liga];
+    const oldSigueEnAlgunaLiga = LIGA_LIST.some(l => dataGO[oldName] && dataGO[oldName][l]);
+    if (!oldSigueEnAlgunaLiga) delete dataGO[oldName];
+
+    const idxLiga = arr.indexOf(oldName);
+    if (idxLiga > -1) arr[idxLiga] = newName;
+    localStorage.setItem('leagueTopNames', JSON.stringify(LEAGUE_TOP_NAMES));
+
+    if (!list.includes(newName)) list.push(newName);
+    const oldSigueEnLaUnion = LIGA_LIST.some(l => (LEAGUE_TOP_NAMES[l] || []).includes(oldName));
+    if (!oldSigueEnLaUnion) {
+      const idxOld = list.indexOf(oldName);
+      if (idxOld > -1) list.splice(idxOld, 1);
+    }
+    list.sort((a, b) => a.localeCompare(b, 'es', { sensitivity: 'base' }));
+
+    persistAll();
+    renderCurrentTable();
+    showToast(`✅ Renombrado a ${newName}`);
+    return;
+  }
+
+  const dataByMode = { champions: dataChampions, tcg: dataTCG, tcglive: dataTCGLive };
+  const emptyByMode = { champions: EMPTY_CHAMPIONS, tcg: EMPTY_TCG, tcglive: EMPTY_TCGLIVE };
   const data = dataByMode[mode];
 
   if (list.includes(newName)) { showToast('⚠️ Ya existe un Pokémon con ese nombre en este modo', true); renderCurrentTable(); return; }
 
   data[newName] = data[oldName] || emptyByMode[mode]();
   delete data[oldName];
-
-  // En GO, el ranking por liga (LEAGUE_TOP_NAMES) también referencia el
-  // nombre viejo: si no se actualiza, el Pokémon renombrado desaparece de
-  // la tabla filtrada por liga aunque sus datos sigan existiendo.
-  if (mode === 'go') {
-    let cambioRanking = false;
-    LIGA_LIST.forEach(liga => {
-      const arr = LEAGUE_TOP_NAMES[liga] || [];
-      const idxLiga = arr.indexOf(oldName);
-      if (idxLiga > -1) { arr[idxLiga] = newName; cambioRanking = true; }
-    });
-    if (cambioRanking) localStorage.setItem('leagueTopNames', JSON.stringify(LEAGUE_TOP_NAMES));
-  }
 
   // Los mazos referencian Pokémon de su propio juego (TCG Pocket o TCG Live)
   if (mode === 'tcg') {
