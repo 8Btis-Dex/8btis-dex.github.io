@@ -2483,6 +2483,9 @@
         <button class="btn" style="background:var(--purple);color:#fff" onclick="openExpansionesModal()">🏷️ Expansiones</button>
         <button class="btn btn-primary" onclick="saveAllData()">💾 Guardar cambios</button>
         <button class="btn" style="background:#0ea5e9;color:#fff" onclick="sincronizarDesdeNube()" title="Trae los datos guardados en la nube, sin depender de la sincronización automática">☁️ Sincronizar</button>
+        <button class="btn" style="background:#22c55e;color:#fff" onclick="exportGameJSON()" title="Descarga un .json solo con los datos del juego que estás viendo">💾 Exportar JSON (este juego)</button>
+        <input type="file" id="import-game-json-input" accept="application/json,.json" style="display:none" onchange="importGameJSONFile(event)">
+        <button class="btn" style="background:#a855f7;color:#fff" onclick="document.getElementById('import-game-json-input').click()" title="Importa un .json de este mismo juego, guardado localmente en este dispositivo">📥 Importar JSON (este juego)</button>
         <button class="btn btn-danger" onclick="lockDatos()">🔒 Bloquear</button>
       </div>
     </div>
@@ -5048,13 +5051,10 @@ setTimeout(() => {
   if (window.__loadFromStorageDone) {
     const alt = (typeof dataGO !== 'undefined' && dataGO['Altaria']) ? JSON.stringify(dataGO['Altaria']) : '(Altaria no está en dataGO)';
     console.log('[DEBUG-GO] Carga terminó bien. Pokémon en dataGO:', Object.keys(dataGO || {}).length, '— Altaria =', alt);
-    if (!window.location.search.includes('nodiag')) {
-      alert('✅ CARGA OK. dataGO tiene ' + Object.keys(dataGO || {}).length + ' Pokémon.\n\nAltaria =\n' + alt);
-    }
   } else if (window.__loadFromStorageError) {
-    alert('❌ La carga se rompió con este error:\n\n' + window.__loadFromStorageError);
+    console.log('[DEBUG-GO] La carga se rompió con este error:', window.__loadFromStorageError);
   } else {
-    alert('❌ La carga NUNCA TERMINÓ (se quedó colgada, sin error).');
+    console.log('[DEBUG-GO] La carga nunca terminó (se quedó colgada, sin error).');
   }
 }, 2500);
 
@@ -6591,6 +6591,75 @@ async function saveAllData() {
 }
 
 // ── EXPORTAR / IMPORTAR (backup completo) ───────────────────────────────
+// ── EXPORTAR / IMPORTAR POR JUEGO (respaldo local, un .json por juego) ──────
+// Mientras la sincronización automática con la nube no anda bien en ciertas
+// redes/dispositivos, esto permite guardar y compartir los datos de UN SOLO
+// juego (el que se esté viendo en Datos) como archivo .json independiente,
+// sin depender de Firestore para nada: se descarga y se importa a mano.
+const GAME_DATA_REFS = {
+  champions: () => ({ data: dataChampions, empty: EMPTY_CHAMPIONS }),
+  go: () => ({ data: dataGO, empty: EMPTY_GO }),
+  tcg: () => ({ data: dataTCG, empty: EMPTY_TCG }),
+  tcglive: () => ({ data: dataTCGLive, empty: EMPTY_TCGLIVE })
+};
+const GAME_LABELS = { champions: 'Champions', go: 'GO', tcg: 'TCG Pocket', tcglive: 'TCG Live' };
+
+function exportGameJSON() {
+  const mode = currentDatosMode;
+  if (!GAME_DATA_REFS[mode]) { showToast('⚠️ Elegí primero Champions, GO, TCG o TCG Live', true); return; }
+  const { data } = GAME_DATA_REFS[mode]();
+  const payload = { juego: mode, version: 1, fecha: new Date().toISOString(), list: POKEMON_LISTS[mode], data };
+  const txt = JSON.stringify(payload, null, 2);
+  const a = document.createElement('a');
+  a.href = 'data:application/json;charset=utf-8,' + encodeURIComponent(txt);
+  a.download = 'pokemon_' + mode + '_backup.json';
+  a.click();
+  showToast('⬇️ Descargando datos de ' + (GAME_LABELS[mode] || mode) + '...');
+}
+
+function importGameJSONFile(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      applyGameJSON(JSON.parse(e.target.result));
+    } catch (err) {
+      console.error('Error al importar JSON de juego', err);
+      showToast('❌ Archivo inválido', true);
+    }
+  };
+  reader.onerror = function() { showToast('❌ No se pudo leer el archivo', true); };
+  reader.readAsText(file);
+  event.target.value = '';
+}
+
+function applyGameJSON(parsed) {
+  if (!parsed || !parsed.juego || !GAME_DATA_REFS[parsed.juego]) {
+    showToast('❌ El archivo no tiene un formato válido de respaldo por juego', true);
+    return;
+  }
+  const juego = parsed.juego;
+  const listaImportada = Array.isArray(parsed.list) ? parsed.list : [];
+  const dataImportada = parsed.data && typeof parsed.data === 'object' ? parsed.data : {};
+  const { data: dataDestino, empty } = GAME_DATA_REFS[juego]();
+
+  POKEMON_LISTS[juego] = [...new Set([...POKEMON_LISTS[juego], ...listaImportada])];
+  Object.keys(dataImportada).forEach(nombre => {
+    dataDestino[nombre] = { ...empty(), ...dataDestino[nombre], ...dataImportada[nombre] };
+    if (!POKEMON_LISTS[juego].includes(nombre)) POKEMON_LISTS[juego].push(nombre);
+  });
+  POKEMON_LISTS[juego].sort((a, b) => a.localeCompare(b, 'es', { sensitivity: 'base' }));
+
+  // Solo se guarda LOCAL (no se empuja a Firestore): esto es justamente para
+  // poder seguir trabajando por afuera de la nube mientras esa sincronización
+  // no ande bien. Si más adelante se soluciona, "Guardar cambios" sí subirá
+  // este contenido a la nube normalmente.
+  persistLocalOnly();
+  if (currentDatosMode === juego) renderCurrentTable();
+  showToast('✅ Datos de ' + (GAME_LABELS[juego] || juego) + ' importados (guardado solo en este dispositivo)');
+}
+
 function exportData() {
   saveAllData();
   const exportObj = {
