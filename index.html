@@ -2985,12 +2985,12 @@ function readStorageObj(key) {
     return raw ? JSON.parse(raw) : {};
   } catch(e) { return {}; }
 }
-function getChampionsData(name) { return readStorageObj('pokemonData')[name] || {}; }
-function getGOData(name)        { return readStorageObj('pokemonDataGO')[name] || {}; }
-function getTCGData(name)       { return readStorageObj('pokemonDataTCG')[name] || {}; }
-function getAllTCGData()        { return readStorageObj('pokemonDataTCG'); }
-function getTCGLiveData(name)   { return readStorageObj('pokemonDataTCGLive')[name] || {}; }
-function getAllTCGLiveData()    { return readStorageObj('pokemonDataTCGLive'); }
+function getChampionsData(name) { return (typeof dataChampions !== 'undefined' && dataChampions[name]) || readStorageObj('pokemonData')[name] || {}; }
+function getGOData(name)        { return (typeof dataGO !== 'undefined' && dataGO[name]) || readStorageObj('pokemonDataGO')[name] || {}; }
+function getTCGData(name)       { return (typeof dataTCG !== 'undefined' && dataTCG[name]) || readStorageObj('pokemonDataTCG')[name] || {}; }
+function getAllTCGData()        { return (typeof dataTCG !== 'undefined' && dataTCG) || readStorageObj('pokemonDataTCG'); }
+function getTCGLiveData(name)   { return (typeof dataTCGLive !== 'undefined' && dataTCGLive[name]) || readStorageObj('pokemonDataTCGLive')[name] || {}; }
+function getAllTCGLiveData()    { return (typeof dataTCGLive !== 'undefined' && dataTCGLive) || readStorageObj('pokemonDataTCGLive'); }
 function getMazosData() {
   try {
     const raw = localStorage.getItem('pokemonDataMazos');
