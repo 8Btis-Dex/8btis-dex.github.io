@@ -5225,7 +5225,10 @@ function applyExpansionesDoc(doc) {
 let pendingLocalWrites = 0;
 
 function pushToFirestore() {
-  if (!window._fbDb) return Promise.resolve({ ok: true, skipped: true });
+  if (!window._fbDb) {
+    debugGoLog('FIRESTORE: pushToFirestore() llamado pero window._fbDb NO EXISTE (Firebase nunca se conectó) — el guardado queda SOLO local.');
+    return Promise.resolve({ ok: false, failedIds: ['(sin conexión a Firebase)'], errors: [] });
+  }
   const col = window._fbDb.collection('appdata');
   // Cada campo se guarda como texto (JSON.stringify) en vez de objeto/mapa
   // nativo de Firestore, para evitar el límite de "demasiadas entradas de
@@ -5238,6 +5241,15 @@ function pushToFirestore() {
     ['mazos', { mazos: JSON.stringify(dataMazos), mazosLive: JSON.stringify(dataMazosLive) }],
     ['expansiones', { expansiones: JSON.stringify(EXPANSIONES_SUGERIDAS.tcg), expansionesLive: JSON.stringify(EXPANSIONES_SUGERIDAS.tcglive) }]
   ];
+  // Firestore rechaza cualquier documento que supere ~1 MiB en total. Se
+  // mide el tamaño real de cada uno ANTES de mandarlo, para detectar esto
+  // con un mensaje claro en vez de dejar que falle en silencio.
+  const LIMITE_FIRESTORE_BYTES = 1048576; // 1 MiB
+  writes.forEach(([id, payload]) => {
+    const bytes = new Blob([JSON.stringify(payload)]).size;
+    const pct = Math.round((bytes / LIMITE_FIRESTORE_BYTES) * 100);
+    debugGoLog('FIRESTORE: tamaño del documento "' + id + '" = ' + (bytes / 1024).toFixed(1) + ' KB (' + pct + '% del límite de 1 MB de Firestore)');
+  });
   pendingLocalWrites++;
   return Promise.all(writes.map(([id, payload]) =>
     col.doc(id).set(payload).catch(err => ({ id, err }))
@@ -5255,6 +5267,7 @@ function pushToFirestore() {
       // nube. Ahora esta función solo INFORMA el fallo (no muestra toast);
       // quien la llama decide un único mensaje final.
       console.error('Firestore write failed en:', failed.map(f => f.id).join(', '), failed.map(f => ({ id: f.id, code: f.err && f.err.code, message: f.err && f.err.message })));
+      debugGoLog('FIRESTORE: ❌ falló el guardado en: ' + failed.map(f => f.id + ' (' + (f.err && f.err.code) + ': ' + (f.err && f.err.message) + ')').join(', '));
       return { ok: false, failedIds: failed.map(f => f.id), errors: failed.map(f => f.err) };
     }
     return { ok: true };
