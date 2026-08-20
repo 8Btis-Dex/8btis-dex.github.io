@@ -5052,11 +5052,23 @@ function loadFromStorage() {
     migrarNombresExpansionesTcg();
     podarDatosHuerfanos();
     debugGoLog('CARGA: loadFromStorage terminó SIN errores.');
+    window.__loadFromStorageDone = true;
   } catch(e) {
-    debugGoLog('CARGA: ❌❌❌ loadFromStorage ROMPIÓ A MITAD DE CAMINO: ' + (e && e.stack ? e.stack : e));
+    window.__loadFromStorageError = (e && e.stack) ? e.stack : String(e);
+    debugGoLog('CARGA: ❌❌❌ loadFromStorage ROMPIÓ A MITAD DE CAMINO: ' + window.__loadFromStorageError);
   }
 }
 loadFromStorage();
+setTimeout(() => {
+  if (window.__loadFromStorageDone) {
+    const alt = (dataGO && dataGO['Altaria']) ? JSON.stringify(dataGO['Altaria']) : '(Altaria no existe en dataGO)';
+    alert('✅ DIAGNÓSTICO: loadFromStorage TERMINÓ BIEN.\n\ndataGO tiene ' + Object.keys(dataGO || {}).length + ' Pokémon cargados.\n\nAltaria (Liga Super incluida si la tiene) =\n' + alt);
+  } else if (window.__loadFromStorageError) {
+    alert('❌ DIAGNÓSTICO: loadFromStorage ROMPIÓ con este error:\n\n' + window.__loadFromStorageError);
+  } else {
+    alert('❌ DIAGNÓSTICO: loadFromStorage NUNCA TERMINÓ (se quedó colgada, sin error). Pasale este mensaje a Claude tal cual.');
+  }
+}, 2000);
 
 function persistLocalOnly() {
   localStorage.setItem('pokemonList_champions', JSON.stringify(POKEMON_LISTS.champions));
