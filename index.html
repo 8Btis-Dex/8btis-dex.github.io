@@ -4888,6 +4888,7 @@ function bindNatureItemTranslationBlur(tbody) {
 }
 
 function loadFromStorage() {
+  debugGoLog('CARGA: entrando a loadFromStorage()');
   try {
     // Lista vieja compartida (solo para migración de instalaciones previas)
     let legacyList = null;
@@ -4919,6 +4920,7 @@ function loadFromStorage() {
       });
     }
 
+    debugGoLog('CARGA: checkpoint — Champions procesado OK, por entrar a la sección GO.');
     // ── Pokémon GO ──
     const savedListGO = localStorage.getItem('pokemonList_go');
     if (savedListGO) {
@@ -5036,7 +5038,10 @@ function loadFromStorage() {
     // guardados de versiones viejas (mal traducidos o incompletos).
     migrarNombresExpansionesTcg();
     podarDatosHuerfanos();
-  } catch(e) {}
+    debugGoLog('CARGA: loadFromStorage terminó SIN errores.');
+  } catch(e) {
+    debugGoLog('CARGA: ❌❌❌ loadFromStorage ROMPIÓ A MITAD DE CAMINO: ' + (e && e.stack ? e.stack : e));
+  }
 }
 loadFromStorage();
 
