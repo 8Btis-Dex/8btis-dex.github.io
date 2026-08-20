@@ -5043,6 +5043,19 @@ function loadFromStorage() {
   }
 }
 loadFromStorage();
+setTimeout(() => {
+  if (window.__loadFromStorageDone) {
+    const alt = (typeof dataGO !== 'undefined' && dataGO['Altaria']) ? JSON.stringify(dataGO['Altaria']) : '(Altaria no está en dataGO)';
+    console.log('[DEBUG-GO] Carga terminó bien. Pokémon en dataGO:', Object.keys(dataGO || {}).length, '— Altaria =', alt);
+    if (!window.location.search.includes('nodiag')) {
+      alert('✅ CARGA OK. dataGO tiene ' + Object.keys(dataGO || {}).length + ' Pokémon.\n\nAltaria =\n' + alt);
+    }
+  } else if (window.__loadFromStorageError) {
+    alert('❌ La carga se rompió con este error:\n\n' + window.__loadFromStorageError);
+  } else {
+    alert('❌ La carga NUNCA TERMINÓ (se quedó colgada, sin error).');
+  }
+}, 2500);
 
 function persistLocalOnly() {
   localStorage.setItem('pokemonList_champions', JSON.stringify(POKEMON_LISTS.champions));
