@@ -4358,7 +4358,10 @@ async function goSugerirUno(name) {
     }
     const entry = getGoLeagueEntry(name, ligaElegida);
     Object.assign(entry, updates);
+    console.log('[DEBUG-GO] entry tras sugerir', name, ligaElegida, JSON.stringify(entry));
     const result = await persistAll();
+    console.log('[DEBUG-GO] dataGO[name] tras persistAll', name, JSON.stringify(dataGO[name]));
+    console.log('[DEBUG-GO] localStorage.pokemonDataGO tras persistAll', name, JSON.stringify((JSON.parse(localStorage.getItem('pokemonDataGO') || '{}'))[name]));
     renderTableGO();
     if (result && result.ok === false) {
       showToast('🪄 Sugerencia aplicada a ' + name + ', pero no se pudo sincronizar con la nube (queda solo en este dispositivo). Ver consola (F12).', true);
@@ -4869,6 +4872,7 @@ function loadFromStorage() {
       POKEMON_LISTS.go = [...legacyList];
     }
     const savedGO = localStorage.getItem('pokemonDataGO');
+    console.log('[DEBUG-GO] loadFromStorage arrancando. pokemonList_go tiene', POKEMON_LISTS.go.length, 'nombres. pokemonDataGO crudo (primeros 2000 chars):', savedGO ? savedGO.slice(0, 2000) : '(vacío)');
     dataGO = {};
     POKEMON_LISTS.go.forEach(p => { dataGO[p] = EMPTY_GO(); });
     if (savedGO) {
@@ -4878,6 +4882,7 @@ function loadFromStorage() {
         dataGO[k] = { ...dataGO[k], ...parsed[k] };
       });
     }
+    console.log('[DEBUG-GO] loadFromStorage terminó. dataGO reconstruido (completo):', JSON.stringify(dataGO));
 
     // ── TCG Pocket ──
     const savedListTCG = localStorage.getItem('pokemonList_tcg');
@@ -5041,7 +5046,10 @@ function applyGameDoc(game, doc) {
     if (data) dataChampions = data;
   } else if (game === 'go') {
     if (Array.isArray(list)) POKEMON_LISTS.go = list;
-    if (data) dataGO = data;
+    if (data) {
+      console.log('[DEBUG-GO] applyGameDoc: llegó un snapshot de Firestore para GO en', new Date().toISOString(), '— reemplaza dataGO por:', JSON.stringify(data));
+      dataGO = data;
+    }
   } else if (game === 'tcg') {
     if (Array.isArray(list)) POKEMON_LISTS.tcg = list;
     if (data) dataTCG = data;
