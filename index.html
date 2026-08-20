@@ -4068,6 +4068,31 @@ function migrarNombresExpansionesTcg() {
 // en Firestore se desincronizaron en algún momento; sin esta limpieza, cosas
 // como "Sugerir para los vacíos" terminaban generando datos para Pokémon que
 // ya no existían en la tabla.
+// Limpieza puntual de datos corruptos detectados: por un bug anterior,
+// algunos nombres inválidos ("Liga Super", "Liga Ultra", "Liga Master",
+// "undefined", vacío) quedaron guardados como si fueran Pokémon. Se sacan
+// de las listas y de los datos de todos los modos.
+function limpiarNombresInvalidosDePokemon() {
+  const invalidos = new Set(['Liga Super', 'Liga Ultra', 'Liga Master', 'undefined', 'null', '']);
+  [
+    [dataChampions, POKEMON_LISTS.champions],
+    [dataGO, POKEMON_LISTS.go],
+    [dataTCG, POKEMON_LISTS.tcg],
+    [dataTCGLive, POKEMON_LISTS.tcglive]
+  ].forEach(([dict, lista]) => {
+    if (!dict || !lista) return;
+    invalidos.forEach(nombre => { delete dict[nombre]; });
+    for (let i = lista.length - 1; i >= 0; i--) { if (invalidos.has(lista[i])) lista.splice(i, 1); }
+  });
+  LIGA_LIST.forEach(liga => {
+    if (LEAGUE_TOP_NAMES[liga]) {
+      for (let i = LEAGUE_TOP_NAMES[liga].length - 1; i >= 0; i--) {
+        if (invalidos.has(LEAGUE_TOP_NAMES[liga][i])) LEAGUE_TOP_NAMES[liga].splice(i, 1);
+      }
+    }
+  });
+}
+
 function podarDatosHuerfanos() {
   const pares = [
     [dataChampions, POKEMON_LISTS.champions],
@@ -5050,6 +5075,7 @@ function loadFromStorage() {
     // Corrige nombres de expansiones de TCG Pocket que hayan quedado
     // guardados de versiones viejas (mal traducidos o incompletos).
     migrarNombresExpansionesTcg();
+    limpiarNombresInvalidosDePokemon();
     podarDatosHuerfanos();
     debugGoLog('CARGA: loadFromStorage terminó SIN errores.');
     window.__loadFromStorageDone = true;
@@ -5059,16 +5085,6 @@ function loadFromStorage() {
   }
 }
 loadFromStorage();
-setTimeout(() => {
-  if (window.__loadFromStorageDone) {
-    const alt = (dataGO && dataGO['Altaria']) ? JSON.stringify(dataGO['Altaria']) : '(Altaria no existe en dataGO)';
-    alert('✅ DIAGNÓSTICO: loadFromStorage TERMINÓ BIEN.\n\ndataGO tiene ' + Object.keys(dataGO || {}).length + ' Pokémon cargados.\n\nAltaria (Liga Super incluida si la tiene) =\n' + alt);
-  } else if (window.__loadFromStorageError) {
-    alert('❌ DIAGNÓSTICO: loadFromStorage ROMPIÓ con este error:\n\n' + window.__loadFromStorageError);
-  } else {
-    alert('❌ DIAGNÓSTICO: loadFromStorage NUNCA TERMINÓ (se quedó colgada, sin error). Pasale este mensaje a Claude tal cual.');
-  }
-}, 2000);
 
 function persistLocalOnly() {
   localStorage.setItem('pokemonList_champions', JSON.stringify(POKEMON_LISTS.champions));
@@ -5216,7 +5232,20 @@ function pushToFirestore() {
   });
 }
 
+// Una vez que el usuario edita algo en esta sesión (pestaña abierta), se
+// deja de reaplicar lo que llegue de Firestore en tiempo real. Motivo: se
+// detectó que un cambio recién guardado y confirmado (sin error) podía
+// desaparecer solo, antes de que el usuario recargara la página — la
+// hipótesis más sólida es una condición de carrera entre el guardado propio
+// y algún eco/snapshot tardío de Firestore que trae una copia más vieja.
+// En vez de perseguir ese timing exacto, se corta de raíz: mientras dure
+// esta sesión (esta pestaña, sin recargar), lo remoto ya no puede pisar una
+// edición local. Al recargar la página de cero, sí se trae lo último de la
+// nube con normalidad.
+let localEditsMadeThisSession = false;
+
 function persistAll() {
+  localEditsMadeThisSession = true;
   persistLocalOnly();
   return pushToFirestore();
 }
@@ -5272,6 +5301,10 @@ function initFirebaseSync() {
     // > 0), se ignoran los snapshots entrantes: total, esos ecos van a
     // reflejar lo que nosotros mismos acabamos de mandar.
     function applyOneDoc(id) {
+      if (localEditsMadeThisSession) {
+        debugGoLog('FIRESTORE: llegó snapshot de "' + id + '" pero se IGNORA (ya hubo ediciones locales en esta sesión)');
+        return;
+      }
       if (pendingLocalWrites > 0) {
         if (id === 'go') debugGoLog('FIRESTORE: llegó snapshot de "go" pero se IGNORA (pendingLocalWrites=' + pendingLocalWrites + ')');
         return;
@@ -5288,6 +5321,7 @@ function initFirebaseSync() {
       }
 
       if (!applied) return;
+      limpiarNombresInvalidosDePokemon();
       podarDatosHuerfanos();
       const huboMigracion = migrarNombresExpansionesTcg();
       persistLocalOnly();
