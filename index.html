@@ -2939,7 +2939,7 @@ function debugGoLog(msg) {
   try {
     const key = '__debugGoLog';
     const arr = JSON.parse(localStorage.getItem(key) || '[]');
-    const hora = new Date().toISOString().slice(11, 19);
+    const hora = new Date().toLocaleTimeString('es-AR', { hour12: false });
     arr.push(hora + ' — ' + msg);
     while (arr.length > 60) arr.shift();
     localStorage.setItem(key, JSON.stringify(arr));
@@ -4091,6 +4091,18 @@ function limpiarNombresInvalidosDePokemon() {
       }
     }
   });
+
+  // Además del nombre del Pokémon, el bug de "Guardar cambios" sin scope
+  // (arreglado aparte) generaba una liga basura "undefined" DENTRO de cada
+  // Pokémon de GO, mezclando campos de Champions con los de GO. Se saca esa
+  // sub-clave de todos los Pokémon existentes.
+  if (dataGO) {
+    Object.keys(dataGO).forEach(nombre => {
+      if (dataGO[nombre] && typeof dataGO[nombre] === 'object' && 'undefined' in dataGO[nombre]) {
+        delete dataGO[nombre]['undefined'];
+      }
+    });
+  }
 }
 
 function podarDatosHuerfanos() {
@@ -6498,16 +6510,32 @@ function filterDatosTable() {
 
 // ── GUARDAR ────────────────────────────────────────────────────────────────
 async function saveAllData() {
-  document.querySelectorAll('.name-cell').forEach(input => {
+  // IMPORTANTE: antes esto buscaba .name-cell y .editable-cell en TODO el
+  // documento, sin importar qué tabla estuviera visible. Como las 4 tablas
+  // (Champions/GO/TCG/TCG Live) quedan armadas en el DOM aunque estén
+  // ocultas (solo se re-renderiza la que se visita), guardar estando en GO
+  // también procesaba de arrastre los campos viejos de Champions (que no
+  // tienen data-liga → input.dataset.liga queda "undefined"), generando una
+  // clave basura "undefined" dentro de cada Pokémon de GO con una mezcla de
+  // campos de ambos juegos. Ahora se busca solo dentro de la tabla del modo
+  // actual.
+  const tbodyIdPorModo = { champions: 'table-body-champions', go: 'table-body-go', tcg: 'table-body-tcg', tcglive: 'table-body-tcglive' };
+  const tbodyIdActual = tbodyIdPorModo[currentDatosMode];
+  const scopeSelector = tbodyIdActual ? ('#' + tbodyIdActual + ' ') : '';
+
+  document.querySelectorAll(scopeSelector + '.name-cell').forEach(input => {
     const oldName = input.dataset.originalName;
     const newName = input.value.trim();
     if (oldName && newName && newName !== oldName) renamePokemonEntry(oldName, newName);
   });
-  document.querySelectorAll('.editable-cell:not(.name-cell)').forEach(input => {
+  document.querySelectorAll(scopeSelector + '.editable-cell:not(.name-cell)').forEach(input => {
     const p = input.dataset.pokemon, f = input.dataset.field;
     if (!p || !f) return;
     if (currentDatosMode === 'champions') { if (!dataChampions[p]) dataChampions[p] = EMPTY_CHAMPIONS(); dataChampions[p][f] = input.value; }
-    else if (currentDatosMode === 'go') { getGoLeagueEntry(p, input.dataset.liga)[f] = input.value; }
+    else if (currentDatosMode === 'go') {
+      if (input.dataset.liga === undefined) return; // salvaguarda extra: nunca crear liga "undefined"
+      getGoLeagueEntry(p, input.dataset.liga)[f] = input.value;
+    }
     else if (currentDatosMode === 'tcg') { if (!dataTCG[p]) dataTCG[p] = EMPTY_TCG(); dataTCG[p][f] = input.value; }
   });
   document.querySelectorAll('.mazo-name-input').forEach(input => {
