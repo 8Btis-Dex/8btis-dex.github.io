@@ -5265,13 +5265,19 @@ async function sincronizarDesdeNube() {
   showToast('☁️ Sincronizando con la nube...');
   try {
     const col = window._fbDb.collection('appdata');
-    const docs = await Promise.all(FIRESTORE_DOC_IDS.map(id => col.doc(id).get()));
+    const docs = await Promise.all(FIRESTORE_DOC_IDS.map(id => col.doc(id).get({ source: 'server' })));
     let anyExists = false;
     FIRESTORE_DOC_IDS.forEach((id, i) => {
       const doc = docs[i];
       if (!doc.exists) return;
       const data = doc.data();
       anyExists = true;
+      if (id === 'go' && data.go) {
+        try {
+          const goParsed = JSON.parse(data.go);
+          window.__ultimoSyncGoAltaria = JSON.stringify(goParsed['Altaria'] ?? '(Altaria no está en el documento)');
+        } catch (e) { window.__ultimoSyncGoAltaria = '(no se pudo leer)'; }
+      }
       if (id === 'main' || id === 'lists') applyLegacyCombinedLists(data);
       else if (id === 'champions' || id === 'go' || id === 'tcg' || id === 'tcglive') applyGameDoc(id, data);
       else if (id === 'mazos') applyMazosDoc(data);
@@ -5288,6 +5294,9 @@ async function sincronizarDesdeNube() {
     const searchInput = document.getElementById('search-input');
     if (currentMode && searchInput) showResult(searchInput.value.trim() || null);
     showToast('✅ Sincronizado con la nube correctamente');
+    if (window.__ultimoSyncGoAltaria) {
+      alert('Lo que llegó DEL SERVIDOR para Altaria (recién ahora):\n\n' + window.__ultimoSyncGoAltaria + '\n\ny dataGO["Altaria"] después de aplicarlo =\n' + JSON.stringify(dataGO['Altaria']));
+    }
   } catch (e) {
     console.error('Error al sincronizar manualmente con la nube', e);
     showToast('⚠️ No se pudo sincronizar con la nube: ' + (e && e.message || e), true);
