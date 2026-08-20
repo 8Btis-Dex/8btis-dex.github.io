@@ -2930,6 +2930,59 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 
 <script>
+// ══════════════ PANEL DE DIAGNÓSTICO TEMPORAL (borrar cuando se resuelva) ══
+// Escribe cada paso clave del guardado de GO en un cartel fijo abajo de la
+// pantalla, y además lo guarda en localStorage bajo "__debugGoLog" para que
+// sobreviva un F5: así se puede comparar "antes de recargar" y "después de
+// recargar" sin que la consola se pierda ni depender de sus filtros.
+function debugGoLog(msg) {
+  try {
+    const key = '__debugGoLog';
+    const arr = JSON.parse(localStorage.getItem(key) || '[]');
+    const hora = new Date().toISOString().slice(11, 19);
+    arr.push(hora + ' — ' + msg);
+    while (arr.length > 60) arr.shift();
+    localStorage.setItem(key, JSON.stringify(arr));
+  } catch (e) {}
+  try { console.log('[DEBUG-GO]', msg); } catch (e) {}
+  renderDebugGoPanel();
+}
+function renderDebugGoPanel() {
+  let panel = document.getElementById('debug-go-panel');
+  if (!panel) {
+    panel = document.createElement('div');
+    panel.id = 'debug-go-panel';
+    panel.style.cssText = 'position:fixed;bottom:0;left:0;right:0;max-height:45vh;overflow:auto;background:#111;color:#7CFC00;font:11px/1.4 monospace;padding:8px;z-index:999999;white-space:pre-wrap;border-top:3px solid #7CFC00;box-shadow:0 -2px 10px rgba(0,0,0,.6)';
+    const btnCerrar = document.createElement('button');
+    btnCerrar.textContent = '✕ cerrar panel';
+    btnCerrar.style.cssText = 'position:sticky;top:0;float:right;background:#333;color:#fff;border:1px solid #7CFC00;border-radius:4px;padding:2px 8px;cursor:pointer;font-size:11px';
+    btnCerrar.onclick = () => panel.remove();
+    const btnLimpiar = document.createElement('button');
+    btnLimpiar.textContent = '🗑 limpiar registro';
+    btnLimpiar.style.cssText = btnCerrar.style.cssText;
+    btnLimpiar.onclick = () => { localStorage.removeItem('__debugGoLog'); renderDebugGoPanel(); };
+    const barra = document.createElement('div');
+    barra.appendChild(btnLimpiar);
+    barra.appendChild(btnCerrar);
+    panel.appendChild(barra);
+    const texto = document.createElement('div');
+    texto.id = 'debug-go-panel-texto';
+    panel.appendChild(texto);
+    document.body.appendChild(panel);
+  }
+  const arr = JSON.parse(localStorage.getItem('__debugGoLog') || '[]');
+  document.getElementById('debug-go-panel-texto').textContent = arr.join('\n\n');
+}
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', renderDebugGoPanel);
+} else {
+  renderDebugGoPanel();
+}
+debugGoLog('Página cargada / recargada.');
+// ══════════════ FIN PANEL DE DIAGNÓSTICO TEMPORAL ══════════════════════════
+</script>
+
+<script>
 // ── LISTA BASE DE POKÉMON (usada solo como semilla inicial de migración) ─
 const POKEMON_LIST_BASE = ["Abomasnow","Absol","Aegislash","Aerodactyl","Aggron","Alakazam","Alcremie","Altaria","Ampharos","Annihilape","Appletun","Araquanid","Arbok","Arcanine","Archaludon","Ariados","Armarouge","Aromatisse","Audino","Aurorus","Avalugg","Azuramill","Banette","Barbaracle","Basculegion","Beartic","Beedrill","Bellibolt","Blastoise","Blaziken","Camerupt","Castform","Ceruledge","Chandelure","Charizard","Chesnaught","Chimecho","Clawitzer","Clefable","Cofagrigus","Conkeldurr","Corviknight","Crabominable","Cranidos","Decidueye","Dedenne","Delphox","Diggersby","Ditto","Dragalde","Dragapult","Dragonite","Drampa","Eelektross","Emboar","Emolga","Empoleon","Espathra","Espeon","Excadrill","Falinks","Farigiraf","Feraligatr","Flapple","Flareon","Floette","Florges","Foretress","Froslass","Furfrou","Gallade","Garbodor","Garchomp","Gardevoir","Gargancl","Gengar","Gholdengo","Glaceon","Glalie","Glimmora","Gliscor","Golurk","Goodra","Gourgeist","Greninja","Grimmsnarl","Gyarados","Hawlucha","Heliolisk","Heracross","Hippowdon","Houndoom","Houndstone","Hydrapple","Hydreigon","Incineroar","Infernape","Jolteon","Kangaskhan","Kingambit","Kleavor","Klefki","Kommo-o","Krookodile","Leafeon","Liepard","Lopunny","Lucario","Luxray","Lycanroc","Machampo","Malamar","Mamoswine","Manectric","Maushold","Mawile","Medicham","Meganium","Meowscarada","Meowstic","Metagross","Milotic","Mimikyu","Morpeko","Mr. Rime","Mudsdale","Musharna","Nintetales","Noivern","Oranguru","Orthworm","Overqwil","Palafin","Pangoro","Passimian","Pelipper","Pidgeot","Pikachu","Pinsir","Politoed","Polteageist","Primarina","Pyroar","Quaquaval","Qwilfish","Raichu","Rampardos","Reuniclus","Rhyperior","Roserade","Rotom","Runerigus","Sableye","Salazzle","Samurott","Sandaconda","Sceptile","Scizor","Scolipede","Scovillain","Scrafty","Serperior","Sharpedo","Shieldon/Bastiodon","Simipour","Simisage","Simisear","Sinistcha","Skarmory","Skeledirge","Slowbro","Slowking","Slurpuff","Sneasler","Snorlax","Spiritom","Staraptor","Starmie","Steelix","Stunfisk","Swamper","Sylveon","Talonflame","Tauros","Tinkaton","Torkoal","Torterra","Toucannon","Toxicroak","Trevenant","Tsareena","Txapex","Typhlosion","Tyranitar","Tyrantrum","Umbreon","Vanilluxe","Vaporeon","Venasaur","Victreebel","Vileplume","Vivillon","Volcarona","Watchog","Weavile","Whimsicott","Wyrdeer","Zoroark"];
 
@@ -4359,9 +4412,12 @@ async function goSugerirUno(name) {
     const entry = getGoLeagueEntry(name, ligaElegida);
     Object.assign(entry, updates);
     console.log('[DEBUG-GO] entry tras sugerir', name, ligaElegida, JSON.stringify(entry));
+    debugGoLog('SUGERIR: entry tras sugerir ' + name + ' [' + ligaElegida + '] = ' + JSON.stringify(entry));
     const result = await persistAll();
     console.log('[DEBUG-GO] dataGO[name] tras persistAll', name, JSON.stringify(dataGO[name]));
+    debugGoLog('SUGERIR: dataGO["' + name + '"] tras persistAll = ' + JSON.stringify(dataGO[name]));
     console.log('[DEBUG-GO] localStorage.pokemonDataGO tras persistAll', name, JSON.stringify((JSON.parse(localStorage.getItem('pokemonDataGO') || '{}'))[name]));
+    debugGoLog('SUGERIR: localStorage["pokemonDataGO"]["' + name + '"] tras persistAll = ' + JSON.stringify((JSON.parse(localStorage.getItem('pokemonDataGO') || '{}'))[name]));
     renderTableGO();
     if (result && result.ok === false) {
       showToast('🪄 Sugerencia aplicada a ' + name + ', pero no se pudo sincronizar con la nube (queda solo en este dispositivo). Ver consola (F12).', true);
@@ -4873,6 +4929,7 @@ function loadFromStorage() {
     }
     const savedGO = localStorage.getItem('pokemonDataGO');
     console.log('[DEBUG-GO] loadFromStorage arrancando. pokemonList_go tiene', POKEMON_LISTS.go.length, 'nombres. pokemonDataGO crudo (primeros 2000 chars):', savedGO ? savedGO.slice(0, 2000) : '(vacío)');
+    debugGoLog('CARGA: loadFromStorage arrancando. pokemonList_go tiene ' + POKEMON_LISTS.go.length + ' nombres. pokemonDataGO crudo (primeros 2000 chars) = ' + (savedGO ? savedGO.slice(0, 2000) : '(vacío)'));
     dataGO = {};
     POKEMON_LISTS.go.forEach(p => { dataGO[p] = EMPTY_GO(); });
     if (savedGO) {
@@ -4883,6 +4940,7 @@ function loadFromStorage() {
       });
     }
     console.log('[DEBUG-GO] loadFromStorage terminó. dataGO reconstruido (completo):', JSON.stringify(dataGO));
+    debugGoLog('CARGA: loadFromStorage terminó. dataGO reconstruido (completo) = ' + JSON.stringify(dataGO));
 
     // ── TCG Pocket ──
     const savedListTCG = localStorage.getItem('pokemonList_tcg');
@@ -5048,6 +5106,7 @@ function applyGameDoc(game, doc) {
     if (Array.isArray(list)) POKEMON_LISTS.go = list;
     if (data) {
       console.log('[DEBUG-GO] applyGameDoc: llegó un snapshot de Firestore para GO en', new Date().toISOString(), '— reemplaza dataGO por:', JSON.stringify(data));
+      debugGoLog('FIRESTORE: llegó un snapshot de GO — va a reemplazar dataGO por = ' + JSON.stringify(data));
       dataGO = data;
     }
   } else if (game === 'tcg') {
@@ -5183,7 +5242,10 @@ function initFirebaseSync() {
     // > 0), se ignoran los snapshots entrantes: total, esos ecos van a
     // reflejar lo que nosotros mismos acabamos de mandar.
     function applyOneDoc(id) {
-      if (pendingLocalWrites > 0) return;
+      if (pendingLocalWrites > 0) {
+        if (id === 'go') debugGoLog('FIRESTORE: llegó snapshot de "go" pero se IGNORA (pendingLocalWrites=' + pendingLocalWrites + ')');
+        return;
+      }
       let applied = false;
       if (id === 'main' || id === 'lists') {
         if (latestDocs[id]) { applied = true; applyLegacyCombinedLists(latestDocs[id]); }
@@ -6395,12 +6457,18 @@ async function saveAllData() {
   // así que si cerrabas la app o cambiabas de pantalla justo después de tocar
   // el botón (muy común en celular), la escritura a la nube podía quedar
   // cortada a mitad de camino y el cambio nunca llegaba a sincronizarse.
+  if (currentDatosMode === 'go') {
+    debugGoLog('GUARDAR: currentDatosMode=go. dataGO (completo) antes de persistAll = ' + JSON.stringify(dataGO));
+  }
   const btn = document.querySelector('button[onclick="saveAllData()"]');
   const originalLabel = btn ? btn.textContent : null;
   if (btn) { btn.disabled = true; btn.textContent = '💾 Guardando...'; }
   showToast('💾 Guardando...');
   try {
     const result = await persistAll();
+    if (currentDatosMode === 'go') {
+      debugGoLog('GUARDAR: resultado persistAll = ' + JSON.stringify(result) + '. dataGO (completo) después = ' + JSON.stringify(dataGO));
+    }
     if (result && result.ok === false) {
       showToast('⚠️ Guardado solo en este dispositivo: no se pudo sincronizar con la nube (' + result.failedIds.join(', ') + '). Revisá la consola (F12) para más detalle.', true);
     } else {
