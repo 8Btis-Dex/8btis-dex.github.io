@@ -2961,7 +2961,20 @@ function renderDebugGoPanel() {
     btnLimpiar.textContent = '🗑 limpiar registro';
     btnLimpiar.style.cssText = btnCerrar.style.cssText;
     btnLimpiar.onclick = () => { localStorage.removeItem('__debugGoLog'); renderDebugGoPanel(); };
+    const btnCopiar = document.createElement('button');
+    btnCopiar.textContent = '📋 copiar todo';
+    btnCopiar.style.cssText = btnCerrar.style.cssText;
+    btnCopiar.onclick = () => {
+      const texto = (JSON.parse(localStorage.getItem('__debugGoLog') || '[]')).join('\n\n');
+      const listo = () => { btnCopiar.textContent = '✅ copiado, pegalo en el chat'; setTimeout(() => btnCopiar.textContent = '📋 copiar todo', 3000); };
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(texto).then(listo).catch(() => window.prompt('Copiá manualmente (Ctrl+C) y pegalo en el chat:', texto));
+      } else {
+        window.prompt('Copiá manualmente (Ctrl+C) y pegalo en el chat:', texto);
+      }
+    };
     const barra = document.createElement('div');
+    barra.appendChild(btnCopiar);
     barra.appendChild(btnLimpiar);
     barra.appendChild(btnCerrar);
     panel.appendChild(barra);
