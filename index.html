@@ -4358,7 +4358,7 @@ async function goSugerirUno(name) {
     }
     const entry = getGoLeagueEntry(name, ligaElegida);
     Object.assign(entry, updates);
-    persistAll();
+    await persistAll();
     renderTableGO();
     showToast('🪄 Sugerencia aplicada a ' + name + ' (' + ligaElegida + ')' + statsAviso);
   } catch (e) {
@@ -5059,6 +5059,20 @@ function applyExpansionesDoc(doc) {
   const expansionesLive = parseSnapField(doc.expansionesLive); if (Array.isArray(expansionesLive)) EXPANSIONES_SUGERIDAS.tcglive = expansionesLive;
 }
 
+// Mientras esta cuenta es > 0, hay una escritura nuestra en curso hacia
+// Firestore. El listener de "escucha en tiempo real" (más abajo) usa esto
+// para NO reaplicar los documentos mientras tanto: como pushToFirestore()
+// escribe 6 documentos juntos por cada cambio (aunque solo haya cambiado,
+// por ejemplo, GO), sus "ecos" (onSnapshot) pueden llegar en cualquier
+// orden. Si el eco de un documento que NO cambió (ej. "champions") llega
+// antes que el eco del que sí cambió (ej. "go"), sin este freno se volvía a
+// aplicar la copia vieja en caché de "go" encima del cambio recién hecho en
+// memoria, y esa copia vieja terminaba pisando también el localStorage
+// (por el persistLocalOnly() que corre al reaplicar) — o sea, la sugerencia
+// se veía aplicada un instante y después desaparecía sola, incluso antes de
+// tocar "Guardar cambios".
+let pendingLocalWrites = 0;
+
 function pushToFirestore() {
   if (!window._fbDb) return Promise.resolve();
   const col = window._fbDb.collection('appdata');
@@ -5073,6 +5087,7 @@ function pushToFirestore() {
     ['mazos', { mazos: JSON.stringify(dataMazos), mazosLive: JSON.stringify(dataMazosLive) }],
     ['expansiones', { expansiones: JSON.stringify(EXPANSIONES_SUGERIDAS.tcg), expansionesLive: JSON.stringify(EXPANSIONES_SUGERIDAS.tcglive) }]
   ];
+  pendingLocalWrites++;
   return Promise.all(writes.map(([id, payload]) =>
     col.doc(id).set(payload).catch(err => ({ id, err }))
   )).then(results => {
@@ -5081,6 +5096,8 @@ function pushToFirestore() {
       console.log('Firestore write failed en:', failed.map(f => f.id).join(', '), failed);
       showToast(`⚠️ No se pudo sincronizar "${failed.map(f => f.id).join(', ')}" con la nube (puede ser tamaño o conexión)`, true);
     }
+  }).finally(() => {
+    pendingLocalWrites = Math.max(0, pendingLocalWrites - 1);
   });
 }
 
@@ -5127,17 +5144,32 @@ function initFirebaseSync() {
     // único objeto genérico antes de aplicarlos (eso era lo que permitía que
     // el estado de un juego se mezclara con el de otro). Cada documento se
     // procesa con su propia función, tocando solo lo que le corresponde.
-    function applyAll() {
-      let anyExists = false;
-      if (latestDocs['main']) { anyExists = true; applyLegacyCombinedLists(latestDocs['main']); }
-      if (latestDocs['lists']) { anyExists = true; applyLegacyCombinedLists(latestDocs['lists']); }
-      ['champions', 'go', 'tcg', 'tcglive'].forEach(game => {
-        if (latestDocs[game]) { anyExists = true; applyGameDoc(game, latestDocs[game]); }
-      });
-      if (latestDocs['mazos']) { anyExists = true; applyMazosDoc(latestDocs['mazos']); }
-      if (latestDocs['expansiones']) { anyExists = true; applyExpansionesDoc(latestDocs['expansiones']); }
+    //
+    // Importante: solo se reaplica el documento que efectivamente disparó
+    // este snapshot (parámetro "id"), NUNCA se reprocesan de paso los demás
+    // documentos en caché (latestDocs). Antes, cualquier snapshot (incluso
+    // de un documento sin relación, ej. "expansiones") volvía a aplicar TODOS
+    // los documentos en caché, incluyendo una copia de "go" que podía estar
+    // vieja si su propio eco todavía no había llegado — pisando así, en
+    // memoria y en localStorage, una sugerencia recién aplicada.
+    //
+    // Además, mientras haya una escritura nuestra en curso (pendingLocalWrites
+    // > 0), se ignoran los snapshots entrantes: total, esos ecos van a
+    // reflejar lo que nosotros mismos acabamos de mandar.
+    function applyOneDoc(id) {
+      if (pendingLocalWrites > 0) return;
+      let applied = false;
+      if (id === 'main' || id === 'lists') {
+        if (latestDocs[id]) { applied = true; applyLegacyCombinedLists(latestDocs[id]); }
+      } else if (id === 'champions' || id === 'go' || id === 'tcg' || id === 'tcglive') {
+        if (latestDocs[id]) { applied = true; applyGameDoc(id, latestDocs[id]); }
+      } else if (id === 'mazos') {
+        if (latestDocs[id]) { applied = true; applyMazosDoc(latestDocs[id]); }
+      } else if (id === 'expansiones') {
+        if (latestDocs[id]) { applied = true; applyExpansionesDoc(latestDocs[id]); }
+      }
 
-      if (!anyExists) return;
+      if (!applied) return;
       podarDatosHuerfanos();
       const huboMigracion = migrarNombresExpansionesTcg();
       persistLocalOnly();
@@ -5156,7 +5188,7 @@ function initFirebaseSync() {
         } else {
           delete latestDocs[id];
         }
-        applyAll();
+        applyOneDoc(id);
         if (pendingInitialChecks > 0) {
           pendingInitialChecks--;
           if (pendingInitialChecks === 0 && !anyExistedAtStart) {
