@@ -4358,9 +4358,13 @@ async function goSugerirUno(name) {
     }
     const entry = getGoLeagueEntry(name, ligaElegida);
     Object.assign(entry, updates);
-    await persistAll();
+    const result = await persistAll();
     renderTableGO();
-    showToast('🪄 Sugerencia aplicada a ' + name + ' (' + ligaElegida + ')' + statsAviso);
+    if (result && result.ok === false) {
+      showToast('🪄 Sugerencia aplicada a ' + name + ', pero no se pudo sincronizar con la nube (queda solo en este dispositivo). Ver consola (F12).', true);
+    } else {
+      showToast('🪄 Sugerencia aplicada a ' + name + ' (' + ligaElegida + ')' + statsAviso);
+    }
   } catch (e) {
     console.error(e);
     showToast('❌ No se pudo generar una sugerencia para ' + name, true);
@@ -5074,7 +5078,7 @@ function applyExpansionesDoc(doc) {
 let pendingLocalWrites = 0;
 
 function pushToFirestore() {
-  if (!window._fbDb) return Promise.resolve();
+  if (!window._fbDb) return Promise.resolve({ ok: true, skipped: true });
   const col = window._fbDb.collection('appdata');
   // Cada campo se guarda como texto (JSON.stringify) en vez de objeto/mapa
   // nativo de Firestore, para evitar el límite de "demasiadas entradas de
@@ -5093,9 +5097,23 @@ function pushToFirestore() {
   )).then(results => {
     const failed = results.filter(r => r && r.err);
     if (failed.length) {
-      console.log('Firestore write failed en:', failed.map(f => f.id).join(', '), failed);
-      showToast(`⚠️ No se pudo sincronizar "${failed.map(f => f.id).join(', ')}" con la nube (puede ser tamaño o conexión)`, true);
+      // OJO: antes acá se llamaba a showToast() directamente con el aviso de
+      // error, pero como esta función corre DENTRO de persistAll() (que a su
+      // vez es "await"eada por saveAllData()/goSugerirUno()), el toast de
+      // "✅ Datos guardados correctamente" que esas funciones muestran justo
+      // después TAPABA este aviso de error (el toast es un único elemento,
+      // el último mensaje pisa al anterior). Resultado: el usuario veía
+      // "guardado correctamente" aunque la nube hubiera rechazado el
+      // guardado, y al recargar la página volvía la versión vieja de la
+      // nube. Ahora esta función solo INFORMA el fallo (no muestra toast);
+      // quien la llama decide un único mensaje final.
+      console.error('Firestore write failed en:', failed.map(f => f.id).join(', '), failed.map(f => ({ id: f.id, code: f.err && f.err.code, message: f.err && f.err.message })));
+      return { ok: false, failedIds: failed.map(f => f.id), errors: failed.map(f => f.err) };
     }
+    return { ok: true };
+  }).catch(err => {
+    console.error('Firestore write failed (excepción general):', err);
+    return { ok: false, failedIds: ['?'], errors: [err] };
   }).finally(() => {
     pendingLocalWrites = Math.max(0, pendingLocalWrites - 1);
   });
@@ -6374,10 +6392,14 @@ async function saveAllData() {
   if (btn) { btn.disabled = true; btn.textContent = '💾 Guardando...'; }
   showToast('💾 Guardando...');
   try {
-    await persistAll();
-    showToast('✅ Datos guardados correctamente');
+    const result = await persistAll();
+    if (result && result.ok === false) {
+      showToast('⚠️ Guardado solo en este dispositivo: no se pudo sincronizar con la nube (' + result.failedIds.join(', ') + '). Revisá la consola (F12) para más detalle.', true);
+    } else {
+      showToast('✅ Datos guardados correctamente');
+    }
   } catch (err) {
-    console.log('Error al guardar', err);
+    console.error('Error al guardar', err);
     showToast('⚠️ Hubo un problema al guardar en la nube. Revisa tu conexión.', true);
   } finally {
     if (btn) { btn.disabled = false; btn.textContent = originalLabel; }
