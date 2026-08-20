@@ -4031,15 +4031,22 @@ function limpiarNombresInvalidosDePokemon() {
     }
   });
 
-  // Además del nombre del Pokémon, el bug de "Guardar cambios" sin scope
-  // (arreglado aparte) generaba una liga basura "undefined" DENTRO de cada
-  // Pokémon de GO, mezclando campos de Champions con los de GO. Se saca esa
-  // sub-clave de todos los Pokémon existentes.
+  // Además del nombre del Pokémon, varios bugs anteriores (el de "Guardar
+  // cambios" sin scope, y restos de un formato viejo previo a que GO tuviera
+  // datos por liga) dejaron campos sueltos dentro de cada Pokémon de GO que
+  // NO son "Liga Super"/"Liga Ultra"/"Liga Master" (ej. "cpMax", "undefined",
+  // "statsUltra", "movRapido" a nivel raíz, etc.). Esto no solo es basura:
+  // infló tanto el documento "go" que probablemente superó el límite de
+  // tamaño de 1 MB definido en las reglas de Firestore, haciendo que la nube
+  // rechazara el guardado en silencio y quedara con una versión vieja. Acá
+  // se deja cada Pokémon de GO SOLO con sus claves de liga válidas.
   if (dataGO) {
     Object.keys(dataGO).forEach(nombre => {
-      if (dataGO[nombre] && typeof dataGO[nombre] === 'object' && 'undefined' in dataGO[nombre]) {
-        delete dataGO[nombre]['undefined'];
-      }
+      const entry = dataGO[nombre];
+      if (!entry || typeof entry !== 'object') return;
+      Object.keys(entry).forEach(clave => {
+        if (!LIGA_LIST.includes(clave)) delete entry[clave];
+      });
     });
   }
 }
