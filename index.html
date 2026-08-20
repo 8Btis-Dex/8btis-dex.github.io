@@ -2482,6 +2482,7 @@
         <button class="btn btn-yellow" onclick="showAddPokemon()">➕ Agregar Pokémon</button>
         <button class="btn" style="background:var(--purple);color:#fff" onclick="openExpansionesModal()">🏷️ Expansiones</button>
         <button class="btn btn-primary" onclick="saveAllData()">💾 Guardar cambios</button>
+        <button class="btn" style="background:#0ea5e9;color:#fff" onclick="sincronizarDesdeNube()" title="Trae los datos guardados en la nube, sin depender de la sincronización automática">☁️ Sincronizar</button>
         <button class="btn btn-danger" onclick="lockDatos()">🔒 Bloquear</button>
       </div>
     </div>
@@ -5249,6 +5250,49 @@ const firebaseConfig = {
 // viejos (compatibilidad); los 4 juegos, mazos y expansiones son el formato
 // actual, cada uno 100% independiente de los demás.
 const FIRESTORE_DOC_IDS = ['main', 'lists', 'champions', 'go', 'tcg', 'tcglive', 'mazos', 'expansiones'];
+
+// Sincronización MANUAL con la nube: en vez de depender del listener en
+// tiempo real (onSnapshot, más abajo) — que en ciertas redes/dispositivos
+// no está trayendo los cambios correctamente aunque el guardado sí llegue
+// bien a Firestore — esta función hace una lectura directa (.get()) de
+// cada documento, una sola vez, y aplica lo que encuentre. Sirve como
+// mecanismo de respaldo confiable para forzar traer lo último de la nube.
+async function sincronizarDesdeNube() {
+  if (!window._fbDb) {
+    showToast('⚠️ No hay conexión con la nube en este momento.', true);
+    return;
+  }
+  showToast('☁️ Sincronizando con la nube...');
+  try {
+    const col = window._fbDb.collection('appdata');
+    const docs = await Promise.all(FIRESTORE_DOC_IDS.map(id => col.doc(id).get()));
+    let anyExists = false;
+    FIRESTORE_DOC_IDS.forEach((id, i) => {
+      const doc = docs[i];
+      if (!doc.exists) return;
+      const data = doc.data();
+      anyExists = true;
+      if (id === 'main' || id === 'lists') applyLegacyCombinedLists(data);
+      else if (id === 'champions' || id === 'go' || id === 'tcg' || id === 'tcglive') applyGameDoc(id, data);
+      else if (id === 'mazos') applyMazosDoc(data);
+      else if (id === 'expansiones') applyExpansionesDoc(data);
+    });
+    if (!anyExists) {
+      showToast('⚠️ La nube todavía no tiene datos guardados.', true);
+      return;
+    }
+    limpiarNombresInvalidosDePokemon();
+    podarDatosHuerfanos();
+    persistLocalOnly();
+    if (typeof renderCurrentTable === 'function') renderCurrentTable();
+    const searchInput = document.getElementById('search-input');
+    if (currentMode && searchInput) showResult(searchInput.value.trim() || null);
+    showToast('✅ Sincronizado con la nube correctamente');
+  } catch (e) {
+    console.error('Error al sincronizar manualmente con la nube', e);
+    showToast('⚠️ No se pudo sincronizar con la nube: ' + (e && e.message || e), true);
+  }
+}
 
 function initFirebaseSync() {
   try {
