@@ -2936,18 +2936,33 @@
 // sobreviva un F5: así se puede comparar "antes de recargar" y "después de
 // recargar" sin que la consola se pierda ni depender de sus filtros.
 function debugGoLog(msg) {
+  // Los mensajes que vuelcan objetos completos (ej. dataGO con 1000+
+  // Pokémon) podían pesar cientos de KB cada uno; guardarlos así hacía
+  // crecer __debugGoLog en localStorage hasta volverse pesado de leer/
+  // escribir, y eso a su vez hacía lenta (o directamente colgaba) la carga
+  // de la página. Ahora se recorta cada mensaje a un tamaño razonable.
+  const MAX_MSG = 800;
+  if (msg.length > MAX_MSG) msg = msg.slice(0, MAX_MSG) + ' …(recortado, eran ' + msg.length + ' caracteres)';
   try {
     const key = '__debugGoLog';
-    const arr = JSON.parse(localStorage.getItem(key) || '[]');
+    let arr;
+    try { arr = JSON.parse(localStorage.getItem(key) || '[]'); } catch (e) { arr = []; }
     const hora = new Date().toLocaleTimeString('es-AR', { hour12: false });
     arr.push(hora + ' — ' + msg);
-    while (arr.length > 60) arr.shift();
+    while (arr.length > 25) arr.shift();
     localStorage.setItem(key, JSON.stringify(arr));
   } catch (e) {}
   try { console.log('[DEBUG-GO]', msg); } catch (e) {}
   renderDebugGoPanel();
 }
 function renderDebugGoPanel() {
+  try {
+    _renderDebugGoPanelInterno();
+  } catch (e) {
+    try { localStorage.removeItem('__debugGoLog'); } catch (e2) {}
+  }
+}
+function _renderDebugGoPanelInterno() {
   let panel = document.getElementById('debug-go-panel');
   if (!panel) {
     panel = document.createElement('div');
@@ -2991,6 +3006,13 @@ if (document.readyState === 'loading') {
 } else {
   renderDebugGoPanel();
 }
+// Si el registro guardado de una sesión anterior quedó demasiado pesado
+// (por ejemplo, por versiones previas de este panel que volcaban objetos
+// completos), se descarta directamente en vez de arrastrar ese peso.
+try {
+  const actual = localStorage.getItem('__debugGoLog');
+  if (actual && actual.length > 20000) localStorage.removeItem('__debugGoLog');
+} catch (e) {}
 debugGoLog('Página cargada / recargada.');
 // ══════════════ FIN PANEL DE DIAGNÓSTICO TEMPORAL ══════════════════════════
 </script>
