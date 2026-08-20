@@ -5257,12 +5257,12 @@ const FIRESTORE_DOC_IDS = ['main', 'lists', 'champions', 'go', 'tcg', 'tcglive',
 // bien a Firestore — esta función hace una lectura directa (.get()) de
 // cada documento, una sola vez, y aplica lo que encuentre. Sirve como
 // mecanismo de respaldo confiable para forzar traer lo último de la nube.
-async function sincronizarDesdeNube() {
+async function sincronizarDesdeNube(silencioso) {
   if (!window._fbDb) {
-    showToast('⚠️ No hay conexión con la nube en este momento.', true);
+    if (!silencioso) showToast('⚠️ No hay conexión con la nube en este momento.', true);
     return;
   }
-  showToast('☁️ Sincronizando con la nube...');
+  if (!silencioso) showToast('☁️ Sincronizando con la nube...');
   try {
     const col = window._fbDb.collection('appdata');
     const docs = await Promise.all(FIRESTORE_DOC_IDS.map(id => col.doc(id).get({ source: 'server' })));
@@ -5272,19 +5272,13 @@ async function sincronizarDesdeNube() {
       if (!doc.exists) return;
       const data = doc.data();
       anyExists = true;
-      if (id === 'go' && data.go) {
-        try {
-          const goParsed = JSON.parse(data.go);
-          window.__ultimoSyncGoAltaria = JSON.stringify(goParsed['Altaria'] ?? '(Altaria no está en el documento)');
-        } catch (e) { window.__ultimoSyncGoAltaria = '(no se pudo leer)'; }
-      }
       if (id === 'main' || id === 'lists') applyLegacyCombinedLists(data);
       else if (id === 'champions' || id === 'go' || id === 'tcg' || id === 'tcglive') applyGameDoc(id, data);
       else if (id === 'mazos') applyMazosDoc(data);
       else if (id === 'expansiones') applyExpansionesDoc(data);
     });
     if (!anyExists) {
-      showToast('⚠️ La nube todavía no tiene datos guardados.', true);
+      if (!silencioso) showToast('⚠️ La nube todavía no tiene datos guardados.', true);
       return;
     }
     limpiarNombresInvalidosDePokemon();
@@ -5293,13 +5287,10 @@ async function sincronizarDesdeNube() {
     if (typeof renderCurrentTable === 'function') renderCurrentTable();
     const searchInput = document.getElementById('search-input');
     if (currentMode && searchInput) showResult(searchInput.value.trim() || null);
-    showToast('✅ Sincronizado con la nube correctamente');
-    if (window.__ultimoSyncGoAltaria) {
-      alert('Lo que llegó DEL SERVIDOR para Altaria (recién ahora):\n\n' + window.__ultimoSyncGoAltaria + '\n\ny dataGO["Altaria"] después de aplicarlo =\n' + JSON.stringify(dataGO['Altaria']));
-    }
+    if (!silencioso) showToast('✅ Sincronizado con la nube correctamente');
   } catch (e) {
-    console.error('Error al sincronizar manualmente con la nube', e);
-    showToast('⚠️ No se pudo sincronizar con la nube: ' + (e && e.message || e), true);
+    console.error('Error al sincronizar con la nube', e);
+    if (!silencioso) showToast('⚠️ No se pudo sincronizar con la nube: ' + (e && e.message || e), true);
   }
 }
 
@@ -5316,6 +5307,15 @@ function initFirebaseSync() {
       console.log('No se pudo habilitar persistencia offline de Firestore', err);
     });
     const col = window._fbDb.collection('appdata');
+
+    // IMPORTANTE: se detectó que Firestore, con la persistencia offline
+    // activada, a veces prefiere devolver una copia en caché (vieja) en vez
+    // de ir al servidor real — tanto en la escucha en tiempo real (más abajo)
+    // como en lecturas puntuales. Por eso, apenas se conecta, se fuerza una
+    // sincronización real contra el servidor (sincronizarDesdeNube, con
+    // {source:'server'}), en vez de esperar pasivamente a que el listener
+    // entregue los datos correctos por su cuenta.
+    sincronizarDesdeNube(true);
 
     const latestDocs = {};
     let pendingInitialChecks = FIRESTORE_DOC_IDS.length;
