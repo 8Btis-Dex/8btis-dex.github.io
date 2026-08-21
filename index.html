@@ -3443,8 +3443,8 @@ async function showResult(name) {
         <div class="ri-value ${isEmpty(d.movCargado)?'empty':''}">${d.tipoCargado ? typeIconHTML(d.tipoCargado) : ''}${val(d.movCargado,'Sin datos')}</div>
       </div>
       <div class="result-item">
-        <div class="ri-label">Ligas</div>
-        <div class="ri-value ${(!d.ligas || !d.ligas.length)?'empty':''}">${(d.ligas && d.ligas.length) ? d.ligas.map(l => ligaIconHTML(l)).join('') + d.ligas.join(', ') : 'Sin datos'}</div>
+        <div class="ri-label">Liga</div>
+        <div class="ri-value">${ligaIconHTML(currentGoConsultaLiga)}${esc(currentGoConsultaLiga)}</div>
       </div>`;
   } else if (currentMode === 'tcg') {
     const d = getTCGData(name);
