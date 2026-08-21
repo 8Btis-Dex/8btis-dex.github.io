@@ -2373,8 +2373,25 @@
         <button class="btn" style="background:#444;color:#fff" onclick="backToModeSelect()">↩️ Cambiar modo</button>
       </div>
 
+      <!-- Selector de liga, solo para Pokémon GO -->
+      <div id="go-liga-selector" class="search-section" style="display:none">
+        <span class="search-label">🏆 Elegí la liga</span>
+        <div style="display:flex;gap:10px;margin-top:10px;flex-wrap:wrap">
+          <button class="btn btn-primary" id="go-liga-btn-Liga Super" onclick="selectGoConsultaLiga('Liga Super')">Liga Super</button>
+          <button class="btn btn-primary" id="go-liga-btn-Liga Ultra" onclick="selectGoConsultaLiga('Liga Ultra')">Liga Ultra</button>
+          <button class="btn btn-primary" id="go-liga-btn-Liga Master" onclick="selectGoConsultaLiga('Liga Master')">Liga Master</button>
+        </div>
+      </div>
+
+      <!-- Lista de Pokémon de la liga elegida (solo GO) -->
+      <div id="go-liga-list-section" class="search-section" style="display:none">
+        <span class="search-label" id="go-liga-list-label">Pokémon en esta liga</span>
+        <div id="go-liga-list" style="display:flex;flex-direction:column;gap:8px;margin-top:10px"></div>
+        <button class="btn" style="background:#444;color:#fff;margin-top:12px" onclick="goLigaListaVolver()">← Elegir otra liga</button>
+      </div>
+
       <!-- Buscador -->
-      <div class="search-section">
+      <div class="search-section" id="normal-search-section">
         <span class="search-label">🔍 Buscar Pokémon</span>
         <div class="search-wrapper">
           <input
@@ -2519,6 +2536,7 @@
               <th>CP Máximo</th>
               <th>Stats — Liga Super</th>
               <th>Stats — Liga Ultra</th>
+              <th>Stats — Liga Master</th>
               <th>Mov. Rápido</th>
               <th>Mov. Cargado</th>
               <th>Liga</th>
@@ -2994,6 +3012,47 @@ const MODE_NAMES = {
   tcglive:   'Pokémon TCG Live'
 };
 
+// ── SELECTOR DE LIGA EN CONSULTA (solo Pokémon GO) ──────────────────────
+// Cada Pokémon de GO tiene un único campo "liga" (se asigna a mano en
+// Datos → GO, con el desplegable de la columna Liga). Este selector filtra
+// la Consulta para mostrar solo los Pokémon de la liga elegida.
+let currentGoConsultaLiga = null;
+
+function selectGoConsultaLiga(liga) {
+  currentGoConsultaLiga = liga;
+  LIGA_LIST.forEach(l => {
+    const btn = document.getElementById('go-liga-btn-' + l);
+    if (btn) btn.classList.toggle('btn-primary', l === liga);
+  });
+
+  loadNamesFromStorage();
+  const nombres = (POKEMON_LISTS.go || [])
+    .filter(p => getGOData(p).liga === liga)
+    .sort((a, b) => a.localeCompare(b, 'es', { sensitivity: 'base' }));
+
+  const listEl = document.getElementById('go-liga-list');
+  const labelEl = document.getElementById('go-liga-list-label');
+  if (labelEl) labelEl.textContent = `Pokémon en ${liga} (${nombres.length})`;
+  if (listEl) {
+    listEl.innerHTML = nombres.length
+      ? nombres.map(n => `<button class="btn" style="background:#222;color:#fff;text-align:left" onclick="selectPokemon('${n.replace(/'/g,"\\'")}')">${esc(n)}</button>`).join('')
+      : '<div class="result-empty">Todavía no hay Pokémon asignados a esta liga.</div>';
+  }
+
+  document.getElementById('go-liga-selector').style.display = 'none';
+  document.getElementById('go-liga-list-section').style.display = 'block';
+  document.getElementById('normal-search-section').style.display = 'block';
+  showResult(null);
+}
+
+function goLigaListaVolver() {
+  currentGoConsultaLiga = null;
+  document.getElementById('go-liga-list-section').style.display = 'none';
+  document.getElementById('go-liga-selector').style.display = 'block';
+  document.getElementById('normal-search-section').style.display = 'none';
+  showResult(null);
+}
+
 function selectMode(mode) {
   currentMode = mode;
   document.getElementById('mode-select-screen').style.display = 'none';
@@ -3003,6 +3062,21 @@ function selectMode(mode) {
     `<img src="${logoSrc}" alt="${MODE_NAMES[mode]}" class="current-mode-logo"><span class="current-mode-name">${MODE_NAMES[mode]}</span>`;
   document.getElementById('search-input').value = '';
   document.getElementById('clear-btn').style.display = 'none';
+
+  currentGoConsultaLiga = null;
+  const ligaSelector = document.getElementById('go-liga-selector');
+  const ligaListSection = document.getElementById('go-liga-list-section');
+  const normalSearch = document.getElementById('normal-search-section');
+  if (mode === 'go') {
+    ligaSelector.style.display = 'block';
+    ligaListSection.style.display = 'none';
+    normalSearch.style.display = 'none';
+  } else {
+    ligaSelector.style.display = 'none';
+    ligaListSection.style.display = 'none';
+    normalSearch.style.display = 'block';
+  }
+
   showResult(null);
   document.getElementById('search-input').focus();
 }
@@ -3042,6 +3116,7 @@ function toggleMazoDetail(idx, rowEl) {
 
 function backToModeSelect() {
   currentMode = null;
+  currentGoConsultaLiga = null;
   document.getElementById('consulta-content').style.display = 'none';
   document.getElementById('mode-select-screen').style.display = 'block';
 }
@@ -3100,7 +3175,10 @@ function handleSearch(val) {
 
   loadNamesFromStorage();
   const q = val.toLowerCase();
-  const activeList = POKEMON_LISTS[currentMode] || [];
+  let activeList = POKEMON_LISTS[currentMode] || [];
+  if (currentMode === 'go' && currentGoConsultaLiga) {
+    activeList = activeList.filter(p => getGOData(p).liga === currentGoConsultaLiga);
+  }
   filteredList = activeList.filter(p => p.toLowerCase().includes(q)).slice(0, 8);
 
   if (filteredList.length === 0) {
@@ -3118,7 +3196,10 @@ function handleSearch(val) {
 
 function handleKey(e) {
   const items = document.querySelectorAll('.autocomplete-item');
-  const activeList = POKEMON_LISTS[currentMode] || [];
+  let activeList = POKEMON_LISTS[currentMode] || [];
+  if (currentMode === 'go' && currentGoConsultaLiga) {
+    activeList = activeList.filter(p => getGOData(p).liga === currentGoConsultaLiga);
+  }
   if (!items.length) {
     if (e.key === 'Enter') {
       const val = e.target.value.trim();
@@ -3328,19 +3409,30 @@ async function showResult(name) {
       </div>`;
   } else if (currentMode === 'go') {
     const d = getGOData(name);
+    const statsPorLiga = { 'Liga Super': d.statsSuper, 'Liga Ultra': d.statsUltra, 'Liga Master': d.statsMaster };
+    const statsItemsHTML = currentGoConsultaLiga
+      ? `<div class="result-item">
+          <div class="ri-label">Stats — ${esc(currentGoConsultaLiga)}</div>
+          <div class="ri-value ${isEmpty(statsPorLiga[currentGoConsultaLiga])?'empty':''}">${val(statsPorLiga[currentGoConsultaLiga],'Sin datos')}</div>
+        </div>`
+      : `<div class="result-item">
+          <div class="ri-label">Stats — Liga Super</div>
+          <div class="ri-value ${isEmpty(d.statsSuper)?'empty':''}">${val(d.statsSuper,'Sin datos')}</div>
+        </div>
+        <div class="result-item">
+          <div class="ri-label">Stats — Liga Ultra</div>
+          <div class="ri-value ${isEmpty(d.statsUltra)?'empty':''}">${val(d.statsUltra,'Sin datos')}</div>
+        </div>
+        <div class="result-item">
+          <div class="ri-label">Stats — Liga Master</div>
+          <div class="ri-value ${isEmpty(d.statsMaster)?'empty':''}">${val(d.statsMaster,'Sin datos')}</div>
+        </div>`;
     bodyHTML = `
       <div class="result-item">
         <div class="ri-label">CP Máximo</div>
         <div class="ri-value ${isEmpty(d.cpMax)?'empty':''}">${val(d.cpMax,'Sin datos')}</div>
       </div>
-      <div class="result-item">
-        <div class="ri-label">Stats — Liga Super</div>
-        <div class="ri-value ${isEmpty(d.statsSuper)?'empty':''}">${val(d.statsSuper,'Sin datos')}</div>
-      </div>
-      <div class="result-item">
-        <div class="ri-label">Stats — Liga Ultra</div>
-        <div class="ri-value ${isEmpty(d.statsUltra)?'empty':''}">${val(d.statsUltra,'Sin datos')}</div>
-      </div>
+      ${statsItemsHTML}
       <div class="result-item">
         <div class="ri-label">Movimiento rápido</div>
         <div class="ri-value ${isEmpty(d.movRapido)?'empty':''}">${d.tipoRapido ? typeIconHTML(d.tipoRapido) : ''}${val(d.movRapido,'Sin datos')}</div>
@@ -3706,7 +3798,7 @@ function goToLitePage(mode, delta) {
 }
 
 const EMPTY_CHAMPIONS = () => ({ naturaleza:'', objeto:'', ataque1:'', tipo1:'', ataque2:'', tipo2:'', ataque3:'', tipo3:'', ataque4:'', tipo4:'' });
-const EMPTY_GO         = () => ({ cpMax:'', statsSuper:'', statsUltra:'', movRapido:'', tipoRapido:'', movCargado:'', tipoCargado:'', liga:'' });
+const EMPTY_GO         = () => ({ cpMax:'', statsSuper:'', statsUltra:'', statsMaster:'', movRapido:'', tipoRapido:'', movCargado:'', tipoCargado:'', liga:'' });
 
 // ── ICONOS DE TIPO (Pokémon GO: ataque rápido / cargado) ────────────────────
 // Orden alfabético según el nombre en español (Agua, Bicho, Dragón, Eléctrico...)
@@ -4212,7 +4304,84 @@ const GO_CHARGE_MOVES_BY_TYPE = {
   Hada:      [{s:'moonblast',n:'Lunazo'},{s:'dazzling-gleam',n:'Deslumbrar'},{s:'play-rough',n:'Juego Rudo'}]
 };
 
-function goComputeSuggestion({ types, movepool }) {
+// ── ESTIMACIÓN APROXIMADA DE CP Y IVs PARA GO ───────────────────────────
+// Esta app no consulta una fuente de datos específica de Pokémon GO (como
+// PvPoke), así que estos números son una APROXIMACIÓN calculada a partir de
+// las estadísticas de los juegos principales (PokeAPI) convertidas con una
+// fórmula comunitaria, no oficial. Sirven como punto de partida, pero para
+// el dato exacto conviene verificar con PvPoke u otra fuente de Pokémon GO.
+//
+// Tabla de multiplicador de CP (CPM) por nivel — valor real usado por el
+// juego, tomado de referencias públicas de la comunidad. Solo hasta nivel
+// 40 (el tope normal sin caramelo XL).
+const GO_CPM_TABLE = {
+  1:0.094, 1.5:0.135137432, 2:0.16639787, 2.5:0.192650919, 3:0.21573247, 3.5:0.236572661,
+  4:0.25572005, 4.5:0.273530381, 5:0.29024988, 5.5:0.306057377, 6:0.3210876, 6.5:0.335445036,
+  7:0.34921268, 7.5:0.362457751, 8:0.37523559, 8.5:0.387592416, 9:0.39956728, 9.5:0.411193551,
+  10:0.42250001, 10.5:0.432926419, 11:0.44310755, 11.5:0.453059959, 12:0.46279839, 12.5:0.472336083,
+  13:0.48168495, 13.5:0.4908558, 14:0.49985844, 14.5:0.508701765, 15:0.51739395, 15.5:0.525942511,
+  16:0.53435433, 16.5:0.542635767, 17:0.55079269, 17.5:0.558830576, 18:0.5665315, 18.5:0.57413739,
+  19:0.5815065, 19.5:0.588908628, 20:0.5974, 20.5:0.605169642, 21:0.6127936, 21.5:0.619978794,
+  22:0.6262752, 22.5:0.632338071, 23:0.6399421, 23.5:0.646154386, 24:0.65313554, 24.5:0.659740858,
+  25:0.66639786, 25.5:0.673029333, 26:0.679688006, 26.5:0.686160901, 27:0.6926, 27.5:0.699066623,
+  28:0.7057, 28.5:0.71190, 29:0.7177, 29.5:0.723265098, 30:0.7317, 30.5:0.734741009,
+  31:0.7377, 31.5:0.740738734, 32:0.7439, 32.5:0.747445298, 33:0.7513, 33.5:0.75465,
+  34:0.7583, 34.5:0.761472627, 35:0.7645, 35.5:0.767669553, 36:0.7705, 36.5:0.773562367,
+  37:0.7767, 37.5:0.779751667, 38:0.7828, 38.5:0.785902482, 39:0.7889, 39.5:0.789661374, 40:0.79030001
+};
+const GO_NIVELES = Object.keys(GO_CPM_TABLE).map(Number).sort((a, b) => a - b);
+
+// Convierte estadísticas base de los juegos principales a una estimación
+// (no oficial) de estadísticas base de Pokémon GO.
+function estimarStatsBaseGO(stats) {
+  const atkA = stats.attack || 0, atkB = stats['special-attack'] || 0;
+  const defA = stats.defense || 0, defB = stats['special-defense'] || 0;
+  const atkPrincipal = Math.max(atkA, atkB), atkSecundario = Math.min(atkA, atkB);
+  const defPrincipal = Math.max(defA, defB), defSecundario = Math.min(defA, defB);
+  return {
+    atk: Math.round(2 * (0.85 * atkPrincipal + 0.15 * atkSecundario)),
+    def: Math.round(2 * (0.85 * defPrincipal + 0.15 * defSecundario)),
+    sta: Math.round(1.75 * (stats.hp || 0))
+  };
+}
+
+function calcularCPGo(baseAtk, baseDef, baseSta, ivAtk, ivDef, ivSta, nivel) {
+  const cpm = GO_CPM_TABLE[nivel];
+  if (!cpm) return 0;
+  const atk = (baseAtk + ivAtk) * cpm;
+  const def = (baseDef + ivDef) * cpm;
+  const sta = (baseSta + ivSta) * cpm;
+  return Math.max(10, Math.floor((atk * Math.sqrt(def) * Math.sqrt(sta)) / 10));
+}
+
+// Busca la combinación de nivel + IVs con mejor "stat product" (la métrica
+// que suelen usar las calculadoras de PVP) sin pasarse del tope de CP de la
+// liga. Si no hay tope (Liga Master), directamente el máximo (nivel 40,
+// IVs 15/15/15) es lo mejor posible.
+function sugerirIVsParaLiga(baseAtk, baseDef, baseSta, topeCp) {
+  if (!topeCp) {
+    return { nivel: 40, ivAtk: 15, ivDef: 15, ivSta: 15, cp: calcularCPGo(baseAtk, baseDef, baseSta, 15, 15, 15, 40) };
+  }
+  let mejor = null;
+  for (const nivel of GO_NIVELES) {
+    for (let ivAtk = 0; ivAtk <= 15; ivAtk++) {
+      for (let ivDef = 0; ivDef <= 15; ivDef++) {
+        for (let ivSta = 0; ivSta <= 15; ivSta++) {
+          const cp = calcularCPGo(baseAtk, baseDef, baseSta, ivAtk, ivDef, ivSta, nivel);
+          if (cp > topeCp || cp <= 0) continue;
+          const cpm = GO_CPM_TABLE[nivel];
+          const statProduct = (baseAtk + ivAtk) * cpm * (baseDef + ivDef) * cpm * (baseSta + ivSta) * cpm;
+          if (!mejor || statProduct > mejor.statProduct) {
+            mejor = { nivel, ivAtk, ivDef, ivSta, cp, statProduct };
+          }
+        }
+      }
+    }
+  }
+  return mejor;
+}
+
+function goComputeSuggestion({ types, movepool, stats }) {
   const candidatosRapido = [];
   const candidatosCargado = [];
   types.forEach(t => {
@@ -4231,6 +4400,16 @@ function goComputeSuggestion({ types, movepool }) {
     resultado.movCargado = cargado.n;
     resultado.tipoCargado = cargado.tipo;
   }
+
+  if (stats) {
+    const { atk, def, sta } = estimarStatsBaseGO(stats);
+    const super_ = sugerirIVsParaLiga(atk, def, sta, 1500);
+    const ultra = sugerirIVsParaLiga(atk, def, sta, 2500);
+    const master = sugerirIVsParaLiga(atk, def, sta, null);
+    if (super_) resultado.statsSuper = `${super_.ivAtk}/${super_.ivDef}/${super_.ivSta}`;
+    if (ultra) resultado.statsUltra = `${ultra.ivAtk}/${ultra.ivDef}/${ultra.ivSta}`;
+    if (master) { resultado.statsMaster = `${master.ivAtk}/${master.ivDef}/${master.ivSta}`; resultado.cpMax = String(master.cp); }
+  }
   return resultado;
 }
 
@@ -4241,7 +4420,7 @@ async function goSugerirUno(name) {
     dataGO[name] = { ...EMPTY_GO(), ...dataGO[name], ...sugerido };
     persistAll();
     renderTableGO();
-    showToast('🪄 Sugerencia aplicada a ' + name);
+    showToast('🪄 Sugerencia aplicada a ' + name + ' (CP/Stats es una estimación — no oficial, verificar con PvPoke)');
   } catch (e) {
     console.error(e);
     showToast('❌ No se pudo generar una sugerencia para ' + name, true);
@@ -4256,7 +4435,7 @@ async function goSugerirVacios() {
   const pendientes = Object.keys(dataGO).filter(name => {
     if (!POKEMON_LISTS.go.includes(name)) return false;
     const d = dataGO[name];
-    return !d.movRapido && !d.movCargado;
+    return !d.movRapido || !d.movCargado || !d.cpMax || !d.statsSuper || !d.statsUltra || !d.statsMaster;
   });
   if (!pendientes.length) {
     if (status) status.textContent = 'No hay filas vacías para completar.';
@@ -4277,7 +4456,7 @@ async function goSugerirVacios() {
   }
   persistAll();
   renderTableGO();
-  if (status) status.textContent = `Listo: se completaron ${hechos} Pokémon.`;
+  if (status) status.textContent = `Listo: se completaron ${hechos} Pokémon (CP/Stats es una estimación — no oficial, verificar con PvPoke).`;
   goSugerirEnCurso = false;
 }
 
@@ -5038,6 +5217,7 @@ function renderTableGO() {
       <td><input class="editable-cell" list="suggest-go-cpmax" data-pokemon="${esc(name)}" data-field="cpMax" value="${esc(d.cpMax)}" placeholder="Ej: 3500"></td>
       <td><input class="editable-cell stat-slash-input" data-pokemon="${esc(name)}" data-field="statsSuper" value="${esc(d.statsSuper)}" placeholder="Ej: 15/14/14"></td>
       <td><input class="editable-cell stat-slash-input" data-pokemon="${esc(name)}" data-field="statsUltra" value="${esc(d.statsUltra)}" placeholder="Ej: 13/13/13"></td>
+      <td><input class="editable-cell stat-slash-input" data-pokemon="${esc(name)}" data-field="statsMaster" value="${esc(d.statsMaster)}" placeholder="Ej: 15/15/15"></td>
       <td>
         <input class="editable-cell move-name-input" list="suggest-go-movimiento" data-pokemon="${esc(name)}" data-field="movRapido" data-game="go" value="${esc(d.movRapido)}" placeholder="Ej: Roca Afilada">
         <div class="move-type-row">
@@ -5927,12 +6107,23 @@ function filterDatosTable() {
 
 // ── GUARDAR ────────────────────────────────────────────────────────────────
 async function saveAllData() {
-  document.querySelectorAll('.name-cell').forEach(input => {
+  // IMPORTANTE: antes esto buscaba .name-cell y .editable-cell en TODO el
+  // documento, sin importar qué tabla estuviera visible. Como las 4 tablas
+  // (Champions/GO/TCG/TCG Live) quedan armadas en el DOM aunque estén
+  // ocultas, guardar estando en GO también podía procesar de arrastre
+  // campos viejos de otra tabla (sin data-liga ni el data-field correcto),
+  // generando datos cruzados. Ahora se busca solo dentro de la tabla del
+  // modo actual.
+  const tbodyIdPorModo = { champions: 'table-body-champions', go: 'table-body-go', tcg: 'table-body-tcg', tcglive: 'table-body-tcglive' };
+  const tbodyIdActual = tbodyIdPorModo[currentDatosMode];
+  const scopeSelector = tbodyIdActual ? ('#' + tbodyIdActual + ' ') : '';
+
+  document.querySelectorAll(scopeSelector + '.name-cell').forEach(input => {
     const oldName = input.dataset.originalName;
     const newName = input.value.trim();
     if (oldName && newName && newName !== oldName) renamePokemonEntry(oldName, newName);
   });
-  document.querySelectorAll('.editable-cell:not(.name-cell)').forEach(input => {
+  document.querySelectorAll(scopeSelector + '.editable-cell:not(.name-cell)').forEach(input => {
     const p = input.dataset.pokemon, f = input.dataset.field;
     if (!p || !f) return;
     if (currentDatosMode === 'champions') { if (!dataChampions[p]) dataChampions[p] = EMPTY_CHAMPIONS(); dataChampions[p][f] = input.value; }
