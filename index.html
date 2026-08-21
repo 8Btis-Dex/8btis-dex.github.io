@@ -987,7 +987,7 @@
     background: rgba(0,0,0,0.3);
     border-radius: 8px;
     padding: 12px 14px;
-    border-left: 3px solid var(--liga-accent, var(--yellow));
+    border-left: 3px solid var(--yellow);
   }
   .result-item .ri-label {
     font-size: 0.7rem;
@@ -1784,7 +1784,7 @@
     background: rgba(0,0,0,0.3);
     border-radius: 8px;
     padding: 12px 14px;
-    border-left: 3px solid var(--liga-accent, var(--yellow));
+    border-left: 3px solid var(--yellow);
   }
   .result-item .ri-label {
     font-size: 0.7rem;
@@ -2297,9 +2297,8 @@
   .ri-value .item-icon { width: 32px; height: 32px; vertical-align: middle; margin-right: 6px; image-rendering: pixelated; }
   .ri-value .move-type-icon { width: 26px; height: 26px; vertical-align: middle; margin-right: 6px; }
   .liga-icon-wrap { display: flex; align-items: center; }
-  .liga-icon { display: inline-flex; width: 30px; height: 30px; object-fit: contain; flex-shrink: 0; }
+  .liga-icon { width: 30px; height: 30px; object-fit: contain; flex-shrink: 0; }
   .liga-icon-empty { width: 30px; height: 30px; display: inline-block; }
-  .liga-icon svg { width: 100%; height: 100%; display: block; }
   .ri-value .liga-icon { width: 26px; height: 26px; vertical-align: middle; margin-right: 6px; }
 </style>
 </head>
@@ -2375,7 +2374,7 @@
       </div>
 
       <!-- Buscador -->
-      <div class="search-section" id="normal-search-section">
+      <div class="search-section">
         <span class="search-label">🔍 Buscar Pokémon</span>
         <div class="search-wrapper">
           <input
@@ -2393,32 +2392,6 @@
         </div>
         <div class="search-disclaimer">
           La traducción de los ataques es posible gracias a <a href="https://www.wikidex.net" target="_blank" rel="noopener">Wikidex.net</a>. Ante cualquier duda o consulta, utilizá el botón de WhatsApp de abajo.
-        </div>
-      </div>
-
-      <!-- Selector paso a paso, solo para Pokémon GO (ranking por liga) -->
-      <div id="go-wizard" style="display:none">
-        <div id="go-wizard-liga-step" class="search-section">
-          <span class="search-label">🏆 Elegí la liga</span>
-          <div id="go-wizard-liga-buttons" style="display:flex;flex-direction:column;gap:10px;margin-top:10px"></div>
-        </div>
-        <div id="go-wizard-topn-step" class="search-section" style="display:none">
-          <span class="search-label">📊 ¿Top 10, 20 o 30?</span>
-          <div class="modal-btns" style="flex-direction:column;gap:10px;margin-top:10px">
-            <button class="btn btn-primary" style="width:100%" onclick="goWizardChooseTopN(10)">Top 10</button>
-            <button class="btn btn-primary" style="width:100%" onclick="goWizardChooseTopN(20)">Top 20</button>
-            <button class="btn btn-primary" style="width:100%" onclick="goWizardChooseTopN(30)">Top 30</button>
-          </div>
-          <button class="btn" style="background:#444;color:#fff;margin-top:12px" onclick="goWizardBack(1)">← Atrás</button>
-        </div>
-        <div id="go-wizard-list-step" class="search-section" style="display:none">
-          <span class="search-label" id="go-wizard-list-label">Elegí un Pokémon</span>
-          <div id="go-wizard-list-buttons" style="display:flex;flex-direction:column;gap:8px;margin-top:10px"></div>
-          <div id="go-wizard-list-pagination" style="display:flex;gap:10px;margin-top:10px"></div>
-          <button class="btn" style="background:#444;color:#fff;margin-top:12px" onclick="goWizardBack(2)">← Atrás</button>
-        </div>
-        <div id="go-wizard-selected-bar" class="search-section" style="display:none">
-          <button class="btn" style="background:#444;color:#fff;width:100%" onclick="goWizardReset()">🔁 Elegir otro Pokémon</button>
         </div>
       </div>
 
@@ -2482,10 +2455,6 @@
         <button class="btn btn-yellow" onclick="showAddPokemon()">➕ Agregar Pokémon</button>
         <button class="btn" style="background:var(--purple);color:#fff" onclick="openExpansionesModal()">🏷️ Expansiones</button>
         <button class="btn btn-primary" onclick="saveAllData()">💾 Guardar cambios</button>
-        <button class="btn" style="background:#0ea5e9;color:#fff" onclick="sincronizarDesdeNube()" title="Trae los datos guardados en la nube, sin depender de la sincronización automática">☁️ Sincronizar</button>
-        <button class="btn" style="background:#22c55e;color:#fff" onclick="exportGameJSON()" title="Descarga un .json solo con los datos del juego que estás viendo">💾 Exportar JSON (este juego)</button>
-        <input type="file" id="import-game-json-input" accept="application/json,.json" style="display:none" onchange="importGameJSONFile(event)">
-        <button class="btn" style="background:#a855f7;color:#fff" onclick="document.getElementById('import-game-json-input').click()" title="Importa un .json de este mismo juego, guardado localmente en este dispositivo">📥 Importar JSON (este juego)</button>
         <button class="btn btn-danger" onclick="lockDatos()">🔒 Bloquear</button>
       </div>
     </div>
@@ -2536,11 +2505,6 @@
 
     <!-- ===== POKÉMON GO ===== -->
     <div class="mode-section" id="mode-section-go">
-      <div class="translate-moves-toolbar">
-        <button class="btn btn-primary" onclick="reducirListaGoATop30()">🏆 Actualizar Top 30 x liga (PvPoke)</button>
-        <button class="btn" style="background:#444;color:#fff" onclick="document.getElementById('modal-datos-go-liga').classList.add('open')">🔀 Cambiar liga</button>
-        <span id="datos-go-liga-status" style="font-size:0.78rem;color:var(--muted);align-self:center"></span>
-      </div>
       <div class="pokemon-table-wrap">
         <table id="pokemon-table-go">
           <thead>
@@ -2548,10 +2512,12 @@
               <th style="text-align:center"><input type="checkbox" class="table-select-all-th" onchange="toggleSelectAllRows(this.checked)"></th>
               <th>#</th>
               <th>Pokémon</th>
-              <th id="go-th-cp">CP</th>
-              <th id="go-th-stats">Stats</th>
+              <th>CP Máximo</th>
+              <th>Stats — Liga Super</th>
+              <th>Stats — Liga Ultra</th>
               <th>Mov. Rápido</th>
               <th>Mov. Cargado</th>
+              <th>Liga</th>
               <th style="text-align:center">Borrar</th>
             </tr>
           </thead>
@@ -2812,17 +2778,6 @@
   </div>
 </div>
 
-<!-- MODAL ELEGIR LIGA A EDITAR (DATOS > GO) -->
-<div class="modal-overlay" id="modal-datos-go-liga">
-  <div class="modal">
-    <h3>🏆 ¿QUÉ LIGA QUERÉS EDITAR?</h3>
-    <p>La tabla se filtra según el Top 30 de la liga elegida.</p>
-    <div class="modal-btns" style="flex-direction:column;gap:10px">
-      <div id="modal-datos-go-liga-buttons" style="display:flex;flex-direction:column;gap:10px"></div>
-    </div>
-  </div>
-</div>
-
 <!-- MODAL AGREGAR PARTICIPANTE (TORNEOS) -->
 <div class="modal-overlay" id="modal-add-participant">
   <div class="modal">
@@ -2934,11 +2889,6 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 
 <script>
-// debugGoLog: ahora solo escribe en la consola del navegador (F12), sin cartel visible en pantalla.
-function debugGoLog(msg) { try { console.log('[DEBUG-GO]', msg); } catch (e) {} }
-</script>
-
-<script>
 // ── LISTA BASE DE POKÉMON (usada solo como semilla inicial de migración) ─
 const POKEMON_LIST_BASE = ["Abomasnow","Absol","Aegislash","Aerodactyl","Aggron","Alakazam","Alcremie","Altaria","Ampharos","Annihilape","Appletun","Araquanid","Arbok","Arcanine","Archaludon","Ariados","Armarouge","Aromatisse","Audino","Aurorus","Avalugg","Azuramill","Banette","Barbaracle","Basculegion","Beartic","Beedrill","Bellibolt","Blastoise","Blaziken","Camerupt","Castform","Ceruledge","Chandelure","Charizard","Chesnaught","Chimecho","Clawitzer","Clefable","Cofagrigus","Conkeldurr","Corviknight","Crabominable","Cranidos","Decidueye","Dedenne","Delphox","Diggersby","Ditto","Dragalde","Dragapult","Dragonite","Drampa","Eelektross","Emboar","Emolga","Empoleon","Espathra","Espeon","Excadrill","Falinks","Farigiraf","Feraligatr","Flapple","Flareon","Floette","Florges","Foretress","Froslass","Furfrou","Gallade","Garbodor","Garchomp","Gardevoir","Gargancl","Gengar","Gholdengo","Glaceon","Glalie","Glimmora","Gliscor","Golurk","Goodra","Gourgeist","Greninja","Grimmsnarl","Gyarados","Hawlucha","Heliolisk","Heracross","Hippowdon","Houndoom","Houndstone","Hydrapple","Hydreigon","Incineroar","Infernape","Jolteon","Kangaskhan","Kingambit","Kleavor","Klefki","Kommo-o","Krookodile","Leafeon","Liepard","Lopunny","Lucario","Luxray","Lycanroc","Machampo","Malamar","Mamoswine","Manectric","Maushold","Mawile","Medicham","Meganium","Meowscarada","Meowstic","Metagross","Milotic","Mimikyu","Morpeko","Mr. Rime","Mudsdale","Musharna","Nintetales","Noivern","Oranguru","Orthworm","Overqwil","Palafin","Pangoro","Passimian","Pelipper","Pidgeot","Pikachu","Pinsir","Politoed","Polteageist","Primarina","Pyroar","Quaquaval","Qwilfish","Raichu","Rampardos","Reuniclus","Rhyperior","Roserade","Rotom","Runerigus","Sableye","Salazzle","Samurott","Sandaconda","Sceptile","Scizor","Scolipede","Scovillain","Scrafty","Serperior","Sharpedo","Shieldon/Bastiodon","Simipour","Simisage","Simisear","Sinistcha","Skarmory","Skeledirge","Slowbro","Slowking","Slurpuff","Sneasler","Snorlax","Spiritom","Staraptor","Starmie","Steelix","Stunfisk","Swamper","Sylveon","Talonflame","Tauros","Tinkaton","Torkoal","Torterra","Toucannon","Toxicroak","Trevenant","Tsareena","Txapex","Typhlosion","Tyranitar","Tyrantrum","Umbreon","Vanilluxe","Vaporeon","Venasaur","Victreebel","Vileplume","Vivillon","Volcarona","Watchog","Weavile","Whimsicott","Wyrdeer","Zoroark"];
 
@@ -2989,12 +2939,12 @@ function readStorageObj(key) {
     return raw ? JSON.parse(raw) : {};
   } catch(e) { return {}; }
 }
-function getChampionsData(name) { return (typeof dataChampions !== 'undefined' && dataChampions[name]) || readStorageObj('pokemonData')[name] || {}; }
-function getGOData(name)        { return (typeof dataGO !== 'undefined' && dataGO[name]) || readStorageObj('pokemonDataGO')[name] || {}; }
-function getTCGData(name)       { return (typeof dataTCG !== 'undefined' && dataTCG[name]) || readStorageObj('pokemonDataTCG')[name] || {}; }
-function getAllTCGData()        { return (typeof dataTCG !== 'undefined' && dataTCG) || readStorageObj('pokemonDataTCG'); }
-function getTCGLiveData(name)   { return (typeof dataTCGLive !== 'undefined' && dataTCGLive[name]) || readStorageObj('pokemonDataTCGLive')[name] || {}; }
-function getAllTCGLiveData()    { return (typeof dataTCGLive !== 'undefined' && dataTCGLive) || readStorageObj('pokemonDataTCGLive'); }
+function getChampionsData(name) { return readStorageObj('pokemonData')[name] || {}; }
+function getGOData(name)        { return readStorageObj('pokemonDataGO')[name] || {}; }
+function getTCGData(name)       { return readStorageObj('pokemonDataTCG')[name] || {}; }
+function getAllTCGData()        { return readStorageObj('pokemonDataTCG'); }
+function getTCGLiveData(name)   { return readStorageObj('pokemonDataTCGLive')[name] || {}; }
+function getAllTCGLiveData()    { return readStorageObj('pokemonDataTCGLive'); }
 function getMazosData() {
   try {
     const raw = localStorage.getItem('pokemonDataMazos');
@@ -3049,84 +2999,8 @@ function selectMode(mode) {
     `<img src="${logoSrc}" alt="${MODE_NAMES[mode]}" class="current-mode-logo"><span class="current-mode-name">${MODE_NAMES[mode]}</span>`;
   document.getElementById('search-input').value = '';
   document.getElementById('clear-btn').style.display = 'none';
-  if (mode === 'go') {
-    goWizardStart();
-  } else {
-    document.getElementById('go-wizard').style.display = 'none';
-    document.getElementById('normal-search-section').style.display = '';
-    showResult(null);
-    document.getElementById('search-input').focus();
-  }
-}
-
-// ── SELECTOR PASO A PASO PARA GO (liga → top N → lista de a 10 → info) ─────
-let goWizard = { liga: null, topN: null, chunk: 0 };
-let currentGoConsultaLiga = null; // liga con la que se muestra el resultado en Consulta (GO)
-
-function goWizardShowStep(stepId) {
-  ['go-wizard-liga-step', 'go-wizard-topn-step', 'go-wizard-list-step'].forEach(id => {
-    document.getElementById(id).style.display = (id === stepId) ? '' : 'none';
-  });
-}
-
-function goWizardStart() {
-  goWizard = { liga: null, topN: null, chunk: 0 };
-  document.getElementById('normal-search-section').style.display = 'none';
-  document.getElementById('go-wizard').style.display = '';
-  document.getElementById('go-wizard-selected-bar').style.display = 'none';
-  goWizardShowStep('go-wizard-liga-step');
   showResult(null);
-}
-
-function goWizardReset() { goWizardStart(); }
-
-function goWizardBack(step) {
-  if (step === 1) goWizardShowStep('go-wizard-liga-step');
-  else if (step === 2) goWizardShowStep('go-wizard-topn-step');
-}
-
-function goWizardChooseLiga(liga) {
-  if (!LEAGUE_TOP_NAMES[liga] || !LEAGUE_TOP_NAMES[liga].length) {
-    showToast('⚠️ Todavía no hay ranking cargado. Pedile a quien administra los Datos que toque "Actualizar Top 30 x liga" en Datos → GO.', true);
-    return;
-  }
-  goWizard.liga = liga;
-  goWizardShowStep('go-wizard-topn-step');
-}
-
-function goWizardChooseTopN(n) {
-  goWizard.topN = n;
-  goWizard.chunk = 0;
-  goWizardRenderList();
-  goWizardShowStep('go-wizard-list-step');
-}
-
-function goWizardChunk(delta) {
-  goWizard.chunk += delta;
-  goWizardRenderList();
-}
-
-function goWizardRenderList() {
-  const names = (LEAGUE_TOP_NAMES[goWizard.liga] || []).slice(0, goWizard.topN);
-  const start = goWizard.chunk * 10;
-  const chunkNames = names.slice(start, start + 10);
-  const totalChunks = Math.max(1, Math.ceil(names.length / 10));
-  document.getElementById('go-wizard-list-label').textContent =
-    `${goWizard.liga} — Top ${goWizard.topN} (${start + 1}-${Math.min(start + 10, names.length)} de ${names.length})`;
-  document.getElementById('go-wizard-list-buttons').innerHTML = chunkNames.map((name, i) =>
-    `<button class="btn btn-primary" style="width:100%;text-align:left" onclick="goWizardSelectPokemon('${name.replace(/'/g, "\\'")}')">#${start + i + 1} ${esc(name)}</button>`
-  ).join('');
-  let pagHTML = '';
-  if (goWizard.chunk > 0) pagHTML += `<button class="btn" style="background:#444;color:#fff" onclick="goWizardChunk(-1)">‹ Anteriores 10</button>`;
-  if (goWizard.chunk < totalChunks - 1) pagHTML += `<button class="btn" style="background:#444;color:#fff" onclick="goWizardChunk(1)">Siguientes 10 ›</button>`;
-  document.getElementById('go-wizard-list-pagination').innerHTML = pagHTML;
-}
-
-function goWizardSelectPokemon(name) {
-  currentGoConsultaLiga = goWizard.liga;
-  document.getElementById('go-wizard').style.display = 'none';
-  document.getElementById('go-wizard-selected-bar').style.display = '';
-  showResult(name);
+  document.getElementById('search-input').focus();
 }
 
 function toggleMazoDetail(idx, rowEl) {
@@ -3419,7 +3293,6 @@ async function showResult(name) {
 
   const val = (v, fallback='—') => v && String(v).trim() ? v : fallback;
   const isEmpty = v => !v || !String(v).trim();
-  let ligaAccent = '';
 
   let bodyHTML = '';
   if (currentMode === 'champions') {
@@ -3450,31 +3323,31 @@ async function showResult(name) {
         <div class="ri-value ${isEmpty(d.ataque4)?'empty':''}">${d.tipo4 ? typeIconHTML(d.tipo4) : ''}${val(d.ataque4,'Sin datos')}</div>
       </div>`;
   } else if (currentMode === 'go') {
-    const liga = currentGoConsultaLiga || 'Liga Super';
-    const entry = getGOData(name)[liga] || {};
-    const esMaster = liga === 'Liga Master';
-    ligaAccent = LIGA_STYLES[liga] ? LIGA_STYLES[liga].bg : '';
+    const d = getGOData(name);
     bodyHTML = `
       <div class="result-item">
-        <div class="ri-label">${esMaster ? 'CP Máximo' : 'CP'}</div>
-        <div class="ri-value ${isEmpty(entry.cp)?'empty':''}">${val(entry.cp,'Sin datos')}</div>
+        <div class="ri-label">CP Máximo</div>
+        <div class="ri-value ${isEmpty(d.cpMax)?'empty':''}">${val(d.cpMax,'Sin datos')}</div>
       </div>
-      ${esMaster ? '' : `
       <div class="result-item">
-        <div class="ri-label">Stats — ${liga}</div>
-        <div class="ri-value ${isEmpty(entry.stats)?'empty':''}">${val(entry.stats,'Sin datos')}</div>
-      </div>`}
+        <div class="ri-label">Stats — Liga Super</div>
+        <div class="ri-value ${isEmpty(d.statsSuper)?'empty':''}">${val(d.statsSuper,'Sin datos')}</div>
+      </div>
+      <div class="result-item">
+        <div class="ri-label">Stats — Liga Ultra</div>
+        <div class="ri-value ${isEmpty(d.statsUltra)?'empty':''}">${val(d.statsUltra,'Sin datos')}</div>
+      </div>
       <div class="result-item">
         <div class="ri-label">Movimiento rápido</div>
-        <div class="ri-value ${isEmpty(entry.movRapido)?'empty':''}">${entry.tipoRapido ? typeIconHTML(entry.tipoRapido) : ''}${val(entry.movRapido,'Sin datos')}</div>
+        <div class="ri-value ${isEmpty(d.movRapido)?'empty':''}">${d.tipoRapido ? typeIconHTML(d.tipoRapido) : ''}${val(d.movRapido,'Sin datos')}</div>
       </div>
       <div class="result-item">
         <div class="ri-label">Movimiento cargado</div>
-        <div class="ri-value ${isEmpty(entry.movCargado)?'empty':''}">${entry.tipoCargado ? typeIconHTML(entry.tipoCargado) : ''}${val(entry.movCargado,'Sin datos')}</div>
+        <div class="ri-value ${isEmpty(d.movCargado)?'empty':''}">${d.tipoCargado ? typeIconHTML(d.tipoCargado) : ''}${val(d.movCargado,'Sin datos')}</div>
       </div>
       <div class="result-item">
         <div class="ri-label">Liga</div>
-        <div class="ri-value">${ligaIconHTML(liga)}${liga}</div>
+        <div class="ri-value ${isEmpty(d.liga)?'empty':''}">${d.liga ? ligaIconHTML(d.liga) : ''}${val(d.liga,'Sin datos')}</div>
       </div>`;
   } else if (currentMode === 'tcg') {
     const d = getTCGData(name);
@@ -3591,7 +3464,7 @@ async function showResult(name) {
   }
 
   el.innerHTML = `
-    <div class="result-grid" ${ligaAccent ? `style="--liga-accent:${ligaAccent}"` : ''}>
+    <div class="result-grid">
       <div class="result-item pokemon-name" style="grid-column:1/-1">
         <div class="ri-label">Pokémon</div>
         <div class="ri-value">
@@ -3779,14 +3652,13 @@ function showToast(msg, isError = false) {
 const CORRECT_PASSWORD = btoa("Maite1805");
 let datosUnlocked = false;
 let currentDatosMode = 'champions'; // 'champions' | 'go' | 'tcg'
-let datosGoLigaFiltro = 'Liga Super'; // siempre una liga concreta: 'Liga Super' | 'Liga Ultra' | 'Liga Master'
 
 // ── MODO LITE (paginación) ───────────────────────────────────────────────
 // Se activa por elección del usuario al ingresar la contraseña, para
 // dispositivos más lentos: en vez de dibujar todas las filas de golpe
 // (miles de inputs), arma la tabla de a tandas con botones Anterior/Siguiente.
 let LITE_MODE = false;
-const LITE_PAGE_SIZE = 20;
+const LITE_PAGE_SIZE = 50;
 let liteDatosPage = { champions: 1, go: 1, tcg: 1, tcglive: 1 };
 
 // Devuelve la lista a dibujar para un modo dado: aplica el filtro de
@@ -3796,10 +3668,6 @@ function getVisibleList(mode) {
   const searchEl = document.getElementById('datos-search');
   const q = searchEl ? searchEl.value.trim().toLowerCase() : '';
   let list = POKEMON_LISTS[mode];
-  if (mode === 'go') {
-    const set = new Set(LEAGUE_TOP_NAMES[datosGoLigaFiltro] || []);
-    list = list.filter(n => set.has(n));
-  }
   if (q) list = list.filter(n => n.toLowerCase().includes(q));
   if (!LITE_MODE) return { list, page: 1, totalPages: 1, offsetStart: 0 };
   const totalPages = Math.max(1, Math.ceil(list.length / LITE_PAGE_SIZE));
@@ -3834,18 +3702,7 @@ function goToLitePage(mode, delta) {
 }
 
 const EMPTY_CHAMPIONS = () => ({ naturaleza:'', objeto:'', ataque1:'', tipo1:'', ataque2:'', tipo2:'', ataque3:'', tipo3:'', ataque4:'', tipo4:'' });
-// Cada Pokémon de GO puede estar en el top 30 de más de una liga (ej.
-// Tinkaton en Super y Ultra), y el CP y los stats son distintos en cada una.
-// Por eso dataGO[nombre] ya NO es un objeto plano: es un diccionario por
-// liga, y cada liga tiene su propio CP/Stats/Movimientos. Solo existen las
-// claves de liga en las que ese Pokémon realmente está rankeado.
-const EMPTY_GO_ENTRY = () => ({ cp: '', stats: '', movRapido: '', tipoRapido: '', movCargado: '', tipoCargado: '' });
-const EMPTY_GO = () => ({});
-function getGoLeagueEntry(name, liga) {
-  if (!dataGO[name]) dataGO[name] = {};
-  if (!dataGO[name][liga]) dataGO[name][liga] = EMPTY_GO_ENTRY();
-  return dataGO[name][liga];
-}
+const EMPTY_GO         = () => ({ cpMax:'', statsSuper:'', statsUltra:'', movRapido:'', tipoRapido:'', movCargado:'', tipoCargado:'', liga:'' });
 
 // ── ICONOS DE TIPO (Pokémon GO: ataque rápido / cargado) ────────────────────
 // Orden alfabético según el nombre en español (Agua, Bicho, Dragón, Eléctrico...)
@@ -3883,54 +3740,26 @@ function typeIconHTML(t) {
   return `<img src="data:image/png;base64,${TYPE_ICONS_B64[t]}" class="move-type-icon" alt="${typeLabel(t)}" title="${typeLabel(t)}">`;
 }
 
-// ── LIGAS DE POKÉMON GO (Super / Ultra / Master) — diseño original propio ──
+// ── LIGAS DE POKÉMON GO (Super / Ultra / Master) ────────────────────────────
 const LIGA_LIST = ['Liga Super', 'Liga Ultra', 'Liga Master'];
-const LIGA_STYLES = {
-  'Liga Super':  { bg: '#2f6fed', ring: '#e03030', center: '#e03030' },
-  'Liga Ultra':  { bg: '#2c2f36', ring: '#f1c40f', center: '#f1c40f' },
-  'Liga Master': { bg: '#7b2ff7', ring: '#ff4fd8', center: '#ff4fd8' }
-};
+const LIGA_COLORS = { 'Liga Super': '#8e44ad', 'Liga Ultra': '#e67e22', 'Liga Master': '#2c2c2c' };
 function ligaOptionsHTML(selected) {
   return '<option value="">—</option>' + LIGA_LIST.map(l =>
     `<option value="${l}" ${l === selected ? 'selected' : ''}>${l}</option>`
   ).join('');
 }
 function ligaIconHTML(liga) {
-  if (!liga || !LIGA_STYLES[liga]) return '<span class="liga-icon liga-icon-empty"></span>';
-  const s = LIGA_STYLES[liga];
-  const cid = 'ligaClip_' + liga.replace(/\s+/g, '');
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">` +
-    `<defs><clipPath id="${cid}"><path d="M50 6 C72 6 90 15 94 22 C94 55 78 82 50 96 C22 82 6 55 6 22 C10 15 28 6 50 6 Z"/></clipPath></defs>` +
-    `<path d="M50 4 C74 4 93 14 97 21 C97 57 80 85 50 99 C20 85 3 57 3 21 C7 14 26 4 50 4 Z" fill="#dfe3e8" stroke="#8a8f98" stroke-width="1.5"/>` +
-    `<g clip-path="url(#${cid})">` +
-      `<rect x="0" y="0" width="100" height="100" fill="${s.bg}"/>` +
-      `<circle cx="50" cy="60" r="42" fill="none" stroke="${s.ring}" stroke-opacity="0.55" stroke-width="6"/>` +
-      `<circle cx="50" cy="60" r="28" fill="none" stroke="${s.ring}" stroke-opacity="0.45" stroke-width="6"/>` +
-      `<circle cx="50" cy="60" r="14" fill="none" stroke="${s.ring}" stroke-opacity="0.35" stroke-width="6"/>` +
-    `</g>` +
-    `<path d="M50 4 C74 4 93 14 97 21 C97 57 80 85 50 99 C20 85 3 57 3 21 C7 14 26 4 50 4 Z" fill="none" stroke="#8a8f98" stroke-width="1.5"/>` +
-    `<circle cx="50" cy="26" r="16" fill="#ffffff" stroke="#333" stroke-width="3"/>` +
-    `<circle cx="50" cy="26" r="6" fill="${s.center}" stroke="#333" stroke-width="3"/>` +
+  if (!liga || !LIGA_COLORS[liga]) return '<span class="liga-icon liga-icon-empty"></span>';
+  const color = LIGA_COLORS[liga];
+  const accent = liga === 'Liga Master' ? '#f1c40f' : '#ffffff';
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 40">` +
+    `<circle cx="20" cy="20" r="18" fill="#ffffff" stroke="#222" stroke-width="2"/>` +
+    `<path d="M2 20a18 18 0 0 1 36 0z" fill="${color}"/>` +
+    `<rect x="2" y="18.5" width="36" height="3" fill="#222"/>` +
+    `<circle cx="20" cy="20" r="6" fill="${accent}" stroke="#222" stroke-width="2"/>` +
   `</svg>`;
   return `<span class="liga-icon" title="${liga}">${svg}</span>`;
 }
-
-// Rellena los botones de "elegir liga" (modal de Datos y wizard de Consulta)
-// con el escudo SVG real de cada liga en vez de un emoji genérico.
-function ligaChoiceButtonsHTML(onClickFnName) {
-  return LIGA_LIST.map(liga =>
-    `<button class="btn btn-primary" style="width:100%;display:flex;align-items:center;gap:10px;text-align:left" onclick="${onClickFnName}('${liga}')">
-      <span style="width:36px;height:36px;flex-shrink:0;display:inline-flex">${ligaIconHTML(liga)}</span><span>${liga}</span>
-    </button>`
-  ).join('');
-}
-function initLigaChoiceButtons() {
-  const modalWrap = document.getElementById('modal-datos-go-liga-buttons');
-  if (modalWrap) modalWrap.innerHTML = ligaChoiceButtonsHTML('chooseDatosGoLiga');
-  const wizardWrap = document.getElementById('go-wizard-liga-buttons');
-  if (wizardWrap) wizardWrap.innerHTML = ligaChoiceButtonsHTML('goWizardChooseLiga');
-}
-initLigaChoiceButtons();
 
 const EMPTY_TCG        = () => ({ mazos:'', cartas:[] });
 const EMPTY_TCGLIVE    = () => ({ mazos:'', cartas:[] });
@@ -4011,50 +3840,6 @@ function migrarNombresExpansionesTcg() {
 // en Firestore se desincronizaron en algún momento; sin esta limpieza, cosas
 // como "Sugerir para los vacíos" terminaban generando datos para Pokémon que
 // ya no existían en la tabla.
-// Limpieza puntual de datos corruptos detectados: por un bug anterior,
-// algunos nombres inválidos ("Liga Super", "Liga Ultra", "Liga Master",
-// "undefined", vacío) quedaron guardados como si fueran Pokémon. Se sacan
-// de las listas y de los datos de todos los modos.
-function limpiarNombresInvalidosDePokemon() {
-  const invalidos = new Set(['Liga Super', 'Liga Ultra', 'Liga Master', 'undefined', 'null', '']);
-  [
-    [dataChampions, POKEMON_LISTS.champions],
-    [dataGO, POKEMON_LISTS.go],
-    [dataTCG, POKEMON_LISTS.tcg],
-    [dataTCGLive, POKEMON_LISTS.tcglive]
-  ].forEach(([dict, lista]) => {
-    if (!dict || !lista) return;
-    invalidos.forEach(nombre => { delete dict[nombre]; });
-    for (let i = lista.length - 1; i >= 0; i--) { if (invalidos.has(lista[i])) lista.splice(i, 1); }
-  });
-  LIGA_LIST.forEach(liga => {
-    if (LEAGUE_TOP_NAMES[liga]) {
-      for (let i = LEAGUE_TOP_NAMES[liga].length - 1; i >= 0; i--) {
-        if (invalidos.has(LEAGUE_TOP_NAMES[liga][i])) LEAGUE_TOP_NAMES[liga].splice(i, 1);
-      }
-    }
-  });
-
-  // Además del nombre del Pokémon, varios bugs anteriores (el de "Guardar
-  // cambios" sin scope, y restos de un formato viejo previo a que GO tuviera
-  // datos por liga) dejaron campos sueltos dentro de cada Pokémon de GO que
-  // NO son "Liga Super"/"Liga Ultra"/"Liga Master" (ej. "cpMax", "undefined",
-  // "statsUltra", "movRapido" a nivel raíz, etc.). Esto no solo es basura:
-  // infló tanto el documento "go" que probablemente superó el límite de
-  // tamaño de 1 MB definido en las reglas de Firestore, haciendo que la nube
-  // rechazara el guardado en silencio y quedara con una versión vieja. Acá
-  // se deja cada Pokémon de GO SOLO con sus claves de liga válidas.
-  if (dataGO) {
-    Object.keys(dataGO).forEach(nombre => {
-      const entry = dataGO[nombre];
-      if (!entry || typeof entry !== 'object') return;
-      Object.keys(entry).forEach(clave => {
-        if (!LIGA_LIST.includes(clave)) delete entry[clave];
-      });
-    });
-  }
-}
-
 function podarDatosHuerfanos() {
   const pares = [
     [dataChampions, POKEMON_LISTS.champions],
@@ -4130,305 +3915,6 @@ async function loadMovesEsDict() {
   if (typeof rebuildGoSuggestions === 'function') rebuildGoSuggestions();
 }
 loadMovesEsDict();
-
-// ── RANKINGS PVP POR LIGA (Pokémon GO) ──────────────────────────────────────
-// Fuente: PvPoke (pvpoke.com), proyecto de la comunidad con datos públicos en
-// GitHub. Se usa el ranking "overall" de cada liga para armar un top 30 por
-// liga, cruzando el speciesId de PvPoke contra nuestra lista de nombres (por
-// slug). Si PvPoke cambiara la URL de sus datos, este fetch fallará con un
-// aviso claro en pantalla en vez de romper el resto de la app.
-const LEAGUE_CP_CAP = { 'Liga Super': 1500, 'Liga Ultra': 2500, 'Liga Master': 10000 };
-let LEAGUE_TOP_NAMES = { 'Liga Super': [], 'Liga Ultra': [], 'Liga Master': [] };
-// Movimientos recomendados por PvPoke para cada Pokémon del top 30 de cada
-// liga (formato interno de GO, ej. "ICE_BEAM"): se usan para el botón 🪄 de
-// sugerencia en la tabla de GO.
-let LEAGUE_MOVESETS = { 'Liga Super': {}, 'Liga Ultra': {}, 'Liga Master': {} };
-// IVs óptimos por Pokémon según el gamemaster.json de PvPoke: cada especie
-// trae "defaultIVs.cp1500" y "cp2500" como [nivel, ivAtk, ivDef, ivPS], ya
-// calculados por PvPoke para acercarse lo más posible al tope de esa liga.
-let GAMEMASTER_DEFAULT_IVS = {};
-let GAMEMASTER_BASE_STATS = {};
-try {
-  const cachedLeagues = localStorage.getItem('leagueTopNames');
-  if (cachedLeagues) LEAGUE_TOP_NAMES = { ...LEAGUE_TOP_NAMES, ...JSON.parse(cachedLeagues) };
-  const cachedMovesets = localStorage.getItem('leagueMovesets');
-  if (cachedMovesets) LEAGUE_MOVESETS = { ...LEAGUE_MOVESETS, ...JSON.parse(cachedMovesets) };
-  const cachedIvs = localStorage.getItem('gamemasterDefaultIvs');
-  if (cachedIvs) GAMEMASTER_DEFAULT_IVS = JSON.parse(cachedIvs);
-  const cachedBaseStats = localStorage.getItem('gamemasterBaseStats');
-  if (cachedBaseStats) GAMEMASTER_BASE_STATS = JSON.parse(cachedBaseStats);
-} catch (e) { console.log('No se pudo leer el ranking cacheado', e); }
-
-// Tabla de multiplicadores de nivel (CPM) del propio juego Pokémon GO.
-// Es una constante pública del juego (documentada desde hace años por toda
-// la comunidad, ej. GamePress/Silph Road), no un dato de PvPoke: por eso va
-// escrita acá directo en vez de intentar descargarla de algún lado.
-const CPM_TABLE = {
-  1:0.094, 1.5:0.135137432, 2:0.16639787, 2.5:0.192650919, 3:0.21573247, 3.5:0.236572661,
-  4:0.25572005, 4.5:0.273530381, 5:0.29024988, 5.5:0.306057377, 6:0.3210876, 6.5:0.335445036,
-  7:0.34921268, 7.5:0.362457751, 8:0.37523559, 8.5:0.387592406, 9:0.39956728, 9.5:0.411193551,
-  10:0.42250001, 10.5:0.432926419, 11:0.44310755, 11.5:0.453059959, 12:0.46279839, 12.5:0.472336083,
-  13:0.48168495, 13.5:0.4908558, 14:0.49985844, 14.5:0.508701765, 15:0.51739395, 15.5:0.525942511,
-  16:0.53435433, 16.5:0.542635767, 17:0.55079269, 17.5:0.558830576, 18:0.56675452, 18.5:0.574569133,
-  19:0.58227891, 19.5:0.589887917, 20:0.59740001, 20.5:0.604818814, 21:0.61215729, 21.5:0.619399365,
-  22:0.62656713, 22.5:0.633644533, 23:0.64065295, 23.5:0.647576552, 24:0.65443563, 24.5:0.661214806,
-  25:0.667934, 25.5:0.674577537, 26:0.68116492, 26.5:0.687680648, 27:0.69414365, 27.5:0.700538673,
-  28:0.70688421, 28.5:0.713164996, 29:0.71939909, 29.5:0.725571552, 30:0.7317, 30.5:0.734741009,
-  31:0.73776948, 31.5:0.740785574, 32:0.74378943, 32.5:0.746781211, 33:0.74976104, 33.5:0.752729087,
-  34:0.75568551, 34.5:0.758630368, 35:0.76156384, 35.5:0.764486065, 36:0.76739717, 36.5:0.770297266,
-  37:0.7731865, 37.5:0.776064873, 38:0.77893275, 38.5:0.781790055, 39:0.78463697, 39.5:0.787473578,
-  40:0.79030001, 40.5:0.792650014, 41:0.79530001, 41.5:0.79799720, 42:0.80069995, 42.5:0.80339452,
-  43:0.80608904, 43.5:0.80878359, 44:0.81147376, 44.5:0.81406725, 45:0.81665001, 45.5:0.81922376,
-  46:0.82178767, 46.5:0.82434338, 47:0.82689452, 47.5:0.82944291, 48:0.83198899, 48.5:0.83452988,
-  49:0.83706397, 49.5:0.83959077, 50:0.84210526, 50.5:0.8446557, 51:0.84713375
-};
-// Fórmula oficial de CP del juego: CP = floor( (Atk_total · √Def_total · √PS_total · CPM²) / 10 )
-function calcularCP(baseStats, ivAtk, ivDef, ivHp, nivel) {
-  const cpm = CPM_TABLE[nivel];
-  if (!baseStats || cpm === undefined) return null;
-  const atk = baseStats.atk + ivAtk;
-  const def = baseStats.def + ivDef;
-  const hp = baseStats.hp + ivHp;
-  return Math.max(10, Math.floor((atk * Math.sqrt(def) * Math.sqrt(hp) * cpm * cpm) / 10));
-}
-
-// Los valores de CPM que tengo escritos a mano pueden tener algún error de
-// precisión mínimo, y eso a veces hacía que el CP calculado se pasara por
-// 2-6 puntos del tope real de la liga. Como red de seguridad: si el CP da
-// por encima del tope, se prueba con el nivel inmediatamente inferior (de a
-// 0.5) hasta quedar dentro del límite. El CP sube siempre con el nivel, así
-// que esto garantiza que nunca se pase, sin depender de tener el CPM exacto.
-function calcularCPDentroDelTope(baseStats, ivAtk, ivDef, ivHp, nivelInicial, tope) {
-  let nivel = nivelInicial;
-  let cp = calcularCP(baseStats, ivAtk, ivDef, ivHp, nivel);
-  while (cp != null && cp > tope && nivel > 1) {
-    nivel -= 0.5;
-    cp = calcularCP(baseStats, ivAtk, ivDef, ivHp, nivel);
-  }
-  return cp;
-}
-
-async function fetchGamemasterDefaultIvs() {
-  const res = await fetch('https://raw.githubusercontent.com/pvpoke/pvpoke/master/src/data/gamemaster.json');
-  if (!res.ok) throw new Error(`HTTP ${res.status} al pedir el gamemaster de PvPoke`);
-  const data = await res.json();
-  const pokemonArr = Array.isArray(data) ? data
-    : (data.pokemon || data.pokemonData || data.pokemons || []);
-  if (!Array.isArray(pokemonArr) || !pokemonArr.length) {
-    throw new Error('No se encontró la lista de Pokémon dentro del gamemaster (estructura inesperada)');
-  }
-  const slugToNombre = {};
-  POKEMON_LIST_BASE.forEach(n => { slugToNombre[getPokemonSlug(n)] = n; });
-  const result = {};
-  GAMEMASTER_BASE_STATS = {};
-  pokemonArr.forEach(p => {
-    const nombre = slugToNombre[p.speciesId];
-    if (nombre && p.defaultIVs) result[nombre] = p.defaultIVs;
-    if (nombre && p.baseStats) GAMEMASTER_BASE_STATS[nombre] = p.baseStats;
-  });
-  return result;
-}
-
-async function fetchLeagueTop30(liga) {
-  const cap = LEAGUE_CP_CAP[liga];
-  const res = await fetch(`https://raw.githubusercontent.com/pvpoke/pvpoke/master/src/data/rankings/all/overall/rankings-${cap}.json`);
-  if (!res.ok) throw new Error(`HTTP ${res.status} al pedir el ranking de ${liga}`);
-  const data = await res.json();
-  const slugToNombre = {};
-  POKEMON_LIST_BASE.forEach(n => { slugToNombre[getPokemonSlug(n)] = n; });
-  const top = [];
-  const movesets = {};
-  for (const entry of data) {
-    const nombre = slugToNombre[entry.speciesId];
-    if (nombre && !top.includes(nombre)) {
-      top.push(nombre);
-      const info = {};
-      if (Array.isArray(entry.moveset) && entry.moveset.length) {
-        info.fast = entry.moveset[0] || null;
-        info.charged = entry.moveset[1] || null;
-      }
-      movesets[nombre] = info;
-    }
-    if (top.length >= 30) break;
-  }
-  return { top, movesets };
-}
-
-async function reducirListaGoATop30() {
-  if (!confirm('Esto va a reemplazar la lista completa de GO por el Top 30 de cada liga (Super/Ultra/Master, según PvPoke). Los Pokémon que ya tenías cargados y no queden en ningún top 30 se van a borrar de GO. ¿Continuar?')) return;
-  const status = document.getElementById('datos-go-liga-status');
-  if (status) status.textContent = '⏳ Consultando rankings de PvPoke...';
-  try {
-    for (const liga of LIGA_LIST) {
-      const { top, movesets } = await fetchLeagueTop30(liga);
-      LEAGUE_TOP_NAMES[liga] = top;
-      LEAGUE_MOVESETS[liga] = movesets;
-    }
-    if (status) status.textContent = '⏳ Consultando IVs recomendados (gamemaster PvPoke)...';
-    try {
-      GAMEMASTER_DEFAULT_IVS = await fetchGamemasterDefaultIvs();
-      localStorage.setItem('gamemasterDefaultIvs', JSON.stringify(GAMEMASTER_DEFAULT_IVS));
-      localStorage.setItem('gamemasterBaseStats', JSON.stringify(GAMEMASTER_BASE_STATS));
-    } catch (e) {
-      console.log('No se pudieron cargar los IVs del gamemaster (los Stats no se van a poder sugerir):', e);
-    }
-    const union = [...new Set([...LEAGUE_TOP_NAMES['Liga Super'], ...LEAGUE_TOP_NAMES['Liga Ultra'], ...LEAGUE_TOP_NAMES['Liga Master']])];
-    if (!union.length) throw new Error('PvPoke no devolvió ningún Pokémon reconocido');
-    POKEMON_LISTS.go = union;
-    const nuevaDataGO = {};
-    union.forEach(name => {
-      nuevaDataGO[name] = {};
-      LIGA_LIST.forEach(liga => {
-        if (LEAGUE_TOP_NAMES[liga].includes(name)) {
-          nuevaDataGO[name][liga] = (dataGO[name] && dataGO[name][liga]) || EMPTY_GO_ENTRY();
-        }
-      });
-    });
-    dataGO = nuevaDataGO;
-    localStorage.setItem('leagueTopNames', JSON.stringify(LEAGUE_TOP_NAMES));
-    localStorage.setItem('leagueMovesets', JSON.stringify(LEAGUE_MOVESETS));
-    persistAll();
-    if (!LEAGUE_TOP_NAMES[datosGoLigaFiltro] || !LEAGUE_TOP_NAMES[datosGoLigaFiltro].length) datosGoLigaFiltro = 'Liga Super';
-    if (currentDatosMode === 'go') renderTableGO();
-    if (status) status.textContent = `✅ Lista actualizada: ${union.length} Pokémon (Top 30 x liga)`;
-    showToast(`✅ Lista de GO reducida a ${union.length} Pokémon`);
-  } catch (e) {
-    console.error(e);
-    if (status) status.textContent = '❌ Falló la consulta de rankings.';
-    showToast('❌ No se pudo actualizar el ranking: ' + e.message, true);
-  }
-}
-
-// Convierte el ID interno de GO (ej. "ICE_BEAM") al slug que usa PokeAPI
-// (ej. "ice-beam"), para poder pedirle a PokeAPI el nombre en español y el
-// tipo del movimiento sin depender de un diccionario local.
-//
-// Algunos movimientos de GO no calzan 1 a 1 con el juego principal:
-// - "Bola Meteoro"/"Onda Certera"/"Palabreo" en GO están separados por tipo
-//   fijo (ej. WEATHER_BALL_ICE, HIDDEN_POWER_FIRE), mientras que PokeAPI solo
-//   tiene un movimiento genérico (weather-ball) con tipo variable. Se separa
-//   el sufijo de tipo y se fuerza ese tipo directamente, sin depender de lo
-//   que diga PokeAPI (que sería "Normal" por defecto y estaría mal).
-// - Otros simplemente se escriben distinto (SUPER_POWER vs. "superpower").
-const GO_TYPE_SUFFIX_BASE_SLUG = {
-  WEATHER_BALL: 'weather-ball',
-  HIDDEN_POWER: 'hidden-power',
-  TECHNO_BLAST: 'techno-blast'
-};
-const GO_SUFFIX_TO_INTERNAL_TYPE = {
-  NORMAL: 'Normal', FIRE: 'Fuego', WATER: 'Agua', ELECTRIC: 'Electrico',
-  GRASS: 'Planta', ICE: 'Hielo', FIGHTING: 'Lucha', POISON: 'Veneno',
-  GROUND: 'Tierra', FLYING: 'Volador', PSYCHIC: 'Psiquico', BUG: 'Bicho',
-  ROCK: 'Roca', GHOST: 'Fantasma', DRAGON: 'Dragon', DARK: 'Siniestro',
-  STEEL: 'Metal', FAIRY: 'Hada', DOUSE: 'Agua', SHOCK: 'Electrico',
-  BURN: 'Fuego', CHILL: 'Hielo'
-};
-const GO_MOVE_ID_OVERRIDES = { SUPER_POWER: 'superpower' };
-
-function resolveGoMoveSlugAndType(goMoveIdRaw) {
-  const goMoveId = goMoveIdRaw.replace(/_FAST$/i, '').toUpperCase();
-  if (GO_MOVE_ID_OVERRIDES[goMoveId]) return { slug: GO_MOVE_ID_OVERRIDES[goMoveId], forcedTipo: null };
-  const partes = goMoveId.split('_');
-  const posibleSufijo = partes[partes.length - 1];
-  const posibleBase = partes.slice(0, -1).join('_');
-  if (GO_TYPE_SUFFIX_BASE_SLUG[posibleBase] && GO_SUFFIX_TO_INTERNAL_TYPE[posibleSufijo]) {
-    return { slug: GO_TYPE_SUFFIX_BASE_SLUG[posibleBase], forcedTipo: GO_SUFFIX_TO_INTERNAL_TYPE[posibleSufijo] };
-  }
-  return { slug: goMoveId.toLowerCase().replace(/_/g, '-'), forcedTipo: null };
-}
-
-const POKEAPI_MOVE_TYPE_CACHE = {};
-async function fetchMoveEsAndType(slug) {
-  if (POKEAPI_MOVE_ES_CACHE[slug] && POKEAPI_MOVE_TYPE_CACHE[slug] !== undefined) {
-    return { nombre: POKEAPI_MOVE_ES_CACHE[slug], tipo: POKEAPI_MOVE_TYPE_CACHE[slug] };
-  }
-  const fallbackNombre = slug.split('-').map(w => w[0].toUpperCase() + w.slice(1)).join(' ');
-  try {
-    const res = await fetch(`https://pokeapi.co/api/v2/move/${slug}`);
-    if (res.ok) {
-      const data = await res.json();
-      const esName = (data.names || []).find(n => n.language && n.language.name === 'es');
-      const nombre = esName && esName.name ? esName.name : fallbackNombre;
-      const tipoRaw = data.type && data.type.name;
-      const tipo = POKEAPI_TYPE_TO_INTERNAL_KEY[tipoRaw] || '';
-      POKEAPI_MOVE_ES_CACHE[slug] = nombre;
-      POKEAPI_MOVE_TYPE_CACHE[slug] = tipo;
-      return { nombre, tipo };
-    }
-  } catch (e) {
-    console.log('No se pudo traducir/tipar vía PokeAPI:', slug, e);
-  }
-  const local = MOVES_ES_LOOKUP_LOWER[fallbackNombre.toLowerCase()];
-  const nombre = local || fallbackNombre;
-  const tipo = getKnownMoveType(nombre) || '';
-  POKEAPI_MOVE_ES_CACHE[slug] = nombre;
-  POKEAPI_MOVE_TYPE_CACHE[slug] = tipo;
-  return { nombre, tipo };
-}
-
-// Botón 🪄 de la tabla de GO: sugiere CP, stats (IVs) y movimiento rápido/
-// cargado. Los movimientos y el CP-tope salen del ranking de PvPoke; los IVs
-// (Stats) salen del gamemaster.json de PvPoke, campo "defaultIVs", que trae
-// el IV óptimo real que calculó PvPoke para acercarse al tope de esa liga.
-// En Liga Master no se sugiere CP ni Stats (no hay tope: depende de qué
-// Pokémon atrapaste vos), solo movimientos.
-const LEAGUE_GAMEMASTER_KEY = { 'Liga Super': 'cp1500', 'Liga Ultra': 'cp2500' };
-async function goSugerirUno(name) {
-  const ligaConDatos = LIGA_LIST.filter(l => LEAGUE_MOVESETS[l] && LEAGUE_MOVESETS[l][name]);
-  if (!ligaConDatos.length) {
-    showToast('⚠️ No hay ranking cargado para ' + name + '. Tocá "Actualizar Top 30 x liga" primero.', true);
-    return;
-  }
-  const ligaElegida = ligaConDatos.includes(datosGoLigaFiltro) ? datosGoLigaFiltro : ligaConDatos[0];
-  const mv = LEAGUE_MOVESETS[ligaElegida][name];
-  try {
-    const updates = {};
-    if (mv.fast) {
-      const { slug, forcedTipo } = resolveGoMoveSlugAndType(mv.fast);
-      const { nombre, tipo } = await fetchMoveEsAndType(slug);
-      updates.movRapido = nombre; updates.tipoRapido = forcedTipo || tipo;
-    }
-    if (mv.charged) {
-      const { slug, forcedTipo } = resolveGoMoveSlugAndType(mv.charged);
-      const { nombre, tipo } = await fetchMoveEsAndType(slug);
-      updates.movCargado = nombre; updates.tipoCargado = forcedTipo || tipo;
-    }
-    let statsAviso = '';
-    if (ligaElegida !== 'Liga Master') {
-      const gmKey = LEAGUE_GAMEMASTER_KEY[ligaElegida];
-      const defaultIvs = GAMEMASTER_DEFAULT_IVS[name] && GAMEMASTER_DEFAULT_IVS[name][gmKey];
-      const baseStats = GAMEMASTER_BASE_STATS[name];
-      if (Array.isArray(defaultIvs) && defaultIvs.length === 4) {
-        const [nivel, ivAtk, ivDef, ivHp] = defaultIvs;
-        updates.stats = `${ivAtk}/${ivDef}/${ivHp}`;
-        const cpReal = calcularCPDentroDelTope(baseStats, ivAtk, ivDef, ivHp, nivel, LEAGUE_CP_CAP[ligaElegida]);
-        updates.cp = cpReal != null ? String(cpReal) : String(LEAGUE_CP_CAP[ligaElegida]);
-        if (cpReal == null) statsAviso = ' (CP aproximado: faltan baseStats)';
-      } else {
-        updates.cp = String(LEAGUE_CP_CAP[ligaElegida]);
-        statsAviso = ' (sin IVs: actualizá el ranking de nuevo)';
-      }
-    }
-    const entry = getGoLeagueEntry(name, ligaElegida);
-    Object.assign(entry, updates);
-    console.log('[DEBUG-GO] entry tras sugerir', name, ligaElegida, JSON.stringify(entry));
-    debugGoLog('SUGERIR: entry tras sugerir ' + name + ' [' + ligaElegida + '] = ' + JSON.stringify(entry));
-    const result = await persistAll();
-    console.log('[DEBUG-GO] dataGO[name] tras persistAll', name, JSON.stringify(dataGO[name]));
-    debugGoLog('SUGERIR: dataGO["' + name + '"] tras persistAll = ' + JSON.stringify(dataGO[name]));
-    console.log('[DEBUG-GO] localStorage.pokemonDataGO tras persistAll', name, JSON.stringify((JSON.parse(localStorage.getItem('pokemonDataGO') || '{}'))[name]));
-    debugGoLog('SUGERIR: localStorage["pokemonDataGO"]["' + name + '"] tras persistAll = ' + JSON.stringify((JSON.parse(localStorage.getItem('pokemonDataGO') || '{}'))[name]));
-    renderTableGO();
-    if (result && result.ok === false) {
-      showToast('🪄 Sugerencia aplicada a ' + name + ', pero no se pudo sincronizar con la nube (queda solo en este dispositivo). Ver consola (F12).', true);
-    } else {
-      showToast('🪄 Sugerencia aplicada a ' + name + ' (' + ligaElegida + ')' + statsAviso);
-    }
-  } catch (e) {
-    console.error(e);
-    showToast('❌ No se pudo generar una sugerencia para ' + name, true);
-  }
-}
 
 // Si "value" coincide con un nombre en inglés conocido, devuelve su traducción
 // al español. Si no coincide con nada (porque ya está en español, o no está en
@@ -4526,10 +4012,10 @@ const CHAMPIONS_STRONG_MOVES_BY_TYPE = {
 // especial. "protect" (Protección) queda como red de contención casi
 // universal si no aprende ninguno de los de arriba.
 const CHAMPIONS_SETUP_MOVES = {
-  physical: [{s:'swords-dance', n:'Swords Dance', tipo:'Normal'}, {s:'dragon-dance', n:'Dragon Dance', tipo:'Dragon'}],
-  special:  [{s:'nasty-plot', n:'Nasty Plot', tipo:'Siniestro'}, {s:'calm-mind', n:'Calm Mind', tipo:'Psiquico'}]
+  physical: [{s:'swords-dance', n:'Swords Dance'}, {s:'dragon-dance', n:'Dragon Dance'}],
+  special:  [{s:'nasty-plot', n:'Nasty Plot'}, {s:'calm-mind', n:'Calm Mind'}]
 };
-const CHAMPIONS_PROTECT = {s:'protect', n:'Protect', tipo:'Normal'};
+const CHAMPIONS_PROTECT = {s:'protect', n:'Protect'};
 
 function championsSpanishMoveAndType(englishName) {
   const key = englishName.toLowerCase();
@@ -4537,35 +4023,6 @@ function championsSpanishMoveAndType(englishName) {
   const rawType = MOVE_TYPE_LOOKUP_LOWER[key];
   const tipo = rawType ? (MOVE_TYPE_TO_INTERNAL_KEY[rawType.toLowerCase()] || rawType) : '';
   return { nombre: es, tipo };
-}
-
-// El diccionario local (moves-es.json) se carga con fetch() a un archivo
-// junto al HTML: si la app se abre como archivo local (file://) en vez de
-// servirse por http://, ese fetch falla en silencio y el diccionario queda
-// vacío. Para que "Sugerir" funcione siempre, se pide el nombre en español
-// directamente a PokeAPI (fetch a una URL externa, que sí funciona bajo
-// file://), y solo si eso también falla se recurre al diccionario local o,
-// en último caso, al nombre en inglés.
-const POKEAPI_MOVE_ES_CACHE = {};
-async function championsMoveNameEs(slug, englishName) {
-  if (POKEAPI_MOVE_ES_CACHE[slug]) return POKEAPI_MOVE_ES_CACHE[slug];
-  try {
-    const res = await fetch(`https://pokeapi.co/api/v2/move/${slug}`);
-    if (res.ok) {
-      const data = await res.json();
-      const esName = (data.names || []).find(n => n.language && n.language.name === 'es');
-      if (esName && esName.name) {
-        POKEAPI_MOVE_ES_CACHE[slug] = esName.name;
-        return esName.name;
-      }
-    }
-  } catch (e) {
-    console.log('No se pudo traducir vía PokeAPI:', slug, e);
-  }
-  const local = MOVES_ES_LOOKUP_LOWER[englishName.toLowerCase()];
-  const fallback = local || englishName;
-  POKEAPI_MOVE_ES_CACHE[slug] = fallback;
-  return fallback;
 }
 
 async function championsFetchPokeApiData(name) {
@@ -4580,7 +4037,7 @@ async function championsFetchPokeApiData(name) {
   return { stats, types, movepool };
 }
 
-async function championsComputeSuggestion({ stats, types, movepool }) {
+function championsComputeSuggestion({ stats, types, movepool }) {
   const atk = stats.attack || 0, spa = stats['special-attack'] || 0, spd = stats.speed || 0;
   const def = stats.defense || 0, spdef = stats['special-defense'] || 0, hp = stats.hp || 0;
 
@@ -4604,7 +4061,7 @@ async function championsComputeSuggestion({ stats, types, movepool }) {
 
   const claseBuscada = archetypeFisico ? 'physical' : 'special';
   const candidatos = [];
-  types.forEach(t => (CHAMPIONS_STRONG_MOVES_BY_TYPE[t] || []).forEach(m => candidatos.push({ ...m, tipo: t })));
+  types.forEach(t => (CHAMPIONS_STRONG_MOVES_BY_TYPE[t] || []).forEach(m => candidatos.push(m)));
 
   const elegidos = [];
   const usados = new Set();
@@ -4635,24 +4092,24 @@ async function championsComputeSuggestion({ stats, types, movepool }) {
   if (elegidos.length < 4) intentar(candidatos, null);
 
   const resultado = { naturaleza, objeto };
-  for (const i of [1,2,3,4]) {
+  [1,2,3,4].forEach(i => {
     const m = elegidos[i-1];
     if (m) {
-      const nombre = await championsMoveNameEs(m.s, m.n);
+      const { nombre, tipo } = championsSpanishMoveAndType(m.n);
       resultado['ataque'+i] = nombre;
-      resultado['tipo'+i] = m.tipo || '';
+      resultado['tipo'+i] = tipo;
     } else {
       resultado['ataque'+i] = '';
       resultado['tipo'+i] = '';
     }
-  }
+  });
   return resultado;
 }
 
 async function championsSugerirUno(name) {
   try {
     const apiData = await championsFetchPokeApiData(name);
-    const sugerido = await championsComputeSuggestion(apiData);
+    const sugerido = championsComputeSuggestion(apiData);
     dataChampions[name] = { ...EMPTY_CHAMPIONS(), ...dataChampions[name], ...sugerido };
     persistAll();
     renderTableChampions();
@@ -4683,7 +4140,7 @@ async function championsSugerirVacios() {
     if (status) status.textContent = `Sugiriendo... ${hechos + 1}/${pendientes.length} (${name})`;
     try {
       const apiData = await championsFetchPokeApiData(name);
-      const sugerido = await championsComputeSuggestion(apiData);
+      const sugerido = championsComputeSuggestion(apiData);
       dataChampions[name] = { ...EMPTY_CHAMPIONS(), ...dataChampions[name], ...sugerido };
     } catch (e) {
       console.log('Sin sugerencia para', name, e);
@@ -4708,25 +4165,20 @@ function bindMoveTranslationBlur(tbody) {
   tbody.querySelectorAll('.move-name-input').forEach(input => {
     input.addEventListener('blur', () => {
       const p = input.dataset.pokemon, f = input.dataset.field, game = input.dataset.game;
-      let target;
-      if (game === 'champions') {
-        if (!dataChampions[p]) dataChampions[p] = EMPTY_CHAMPIONS();
-        target = dataChampions[p];
-      } else {
-        target = getGoLeagueEntry(p, input.dataset.liga);
-      }
+      const store = game === 'champions' ? dataChampions : dataGO;
+      if (!store[p]) store[p] = game === 'champions' ? EMPTY_CHAMPIONS() : EMPTY_GO();
 
       const translated = translateMoveIfEnglish(input.value);
       if (translated) {
         input.value = translated;
-        target[f] = translated;
+        store[p][f] = translated;
       }
 
       const typeField = MOVE_FIELD_TO_TYPE_FIELD[f];
-      if (typeField && !target[typeField]) {
-        const knownType = getKnownMoveType(target[f]);
+      if (typeField && !store[p][typeField]) {
+        const knownType = getKnownMoveType(store[p][f]);
         if (knownType) {
-          target[typeField] = knownType;
+          store[p][typeField] = knownType;
           const row = input.closest('tr');
           const select = row ? row.querySelector(`select[data-field="${typeField}"]`) : null;
           if (select) {
@@ -4888,7 +4340,6 @@ function bindNatureItemTranslationBlur(tbody) {
 }
 
 function loadFromStorage() {
-  debugGoLog('CARGA: entrando a loadFromStorage()');
   try {
     // Lista vieja compartida (solo para migración de instalaciones previas)
     let legacyList = null;
@@ -4920,7 +4371,6 @@ function loadFromStorage() {
       });
     }
 
-    debugGoLog('CARGA: checkpoint — Champions procesado OK, por entrar a la sección GO.');
     // ── Pokémon GO ──
     const savedListGO = localStorage.getItem('pokemonList_go');
     if (savedListGO) {
@@ -4930,8 +4380,6 @@ function loadFromStorage() {
       POKEMON_LISTS.go = [...legacyList];
     }
     const savedGO = localStorage.getItem('pokemonDataGO');
-    console.log('[DEBUG-GO] loadFromStorage arrancando. pokemonList_go tiene', POKEMON_LISTS.go.length, 'nombres. pokemonDataGO crudo (primeros 2000 chars):', savedGO ? savedGO.slice(0, 2000) : '(vacío)');
-    debugGoLog('CARGA: loadFromStorage arrancando. pokemonList_go tiene ' + POKEMON_LISTS.go.length + ' nombres. pokemonDataGO crudo (primeros 2000 chars) = ' + (savedGO ? savedGO.slice(0, 2000) : '(vacío)'));
     dataGO = {};
     POKEMON_LISTS.go.forEach(p => { dataGO[p] = EMPTY_GO(); });
     if (savedGO) {
@@ -4941,8 +4389,6 @@ function loadFromStorage() {
         dataGO[k] = { ...dataGO[k], ...parsed[k] };
       });
     }
-    console.log('[DEBUG-GO] loadFromStorage terminó. dataGO reconstruido (completo):', JSON.stringify(dataGO));
-    debugGoLog('CARGA: loadFromStorage terminó. dataGO reconstruido (completo) = ' + JSON.stringify(dataGO));
 
     // ── TCG Pocket ──
     const savedListTCG = localStorage.getItem('pokemonList_tcg');
@@ -5037,26 +4483,10 @@ function loadFromStorage() {
     // Corrige nombres de expansiones de TCG Pocket que hayan quedado
     // guardados de versiones viejas (mal traducidos o incompletos).
     migrarNombresExpansionesTcg();
-    limpiarNombresInvalidosDePokemon();
     podarDatosHuerfanos();
-    debugGoLog('CARGA: loadFromStorage terminó SIN errores.');
-    window.__loadFromStorageDone = true;
-  } catch(e) {
-    window.__loadFromStorageError = (e && e.stack) ? e.stack : String(e);
-    debugGoLog('CARGA: ❌❌❌ loadFromStorage ROMPIÓ A MITAD DE CAMINO: ' + window.__loadFromStorageError);
-  }
+  } catch(e) {}
 }
 loadFromStorage();
-setTimeout(() => {
-  if (window.__loadFromStorageDone) {
-    const alt = (typeof dataGO !== 'undefined' && dataGO['Altaria']) ? JSON.stringify(dataGO['Altaria']) : '(Altaria no está en dataGO)';
-    console.log('[DEBUG-GO] Carga terminó bien. Pokémon en dataGO:', Object.keys(dataGO || {}).length, '— Altaria =', alt);
-  } else if (window.__loadFromStorageError) {
-    console.log('[DEBUG-GO] La carga se rompió con este error:', window.__loadFromStorageError);
-  } else {
-    console.log('[DEBUG-GO] La carga nunca terminó (se quedó colgada, sin error).');
-  }
-}, 2500);
 
 function persistLocalOnly() {
   localStorage.setItem('pokemonList_champions', JSON.stringify(POKEMON_LISTS.champions));
@@ -5122,11 +4552,7 @@ function applyGameDoc(game, doc) {
     if (data) dataChampions = data;
   } else if (game === 'go') {
     if (Array.isArray(list)) POKEMON_LISTS.go = list;
-    if (data) {
-      console.log('[DEBUG-GO] applyGameDoc: llegó un snapshot de Firestore para GO en', new Date().toISOString(), '— reemplaza dataGO por:', JSON.stringify(data));
-      debugGoLog('FIRESTORE: llegó un snapshot de GO — va a reemplazar dataGO por = ' + JSON.stringify(data));
-      dataGO = data;
-    }
+    if (data) dataGO = data;
   } else if (game === 'tcg') {
     if (Array.isArray(list)) POKEMON_LISTS.tcg = list;
     if (data) dataTCG = data;
@@ -5148,25 +4574,8 @@ function applyExpansionesDoc(doc) {
   const expansionesLive = parseSnapField(doc.expansionesLive); if (Array.isArray(expansionesLive)) EXPANSIONES_SUGERIDAS.tcglive = expansionesLive;
 }
 
-// Mientras esta cuenta es > 0, hay una escritura nuestra en curso hacia
-// Firestore. El listener de "escucha en tiempo real" (más abajo) usa esto
-// para NO reaplicar los documentos mientras tanto: como pushToFirestore()
-// escribe 6 documentos juntos por cada cambio (aunque solo haya cambiado,
-// por ejemplo, GO), sus "ecos" (onSnapshot) pueden llegar en cualquier
-// orden. Si el eco de un documento que NO cambió (ej. "champions") llega
-// antes que el eco del que sí cambió (ej. "go"), sin este freno se volvía a
-// aplicar la copia vieja en caché de "go" encima del cambio recién hecho en
-// memoria, y esa copia vieja terminaba pisando también el localStorage
-// (por el persistLocalOnly() que corre al reaplicar) — o sea, la sugerencia
-// se veía aplicada un instante y después desaparecía sola, incluso antes de
-// tocar "Guardar cambios".
-let pendingLocalWrites = 0;
-
 function pushToFirestore() {
-  if (!window._fbDb) {
-    debugGoLog('FIRESTORE: pushToFirestore() llamado pero window._fbDb NO EXISTE (Firebase nunca se conectó) — el guardado queda SOLO local.');
-    return Promise.resolve({ ok: false, failedIds: ['(sin conexión a Firebase)'], errors: [] });
-  }
+  if (!window._fbDb) return Promise.resolve();
   const col = window._fbDb.collection('appdata');
   // Cada campo se guarda como texto (JSON.stringify) en vez de objeto/mapa
   // nativo de Firestore, para evitar el límite de "demasiadas entradas de
@@ -5179,58 +4588,18 @@ function pushToFirestore() {
     ['mazos', { mazos: JSON.stringify(dataMazos), mazosLive: JSON.stringify(dataMazosLive) }],
     ['expansiones', { expansiones: JSON.stringify(EXPANSIONES_SUGERIDAS.tcg), expansionesLive: JSON.stringify(EXPANSIONES_SUGERIDAS.tcglive) }]
   ];
-  // Firestore rechaza cualquier documento que supere ~1 MiB en total. Se
-  // mide el tamaño real de cada uno ANTES de mandarlo, para detectar esto
-  // con un mensaje claro en vez de dejar que falle en silencio.
-  const LIMITE_FIRESTORE_BYTES = 1048576; // 1 MiB
-  writes.forEach(([id, payload]) => {
-    const bytes = new Blob([JSON.stringify(payload)]).size;
-    const pct = Math.round((bytes / LIMITE_FIRESTORE_BYTES) * 100);
-    debugGoLog('FIRESTORE: tamaño del documento "' + id + '" = ' + (bytes / 1024).toFixed(1) + ' KB (' + pct + '% del límite de 1 MB de Firestore)');
-  });
-  pendingLocalWrites++;
   return Promise.all(writes.map(([id, payload]) =>
     col.doc(id).set(payload).catch(err => ({ id, err }))
   )).then(results => {
     const failed = results.filter(r => r && r.err);
     if (failed.length) {
-      // OJO: antes acá se llamaba a showToast() directamente con el aviso de
-      // error, pero como esta función corre DENTRO de persistAll() (que a su
-      // vez es "await"eada por saveAllData()/goSugerirUno()), el toast de
-      // "✅ Datos guardados correctamente" que esas funciones muestran justo
-      // después TAPABA este aviso de error (el toast es un único elemento,
-      // el último mensaje pisa al anterior). Resultado: el usuario veía
-      // "guardado correctamente" aunque la nube hubiera rechazado el
-      // guardado, y al recargar la página volvía la versión vieja de la
-      // nube. Ahora esta función solo INFORMA el fallo (no muestra toast);
-      // quien la llama decide un único mensaje final.
-      console.error('Firestore write failed en:', failed.map(f => f.id).join(', '), failed.map(f => ({ id: f.id, code: f.err && f.err.code, message: f.err && f.err.message })));
-      debugGoLog('FIRESTORE: ❌ falló el guardado en: ' + failed.map(f => f.id + ' (' + (f.err && f.err.code) + ': ' + (f.err && f.err.message) + ')').join(', '));
-      return { ok: false, failedIds: failed.map(f => f.id), errors: failed.map(f => f.err) };
+      console.log('Firestore write failed en:', failed.map(f => f.id).join(', '), failed);
+      showToast(`⚠️ No se pudo sincronizar "${failed.map(f => f.id).join(', ')}" con la nube (puede ser tamaño o conexión)`, true);
     }
-    return { ok: true };
-  }).catch(err => {
-    console.error('Firestore write failed (excepción general):', err);
-    return { ok: false, failedIds: ['?'], errors: [err] };
-  }).finally(() => {
-    pendingLocalWrites = Math.max(0, pendingLocalWrites - 1);
   });
 }
 
-// Una vez que el usuario edita algo en esta sesión (pestaña abierta), se
-// deja de reaplicar lo que llegue de Firestore en tiempo real. Motivo: se
-// detectó que un cambio recién guardado y confirmado (sin error) podía
-// desaparecer solo, antes de que el usuario recargara la página — la
-// hipótesis más sólida es una condición de carrera entre el guardado propio
-// y algún eco/snapshot tardío de Firestore que trae una copia más vieja.
-// En vez de perseguir ese timing exacto, se corta de raíz: mientras dure
-// esta sesión (esta pestaña, sin recargar), lo remoto ya no puede pisar una
-// edición local. Al recargar la página de cero, sí se trae lo último de la
-// nube con normalidad.
-let localEditsMadeThisSession = false;
-
 function persistAll() {
-  localEditsMadeThisSession = true;
   persistLocalOnly();
   return pushToFirestore();
 }
@@ -5246,53 +4615,18 @@ const firebaseConfig = {
   appId: "1:585284610562:web:15d174fc5971319167d51b"
 };
 
-// Documentos que se escuchan en Firestore. 'main' y 'lists' son formatos
-// viejos (compatibilidad); los 4 juegos, mazos y expansiones son el formato
-// actual, cada uno 100% independiente de los demás.
-const FIRESTORE_DOC_IDS = ['main', 'lists', 'champions', 'go', 'tcg', 'tcglive', 'mazos', 'expansiones'];
-
-// Sincronización MANUAL con la nube: en vez de depender del listener en
-// tiempo real (onSnapshot, más abajo) — que en ciertas redes/dispositivos
-// no está trayendo los cambios correctamente aunque el guardado sí llegue
-// bien a Firestore — esta función hace una lectura directa (.get()) de
-// cada documento, una sola vez, y aplica lo que encuentre. Sirve como
-// mecanismo de respaldo confiable para forzar traer lo último de la nube.
-async function sincronizarDesdeNube(silencioso) {
-  if (!window._fbDb) {
-    if (!silencioso) showToast('⚠️ No hay conexión con la nube en este momento.', true);
-    return;
-  }
-  if (!silencioso) showToast('☁️ Sincronizando con la nube...');
-  try {
-    const col = window._fbDb.collection('appdata');
-    const docs = await Promise.all(FIRESTORE_DOC_IDS.map(id => col.doc(id).get({ source: 'server' })));
-    let anyExists = false;
-    FIRESTORE_DOC_IDS.forEach((id, i) => {
-      const doc = docs[i];
-      if (!doc.exists) return;
-      const data = doc.data();
-      anyExists = true;
-      if (id === 'main' || id === 'lists') applyLegacyCombinedLists(data);
-      else if (id === 'champions' || id === 'go' || id === 'tcg' || id === 'tcglive') applyGameDoc(id, data);
-      else if (id === 'mazos') applyMazosDoc(data);
-      else if (id === 'expansiones') applyExpansionesDoc(data);
-    });
-    if (!anyExists) {
-      if (!silencioso) showToast('⚠️ La nube todavía no tiene datos guardados.', true);
-      return;
-    }
-    limpiarNombresInvalidosDePokemon();
-    podarDatosHuerfanos();
-    persistLocalOnly();
-    if (typeof renderCurrentTable === 'function') renderCurrentTable();
-    const searchInput = document.getElementById('search-input');
-    if (currentMode && searchInput) showResult(searchInput.value.trim() || null);
-    if (!silencioso) showToast('✅ Sincronizado con la nube correctamente');
-  } catch (e) {
-    console.error('Error al sincronizar con la nube', e);
-    if (!silencioso) showToast('⚠️ No se pudo sincronizar con la nube: ' + (e && e.message || e), true);
-  }
-}
+// Documentos que se escuchan en Firestore. Antes también se escuchaban 'main'
+// y 'lists' (formato viejo, pre-migración) como respaldo de compatibilidad,
+// pero como pushToFirestore() nunca los actualiza ni los borra, quedaban
+// "congelados" con datos viejos para siempre. Si esos listeners respondían
+// antes que los del juego correspondiente (algo asíncrono y sin orden
+// garantizado, más probable con conexiones lentas), la app llegaba a guardar
+// esos datos viejos en localStorage por unos instantes, y si el usuario
+// recargaba justo en ese momento, perdía lo último guardado. Ya no se
+// escuchan más: se ignoran por completo y, si existen, se borran solos la
+// primera vez que carga la app (ver limpiarDocumentosLegacy más abajo).
+const FIRESTORE_DOC_IDS = ['champions', 'go', 'tcg', 'tcglive', 'mazos', 'expansiones'];
+const FIRESTORE_LEGACY_DOC_IDS = ['main', 'lists'];
 
 function initFirebaseSync() {
   try {
@@ -5308,14 +4642,15 @@ function initFirebaseSync() {
     });
     const col = window._fbDb.collection('appdata');
 
-    // IMPORTANTE: se detectó que Firestore, con la persistencia offline
-    // activada, a veces prefiere devolver una copia en caché (vieja) en vez
-    // de ir al servidor real — tanto en la escucha en tiempo real (más abajo)
-    // como en lecturas puntuales. Por eso, apenas se conecta, se fuerza una
-    // sincronización real contra el servidor (sincronizarDesdeNube, con
-    // {source:'server'}), en vez de esperar pasivamente a que el listener
-    // entregue los datos correctos por su cuenta.
-    sincronizarDesdeNube(true);
+    // Borra 'main'/'lists' de Firestore si todavía existen (quedaron de una
+    // versión vieja de la app). No se leen ni se aplican en ningún momento:
+    // esto es solo higiene, para que no sigan ocupando espacio ni generando
+    // confusión si alguien los mira desde la consola de Firebase.
+    FIRESTORE_LEGACY_DOC_IDS.forEach(id => {
+      col.doc(id).get().then(doc => {
+        if (doc.exists) col.doc(id).delete().catch(() => {});
+      }).catch(() => {});
+    });
 
     const latestDocs = {};
     let pendingInitialChecks = FIRESTORE_DOC_IDS.length;
@@ -5325,40 +4660,15 @@ function initFirebaseSync() {
     // único objeto genérico antes de aplicarlos (eso era lo que permitía que
     // el estado de un juego se mezclara con el de otro). Cada documento se
     // procesa con su propia función, tocando solo lo que le corresponde.
-    //
-    // Importante: solo se reaplica el documento que efectivamente disparó
-    // este snapshot (parámetro "id"), NUNCA se reprocesan de paso los demás
-    // documentos en caché (latestDocs). Antes, cualquier snapshot (incluso
-    // de un documento sin relación, ej. "expansiones") volvía a aplicar TODOS
-    // los documentos en caché, incluyendo una copia de "go" que podía estar
-    // vieja si su propio eco todavía no había llegado — pisando así, en
-    // memoria y en localStorage, una sugerencia recién aplicada.
-    //
-    // Además, mientras haya una escritura nuestra en curso (pendingLocalWrites
-    // > 0), se ignoran los snapshots entrantes: total, esos ecos van a
-    // reflejar lo que nosotros mismos acabamos de mandar.
-    function applyOneDoc(id) {
-      if (localEditsMadeThisSession) {
-        debugGoLog('FIRESTORE: llegó snapshot de "' + id + '" pero se IGNORA (ya hubo ediciones locales en esta sesión)');
-        return;
-      }
-      if (pendingLocalWrites > 0) {
-        if (id === 'go') debugGoLog('FIRESTORE: llegó snapshot de "go" pero se IGNORA (pendingLocalWrites=' + pendingLocalWrites + ')');
-        return;
-      }
-      let applied = false;
-      if (id === 'main' || id === 'lists') {
-        if (latestDocs[id]) { applied = true; applyLegacyCombinedLists(latestDocs[id]); }
-      } else if (id === 'champions' || id === 'go' || id === 'tcg' || id === 'tcglive') {
-        if (latestDocs[id]) { applied = true; applyGameDoc(id, latestDocs[id]); }
-      } else if (id === 'mazos') {
-        if (latestDocs[id]) { applied = true; applyMazosDoc(latestDocs[id]); }
-      } else if (id === 'expansiones') {
-        if (latestDocs[id]) { applied = true; applyExpansionesDoc(latestDocs[id]); }
-      }
+    function applyAll() {
+      let anyExists = false;
+      ['champions', 'go', 'tcg', 'tcglive'].forEach(game => {
+        if (latestDocs[game]) { anyExists = true; applyGameDoc(game, latestDocs[game]); }
+      });
+      if (latestDocs['mazos']) { anyExists = true; applyMazosDoc(latestDocs['mazos']); }
+      if (latestDocs['expansiones']) { anyExists = true; applyExpansionesDoc(latestDocs['expansiones']); }
 
-      if (!applied) return;
-      limpiarNombresInvalidosDePokemon();
+      if (!anyExists) return;
       podarDatosHuerfanos();
       const huboMigracion = migrarNombresExpansionesTcg();
       persistLocalOnly();
@@ -5377,7 +4687,7 @@ function initFirebaseSync() {
         } else {
           delete latestDocs[id];
         }
-        applyOneDoc(id);
+        applyAll();
         if (pendingInitialChecks > 0) {
           pendingInitialChecks--;
           if (pendingInitialChecks === 0 && !anyExistedAtStart) {
@@ -5487,14 +4797,6 @@ const MODE_TITLES = {
   mazoslive: '🗂️ Mazos Live'
 };
 
-function chooseDatosGoLiga(liga) {
-  datosGoLigaFiltro = liga;
-  closeModal('modal-datos-go-liga');
-  const status = document.getElementById('datos-go-liga-status');
-  if (status) status.textContent = `📋 Editando: ${liga}`;
-  if (currentDatosMode === 'go') renderTableGO();
-}
-
 function showMode(mode) {
   currentDatosMode = mode;
   document.querySelectorAll('.mode-section').forEach(s => s.classList.remove('active'));
@@ -5502,9 +4804,6 @@ function showMode(mode) {
   document.querySelectorAll('.mode-tab-btn').forEach(b => b.classList.remove('active'));
   document.getElementById('modetab-' + mode).classList.add('active');
   document.getElementById('datos-title').textContent = MODE_TITLES[mode];
-  if (mode === 'go') {
-    document.getElementById('modal-datos-go-liga').classList.add('open');
-  }
   renderCurrentTable();
 }
 
@@ -5600,62 +4899,49 @@ function renderTableChampions() {
 // ── TABLA GO ───────────────────────────────────────────────────────────────
 function renderTableGO() {
   const tbody = document.getElementById('table-body-go');
-  const liga = datosGoLigaFiltro;
-  const esMaster = liga === 'Liga Master';
-
-  const thCp = document.getElementById('go-th-cp');
-  const thStats = document.getElementById('go-th-stats');
-  if (thCp) thCp.textContent = esMaster ? 'CP Máximo' : 'CP';
-  if (thStats) thStats.style.display = esMaster ? 'none' : '';
-  if (thStats) thStats.textContent = 'Stats — ' + liga;
-
   const { list, page, totalPages, offsetStart } = getVisibleList('go');
-
-  if (!list.length) {
-    tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;color:var(--muted);padding:24px">
-      No hay Pokémon cargados para ${esc(liga)}. Tocá "🏆 Actualizar Top 30 x liga (PvPoke)" para traer el ranking.
-    </td></tr>`;
-    renderLitePaginationBar('go', tbody, 1, 1);
-    return;
-  }
-
   tbody.innerHTML = list.map((name, i) => {
     i = i + offsetStart;
-    const d = getGoLeagueEntry(name, liga);
+    const d = dataGO[name] || EMPTY_GO();
     return `<tr data-name="${esc(name).toLowerCase()}">
       <td style="text-align:center"><input type="checkbox" class="row-select-cb" value="${esc(name)}" onchange="updateBulkDeleteUI()"></td>
       <td style="color:var(--muted);font-size:0.8rem">${i+1}</td>
       <td><input class="editable-cell name-cell" data-original-name="${esc(name)}" value="${esc(name)}" placeholder="Nombre"></td>
-      <td><input class="editable-cell" list="suggest-go-cpmax" data-pokemon="${esc(name)}" data-liga="${esc(liga)}" data-field="cp" value="${esc(d.cp)}" placeholder="${esMaster ? 'Ej: 4500' : 'Ej: ' + (liga === 'Liga Ultra' ? '2500' : '1500')}"></td>
-      <td style="${esMaster ? 'display:none' : ''}"><input class="editable-cell stat-slash-input" data-pokemon="${esc(name)}" data-liga="${esc(liga)}" data-field="stats" value="${esc(d.stats)}" placeholder="Ej: 15/14/14"></td>
+      <td><input class="editable-cell" list="suggest-go-cpmax" data-pokemon="${esc(name)}" data-field="cpMax" value="${esc(d.cpMax)}" placeholder="Ej: 3500"></td>
+      <td><input class="editable-cell stat-slash-input" data-pokemon="${esc(name)}" data-field="statsSuper" value="${esc(d.statsSuper)}" placeholder="Ej: 15/14/14"></td>
+      <td><input class="editable-cell stat-slash-input" data-pokemon="${esc(name)}" data-field="statsUltra" value="${esc(d.statsUltra)}" placeholder="Ej: 13/13/13"></td>
       <td>
-        <input class="editable-cell move-name-input" list="suggest-go-movimiento" data-pokemon="${esc(name)}" data-liga="${esc(liga)}" data-field="movRapido" data-game="go" value="${esc(d.movRapido)}" placeholder="Ej: Roca Afilada">
+        <input class="editable-cell move-name-input" list="suggest-go-movimiento" data-pokemon="${esc(name)}" data-field="movRapido" data-game="go" value="${esc(d.movRapido)}" placeholder="Ej: Roca Afilada">
         <div class="move-type-row">
-          <select class="move-type-select" data-pokemon="${esc(name)}" data-liga="${esc(liga)}" data-field="tipoRapido">${typeOptionsHTML(d.tipoRapido)}</select>
+          <select class="move-type-select" data-pokemon="${esc(name)}" data-field="tipoRapido">${typeOptionsHTML(d.tipoRapido)}</select>
           <span class="move-type-icon-wrap">${typeIconHTML(d.tipoRapido)}</span>
         </div>
       </td>
       <td>
-        <input class="editable-cell move-name-input" list="suggest-go-movimiento" data-pokemon="${esc(name)}" data-liga="${esc(liga)}" data-field="movCargado" data-game="go" value="${esc(d.movCargado)}" placeholder="Ej: Avalancha">
+        <input class="editable-cell move-name-input" list="suggest-go-movimiento" data-pokemon="${esc(name)}" data-field="movCargado" data-game="go" value="${esc(d.movCargado)}" placeholder="Ej: Avalancha">
         <div class="move-type-row">
-          <select class="move-type-select" data-pokemon="${esc(name)}" data-liga="${esc(liga)}" data-field="tipoCargado">${typeOptionsHTML(d.tipoCargado)}</select>
+          <select class="move-type-select" data-pokemon="${esc(name)}" data-field="tipoCargado">${typeOptionsHTML(d.tipoCargado)}</select>
           <span class="move-type-icon-wrap">${typeIconHTML(d.tipoCargado)}</span>
         </div>
       </td>
-      <td style="text-align:center; white-space:nowrap">
-        <button class="delete-btn" title="Sugerir movimientos según ranking PvP" onclick="goSugerirUno('${name.replace(/'/g,"\\'")}')">🪄</button>
-        <button class="delete-btn" onclick="confirmDelete('${name.replace(/'/g,"\\'")}')">🗑️</button>
+      <td>
+        <div class="move-type-row">
+          <select class="liga-select" data-pokemon="${esc(name)}" data-field="liga">${ligaOptionsHTML(d.liga)}</select>
+          <span class="liga-icon-wrap">${ligaIconHTML(d.liga)}</span>
+        </div>
       </td>
+      <td style="text-align:center"><button class="delete-btn" onclick="confirmDelete('${name.replace(/'/g,"\\'")}')">🗑️</button></td>
     </tr>`;
   }).join('');
 
   tbody.querySelectorAll('.editable-cell:not(.name-cell):not(.stat-slash-input)').forEach(input => {
     input.addEventListener('input', () => {
-      const p = input.dataset.pokemon, f = input.dataset.field, l = input.dataset.liga;
-      getGoLeagueEntry(p, l)[f] = input.value;
+      const p = input.dataset.pokemon, f = input.dataset.field;
+      if (!dataGO[p]) dataGO[p] = EMPTY_GO();
+      dataGO[p][f] = input.value;
     });
   });
-  // Stats de la liga activa: mientras se escribe, se le agrega la "/" sola
+  // Stats Liga Super/Ultra: mientras se escribe, se le agrega la "/" sola
   // cada 2 dígitos (ej: "151415" → "15/14/15"), sin sugerencias de autocompletado.
   tbody.querySelectorAll('.stat-slash-input').forEach(input => {
     input.addEventListener('input', () => {
@@ -5664,16 +4950,27 @@ function renderTableGO() {
       for (let j = 0; j < digits.length; j += 2) groups.push(digits.slice(j, j + 2));
       const formatted = groups.join('/');
       input.value = formatted;
-      const p = input.dataset.pokemon, f = input.dataset.field, l = input.dataset.liga;
-      getGoLeagueEntry(p, l)[f] = formatted;
+      const p = input.dataset.pokemon, f = input.dataset.field;
+      if (!dataGO[p]) dataGO[p] = EMPTY_GO();
+      dataGO[p][f] = formatted;
     });
   });
   tbody.querySelectorAll('.move-type-select').forEach(select => {
     select.addEventListener('change', () => {
-      const p = select.dataset.pokemon, f = select.dataset.field, l = select.dataset.liga;
-      getGoLeagueEntry(p, l)[f] = select.value;
+      const p = select.dataset.pokemon, f = select.dataset.field;
+      if (!dataGO[p]) dataGO[p] = EMPTY_GO();
+      dataGO[p][f] = select.value;
       const wrap = select.nextElementSibling;
       if (wrap) wrap.innerHTML = typeIconHTML(select.value);
+    });
+  });
+  tbody.querySelectorAll('.liga-select').forEach(select => {
+    select.addEventListener('change', () => {
+      const p = select.dataset.pokemon, f = select.dataset.field;
+      if (!dataGO[p]) dataGO[p] = EMPTY_GO();
+      dataGO[p][f] = select.value;
+      const wrap = select.nextElementSibling;
+      if (wrap) wrap.innerHTML = ligaIconHTML(select.value);
     });
   });
   bindNameCellEvents(tbody);
@@ -6315,12 +5612,10 @@ function rebuildSuggestDatalist(id, values) {
 
 function rebuildGoSuggestions() {
   const cpValues = [], movValues = [...MOVES_ES_ENGLISH_NAMES];
-  Object.values(dataGO).forEach(porLiga => {
-    Object.values(porLiga || {}).forEach(d => {
-      if (d.cp) cpValues.push(d.cp);
-      if (d.movRapido) movValues.push(d.movRapido);
-      if (d.movCargado) movValues.push(d.movCargado);
-    });
+  Object.values(dataGO).forEach(d => {
+    if (d.cpMax) cpValues.push(d.cpMax);
+    if (d.movRapido) movValues.push(d.movRapido);
+    if (d.movCargado) movValues.push(d.movCargado);
   });
   rebuildSuggestDatalist('suggest-go-cpmax', cpValues);
   rebuildSuggestDatalist('suggest-go-movimiento', movValues);
@@ -6452,42 +5747,8 @@ function renamePokemonEntry(oldName, newNameRaw) {
 
   const mode = currentDatosMode; // 'champions' | 'go' | 'tcg' | 'tcglive'
   const list = POKEMON_LISTS[mode];
-
-  // GO es un caso especial: un mismo nombre puede existir en varias ligas a
-  // la vez (cada una con su propio sub-objeto), así que la validación de
-  // "ya existe" y el renombrado tienen que operar solo sobre la liga que se
-  // está editando, sin pisar los datos que ese nombre tenga en otras ligas.
-  if (mode === 'go') {
-    const liga = datosGoLigaFiltro;
-    const arr = LEAGUE_TOP_NAMES[liga] || [];
-    if (arr.includes(newName)) { showToast('⚠️ Ya existe un Pokémon con ese nombre en esta liga', true); renderCurrentTable(); return; }
-
-    if (!dataGO[newName]) dataGO[newName] = {};
-    dataGO[newName][liga] = (dataGO[oldName] && dataGO[oldName][liga]) || EMPTY_GO_ENTRY();
-    if (dataGO[oldName]) delete dataGO[oldName][liga];
-    const oldSigueEnAlgunaLiga = LIGA_LIST.some(l => dataGO[oldName] && dataGO[oldName][l]);
-    if (!oldSigueEnAlgunaLiga) delete dataGO[oldName];
-
-    const idxLiga = arr.indexOf(oldName);
-    if (idxLiga > -1) arr[idxLiga] = newName;
-    localStorage.setItem('leagueTopNames', JSON.stringify(LEAGUE_TOP_NAMES));
-
-    if (!list.includes(newName)) list.push(newName);
-    const oldSigueEnLaUnion = LIGA_LIST.some(l => (LEAGUE_TOP_NAMES[l] || []).includes(oldName));
-    if (!oldSigueEnLaUnion) {
-      const idxOld = list.indexOf(oldName);
-      if (idxOld > -1) list.splice(idxOld, 1);
-    }
-    list.sort((a, b) => a.localeCompare(b, 'es', { sensitivity: 'base' }));
-
-    persistAll();
-    renderCurrentTable();
-    showToast(`✅ Renombrado a ${newName}`);
-    return;
-  }
-
-  const dataByMode = { champions: dataChampions, tcg: dataTCG, tcglive: dataTCGLive };
-  const emptyByMode = { champions: EMPTY_CHAMPIONS, tcg: EMPTY_TCG, tcglive: EMPTY_TCGLIVE };
+  const dataByMode = { champions: dataChampions, go: dataGO, tcg: dataTCG, tcglive: dataTCGLive };
+  const emptyByMode = { champions: EMPTY_CHAMPIONS, go: EMPTY_GO, tcg: EMPTY_TCG, tcglive: EMPTY_TCGLIVE };
   const data = dataByMode[mode];
 
   if (list.includes(newName)) { showToast('⚠️ Ya existe un Pokémon con ese nombre en este modo', true); renderCurrentTable(); return; }
@@ -6535,32 +5796,16 @@ function filterDatosTable() {
 
 // ── GUARDAR ────────────────────────────────────────────────────────────────
 async function saveAllData() {
-  // IMPORTANTE: antes esto buscaba .name-cell y .editable-cell en TODO el
-  // documento, sin importar qué tabla estuviera visible. Como las 4 tablas
-  // (Champions/GO/TCG/TCG Live) quedan armadas en el DOM aunque estén
-  // ocultas (solo se re-renderiza la que se visita), guardar estando en GO
-  // también procesaba de arrastre los campos viejos de Champions (que no
-  // tienen data-liga → input.dataset.liga queda "undefined"), generando una
-  // clave basura "undefined" dentro de cada Pokémon de GO con una mezcla de
-  // campos de ambos juegos. Ahora se busca solo dentro de la tabla del modo
-  // actual.
-  const tbodyIdPorModo = { champions: 'table-body-champions', go: 'table-body-go', tcg: 'table-body-tcg', tcglive: 'table-body-tcglive' };
-  const tbodyIdActual = tbodyIdPorModo[currentDatosMode];
-  const scopeSelector = tbodyIdActual ? ('#' + tbodyIdActual + ' ') : '';
-
-  document.querySelectorAll(scopeSelector + '.name-cell').forEach(input => {
+  document.querySelectorAll('.name-cell').forEach(input => {
     const oldName = input.dataset.originalName;
     const newName = input.value.trim();
     if (oldName && newName && newName !== oldName) renamePokemonEntry(oldName, newName);
   });
-  document.querySelectorAll(scopeSelector + '.editable-cell:not(.name-cell)').forEach(input => {
+  document.querySelectorAll('.editable-cell:not(.name-cell)').forEach(input => {
     const p = input.dataset.pokemon, f = input.dataset.field;
     if (!p || !f) return;
     if (currentDatosMode === 'champions') { if (!dataChampions[p]) dataChampions[p] = EMPTY_CHAMPIONS(); dataChampions[p][f] = input.value; }
-    else if (currentDatosMode === 'go') {
-      if (input.dataset.liga === undefined) return; // salvaguarda extra: nunca crear liga "undefined"
-      getGoLeagueEntry(p, input.dataset.liga)[f] = input.value;
-    }
+    else if (currentDatosMode === 'go') { if (!dataGO[p]) dataGO[p] = EMPTY_GO(); dataGO[p][f] = input.value; }
     else if (currentDatosMode === 'tcg') { if (!dataTCG[p]) dataTCG[p] = EMPTY_TCG(); dataTCG[p][f] = input.value; }
   });
   document.querySelectorAll('.mazo-name-input').forEach(input => {
@@ -6574,25 +5819,15 @@ async function saveAllData() {
   // así que si cerrabas la app o cambiabas de pantalla justo después de tocar
   // el botón (muy común en celular), la escritura a la nube podía quedar
   // cortada a mitad de camino y el cambio nunca llegaba a sincronizarse.
-  if (currentDatosMode === 'go') {
-    debugGoLog('GUARDAR: currentDatosMode=go. dataGO (completo) antes de persistAll = ' + JSON.stringify(dataGO));
-  }
   const btn = document.querySelector('button[onclick="saveAllData()"]');
   const originalLabel = btn ? btn.textContent : null;
   if (btn) { btn.disabled = true; btn.textContent = '💾 Guardando...'; }
   showToast('💾 Guardando...');
   try {
-    const result = await persistAll();
-    if (currentDatosMode === 'go') {
-      debugGoLog('GUARDAR: resultado persistAll = ' + JSON.stringify(result) + '. dataGO (completo) después = ' + JSON.stringify(dataGO));
-    }
-    if (result && result.ok === false) {
-      showToast('⚠️ Guardado solo en este dispositivo: no se pudo sincronizar con la nube (' + result.failedIds.join(', ') + '). Revisá la consola (F12) para más detalle.', true);
-    } else {
-      showToast('✅ Datos guardados correctamente');
-    }
+    await persistAll();
+    showToast('✅ Datos guardados correctamente');
   } catch (err) {
-    console.error('Error al guardar', err);
+    console.log('Error al guardar', err);
     showToast('⚠️ Hubo un problema al guardar en la nube. Revisa tu conexión.', true);
   } finally {
     if (btn) { btn.disabled = false; btn.textContent = originalLabel; }
@@ -6600,75 +5835,6 @@ async function saveAllData() {
 }
 
 // ── EXPORTAR / IMPORTAR (backup completo) ───────────────────────────────
-// ── EXPORTAR / IMPORTAR POR JUEGO (respaldo local, un .json por juego) ──────
-// Mientras la sincronización automática con la nube no anda bien en ciertas
-// redes/dispositivos, esto permite guardar y compartir los datos de UN SOLO
-// juego (el que se esté viendo en Datos) como archivo .json independiente,
-// sin depender de Firestore para nada: se descarga y se importa a mano.
-const GAME_DATA_REFS = {
-  champions: () => ({ data: dataChampions, empty: EMPTY_CHAMPIONS }),
-  go: () => ({ data: dataGO, empty: EMPTY_GO }),
-  tcg: () => ({ data: dataTCG, empty: EMPTY_TCG }),
-  tcglive: () => ({ data: dataTCGLive, empty: EMPTY_TCGLIVE })
-};
-const GAME_LABELS = { champions: 'Champions', go: 'GO', tcg: 'TCG Pocket', tcglive: 'TCG Live' };
-
-function exportGameJSON() {
-  const mode = currentDatosMode;
-  if (!GAME_DATA_REFS[mode]) { showToast('⚠️ Elegí primero Champions, GO, TCG o TCG Live', true); return; }
-  const { data } = GAME_DATA_REFS[mode]();
-  const payload = { juego: mode, version: 1, fecha: new Date().toISOString(), list: POKEMON_LISTS[mode], data };
-  const txt = JSON.stringify(payload, null, 2);
-  const a = document.createElement('a');
-  a.href = 'data:application/json;charset=utf-8,' + encodeURIComponent(txt);
-  a.download = 'pokemon_' + mode + '_backup.json';
-  a.click();
-  showToast('⬇️ Descargando datos de ' + (GAME_LABELS[mode] || mode) + '...');
-}
-
-function importGameJSONFile(event) {
-  const file = event.target.files[0];
-  if (!file) return;
-  const reader = new FileReader();
-  reader.onload = function(e) {
-    try {
-      applyGameJSON(JSON.parse(e.target.result));
-    } catch (err) {
-      console.error('Error al importar JSON de juego', err);
-      showToast('❌ Archivo inválido', true);
-    }
-  };
-  reader.onerror = function() { showToast('❌ No se pudo leer el archivo', true); };
-  reader.readAsText(file);
-  event.target.value = '';
-}
-
-function applyGameJSON(parsed) {
-  if (!parsed || !parsed.juego || !GAME_DATA_REFS[parsed.juego]) {
-    showToast('❌ El archivo no tiene un formato válido de respaldo por juego', true);
-    return;
-  }
-  const juego = parsed.juego;
-  const listaImportada = Array.isArray(parsed.list) ? parsed.list : [];
-  const dataImportada = parsed.data && typeof parsed.data === 'object' ? parsed.data : {};
-  const { data: dataDestino, empty } = GAME_DATA_REFS[juego]();
-
-  POKEMON_LISTS[juego] = [...new Set([...POKEMON_LISTS[juego], ...listaImportada])];
-  Object.keys(dataImportada).forEach(nombre => {
-    dataDestino[nombre] = { ...empty(), ...dataDestino[nombre], ...dataImportada[nombre] };
-    if (!POKEMON_LISTS[juego].includes(nombre)) POKEMON_LISTS[juego].push(nombre);
-  });
-  POKEMON_LISTS[juego].sort((a, b) => a.localeCompare(b, 'es', { sensitivity: 'base' }));
-
-  // Solo se guarda LOCAL (no se empuja a Firestore): esto es justamente para
-  // poder seguir trabajando por afuera de la nube mientras esa sincronización
-  // no ande bien. Si más adelante se soluciona, "Guardar cambios" sí subirá
-  // este contenido a la nube normalmente.
-  persistLocalOnly();
-  if (currentDatosMode === juego) renderCurrentTable();
-  showToast('✅ Datos de ' + (GAME_LABELS[juego] || juego) + ' importados (guardado solo en este dispositivo)');
-}
-
 function exportData() {
   saveAllData();
   const exportObj = {
@@ -6853,26 +6019,9 @@ function confirmBulkDelete() {
 
 // Aplica la eliminación de un Pokémon sobre los datos en memoria (sin persistir ni avisar);
 // la reutilizan tanto el borrado individual como el borrado masivo.
-// En GO un Pokémon puede estar en varias ligas a la vez: borrar solo debe
-// afectar la liga que se está viendo (datosGoLigaFiltro), no todas. Si tras
-// borrar ya no queda en ninguna liga, recién ahí se lo saca de la lista general.
 function deletePokemonEntry(name, mode) {
   if (mode === 'champions') delete dataChampions[name];
-  else if (mode === 'go') {
-    const liga = datosGoLigaFiltro;
-    if (dataGO[name]) delete dataGO[name][liga];
-    const idxLiga = (LEAGUE_TOP_NAMES[liga] || []).indexOf(name);
-    if (idxLiga > -1) LEAGUE_TOP_NAMES[liga].splice(idxLiga, 1);
-    localStorage.setItem('leagueTopNames', JSON.stringify(LEAGUE_TOP_NAMES));
-    const sigueEnAlgunaLiga = LIGA_LIST.some(l => (LEAGUE_TOP_NAMES[l] || []).includes(name));
-    if (!sigueEnAlgunaLiga) {
-      delete dataGO[name];
-      const list = POKEMON_LISTS.go;
-      const idx = list.indexOf(name);
-      if (idx > -1) list.splice(idx, 1);
-    }
-    return;
-  }
+  else if (mode === 'go') delete dataGO[name];
   else if (mode === 'tcg') {
     delete dataTCG[name];
     dataMazos.forEach(m => { m.cartas = m.cartas.filter(c => c.pokemon !== name); });
@@ -6973,24 +6122,14 @@ function confirmAddPokemon() {
   const mode = currentDatosMode; // 'champions' | 'go' | 'tcg'
   if (!POKEMON_LISTS[mode]) { showToast('❌ Elige primero un modo (Champions, GO o TCG)', true); return; }
   const list = POKEMON_LISTS[mode];
-  const yaExisteEnEsteContexto = mode === 'go'
-    ? (LEAGUE_TOP_NAMES[datosGoLigaFiltro] || []).includes(formatted)
-    : list.includes(formatted);
-  if (yaExisteEnEsteContexto) { showToast(`⚠️ Ese Pokémon ya existe en ${MODE_TITLES[mode] || mode}`, true); return; }
+  if (list.includes(formatted)) { showToast(`⚠️ Ese Pokémon ya existe en ${MODE_TITLES[mode] || mode}`, true); return; }
 
   if (mode === 'champions') dataChampions[formatted] = EMPTY_CHAMPIONS();
-  else if (mode === 'go') {
-    if (!dataGO[formatted]) dataGO[formatted] = {};
-    dataGO[formatted][datosGoLigaFiltro] = EMPTY_GO_ENTRY();
-    if (!LEAGUE_TOP_NAMES[datosGoLigaFiltro].includes(formatted)) {
-      LEAGUE_TOP_NAMES[datosGoLigaFiltro].push(formatted);
-      localStorage.setItem('leagueTopNames', JSON.stringify(LEAGUE_TOP_NAMES));
-    }
-  }
+  else if (mode === 'go') dataGO[formatted] = EMPTY_GO();
   else if (mode === 'tcg') dataTCG[formatted] = EMPTY_TCG();
   else if (mode === 'tcglive') dataTCGLive[formatted] = EMPTY_TCGLIVE();
 
-  if (!list.includes(formatted)) list.push(formatted);
+  list.push(formatted);
   list.sort((a, b) => a.localeCompare(b, 'es', { sensitivity: 'base' }));
 
   persistAll();
@@ -7424,9 +6563,6 @@ async function updatePokemonListFromAPI() {
         list.push(name);
         existingLower.add(name.toLowerCase());
         if (mode === 'champions') dataChampions[name] = EMPTY_CHAMPIONS();
-        // Nota: en GO, si este Pokémon no está en el ranking de ninguna liga
-        // (LEAGUE_TOP_NAMES), va a quedar cargado pero invisible en la tabla
-        // hasta que "Actualizar Top 30 x liga" lo incluya en alguna liga.
         else if (mode === 'go') dataGO[name] = EMPTY_GO();
         else if (mode === 'tcg') dataTCG[name] = EMPTY_TCG();
         else if (mode === 'tcglive') dataTCGLive[name] = EMPTY_TCGLIVE();
