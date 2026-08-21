@@ -2505,6 +2505,10 @@
 
     <!-- ===== POKÉMON GO ===== -->
     <div class="mode-section" id="mode-section-go">
+      <div class="translate-moves-toolbar">
+        <button class="btn btn-primary" onclick="goSugerirVacios()">🪄 Sugerir para los vacíos</button>
+        <span id="go-sugerir-status" style="font-size:0.78rem;color:var(--muted);align-self:center"></span>
+      </div>
       <div class="pokemon-table-wrap">
         <table id="pokemon-table-go">
           <thead>
@@ -2518,7 +2522,7 @@
               <th>Mov. Rápido</th>
               <th>Mov. Cargado</th>
               <th>Liga</th>
-              <th style="text-align:center">Borrar</th>
+              <th style="text-align:center">Acciones</th>
             </tr>
           </thead>
           <tbody id="table-body-go"></tbody>
@@ -4153,6 +4157,130 @@ async function championsSugerirVacios() {
   championsSugerirEnCurso = false;
 }
 
+// ── SUGERENCIAS AUTOMÁTICAS PARA GO ─────────────────────────────────────────
+// Igual que en Champions: heurística simple, no un análisis PvP profundo.
+// Pokémon GO tiene su propio catálogo de movimientos (rápidos y cargados),
+// distinto del de los juegos principales, así que acá se usan listas propias
+// de movimientos típicos de GO por tipo en vez de las de PokeAPI. Se contrasta
+// contra el movepool real del Pokémon (juegos principales, vía PokeAPI) como
+// filtro de plausibilidad: no es garantía de que lo tenga en GO exactamente,
+// pero evita sugerir movimientos de un tipo que el Pokémon no podría tener.
+// El nombre en español y el tipo van embebidos acá mismo (no se busca en
+// moves-es.json): ese diccionario solo cubre los movimientos que ya se usaban
+// en la app antes de esta función, así que apoyarse en él dejaba estos nombres
+// nuevos sin traducir. CP Máximo, Stats de Liga y Liga elegida quedan afuera
+// de la sugerencia: son datos que dependen de los IVs del ejemplar propio del
+// usuario, no del Pokémon en general, y no se pueden inferir sin esa info.
+const GO_FAST_MOVES_BY_TYPE = {
+  Normal:    [{s:'tackle',n:'Placaje'},{s:'quick-attack',n:'Ataque Rápido'},{s:'pound',n:'Golpe'}],
+  Fuego:     [{s:'fire-fang',n:'Colmillo Ígneo'},{s:'ember',n:'Ascuas'}],
+  Agua:      [{s:'water-gun',n:'Pistola Agua'},{s:'waterfall',n:'Cascada'}],
+  Electrico: [{s:'thunder-shock',n:'Impactrueno'},{s:'spark',n:'Chispazo'},{s:'volt-switch',n:'Cambio de Voltio'}],
+  Planta:    [{s:'vine-whip',n:'Látigo Cepa'},{s:'razor-leaf',n:'Hoja Afilada'}],
+  Hielo:     [{s:'powder-snow',n:'Nieve Polvo'},{s:'ice-shard',n:'Esquirla Helada'}],
+  Lucha:     [{s:'counter',n:'Contraataque'},{s:'karate-chop',n:'Golpe Kárate'}],
+  Veneno:    [{s:'poison-jab',n:'Puya Nociva'},{s:'acid',n:'Ácido'}],
+  Tierra:    [{s:'mud-shot',n:'Bote Lodo'},{s:'mud-slap',n:'Salpicadura de Lodo'}],
+  Volador:   [{s:'wing-attack',n:'Ataque Ala'},{s:'peck',n:'Picotazo'},{s:'air-slash',n:'Tajo Aéreo'}],
+  Psiquico:  [{s:'confusion',n:'Confusión'}],
+  Bicho:     [{s:'bug-bite',n:'Picadura'},{s:'fury-cutter',n:'Corte Furia'}],
+  Roca:      [{s:'rock-throw',n:'Lanzarrocas'},{s:'rollout',n:'Rodada'}],
+  Fantasma:  [{s:'lick',n:'Lengüetazo'},{s:'shadow-claw',n:'Garra Umbría'}],
+  Dragon:    [{s:'dragon-breath',n:'Aliento Dragón'},{s:'dragon-tail',n:'Cola Dragón'}],
+  Siniestro: [{s:'bite',n:'Mordisco'},{s:'pursuit',n:'Persecución'}],
+  Metal:     [{s:'metal-claw',n:'Garra Metal'},{s:'iron-tail',n:'Cola Férrea'}],
+  Hada:      [{s:'charm',n:'Encanto'},{s:'fairy-wind',n:'Viento Feérico'}]
+};
+const GO_CHARGE_MOVES_BY_TYPE = {
+  Normal:    [{s:'hyper-beam',n:'Hiperrayo'},{s:'body-slam',n:'Golpe Cuerpo'},{s:'hyper-voice',n:'Vozarrón'}],
+  Fuego:     [{s:'fire-blast',n:'Llamarada'},{s:'overheat',n:'Sofoco'},{s:'flamethrower',n:'Lanzallamas'}],
+  Agua:      [{s:'hydro-pump',n:'Hidrobomba'},{s:'surf',n:'Surf'},{s:'scald',n:'Escaldar'}],
+  Electrico: [{s:'thunderbolt',n:'Rayo'},{s:'thunder',n:'Trueno'},{s:'wild-charge',n:'Carga Salvaje'}],
+  Planta:    [{s:'solar-beam',n:'Rayo Solar'},{s:'leaf-blade',n:'Hoja Aguda'},{s:'power-whip',n:'Latigazo'}],
+  Hielo:     [{s:'ice-beam',n:'Rayo Hielo'},{s:'blizzard',n:'Ventisca'},{s:'icy-wind',n:'Viento Hielo'}],
+  Lucha:     [{s:'close-combat',n:'Combate Cercano'},{s:'focus-blast',n:'Onda Certera'},{s:'superpower',n:'Fuerza Bruta'}],
+  Veneno:    [{s:'sludge-bomb',n:'Bomba Lodo'},{s:'gunk-shot',n:'Bomba Fango'},{s:'sludge-wave',n:'Onda Tóxica'}],
+  Tierra:    [{s:'earthquake',n:'Terremoto'},{s:'earth-power',n:'Tierra Viva'},{s:'bulldoze',n:'Excavar'}],
+  Volador:   [{s:'brave-bird',n:'Pájaro Osado'},{s:'hurricane',n:'Vendaval'},{s:'sky-attack',n:'Ataque Celestial'}],
+  Psiquico:  [{s:'psychic',n:'Psíquico'},{s:'future-sight',n:'Premonición'},{s:'psybeam',n:'Psicorrayo'}],
+  Bicho:     [{s:'megahorn',n:'Megacuerno'},{s:'x-scissor',n:'Tijera X'},{s:'bug-buzz',n:'Zumbido'}],
+  Roca:      [{s:'stone-edge',n:'Roca Afilada'},{s:'rock-slide',n:'Avalancha de Rocas'},{s:'ancient-power',n:'Poder Pasado'}],
+  Fantasma:  [{s:'shadow-ball',n:'Bola Sombra'},{s:'shadow-punch',n:'Puño Sombra'},{s:'ominous-wind',n:'Viento Aciago'}],
+  Dragon:    [{s:'dragon-claw',n:'Garra Dragón'},{s:'outrage',n:'Enfado'},{s:'dragon-pulse',n:'Pulso Dragón'}],
+  Siniestro: [{s:'crunch',n:'Triturar'},{s:'dark-pulse',n:'Pulso Umbrío'},{s:'knock-off',n:'Robo'}],
+  Metal:     [{s:'iron-head',n:'Cabezazo Férreo'},{s:'flash-cannon',n:'Foco Resplandor'},{s:'heavy-slam',n:'Golpe Pesado'}],
+  Hada:      [{s:'moonblast',n:'Lunazo'},{s:'dazzling-gleam',n:'Deslumbrar'},{s:'play-rough',n:'Juego Rudo'}]
+};
+
+function goComputeSuggestion({ types, movepool }) {
+  const candidatosRapido = [];
+  const candidatosCargado = [];
+  types.forEach(t => {
+    (GO_FAST_MOVES_BY_TYPE[t] || []).forEach(m => candidatosRapido.push({ ...m, tipo: t }));
+    (GO_CHARGE_MOVES_BY_TYPE[t] || []).forEach(m => candidatosCargado.push({ ...m, tipo: t }));
+  });
+  const rapido = candidatosRapido.find(m => movepool.has(m.s)) || candidatosRapido[0] || null;
+  const cargado = candidatosCargado.find(m => movepool.has(m.s)) || candidatosCargado[0] || null;
+
+  const resultado = { movRapido: '', tipoRapido: '', movCargado: '', tipoCargado: '' };
+  if (rapido) {
+    resultado.movRapido = rapido.n;
+    resultado.tipoRapido = rapido.tipo;
+  }
+  if (cargado) {
+    resultado.movCargado = cargado.n;
+    resultado.tipoCargado = cargado.tipo;
+  }
+  return resultado;
+}
+
+async function goSugerirUno(name) {
+  try {
+    const apiData = await championsFetchPokeApiData(name);
+    const sugerido = goComputeSuggestion(apiData);
+    dataGO[name] = { ...EMPTY_GO(), ...dataGO[name], ...sugerido };
+    persistAll();
+    renderTableGO();
+    showToast('🪄 Sugerencia aplicada a ' + name);
+  } catch (e) {
+    console.error(e);
+    showToast('❌ No se pudo generar una sugerencia para ' + name, true);
+  }
+}
+
+let goSugerirEnCurso = false;
+async function goSugerirVacios() {
+  if (goSugerirEnCurso) return;
+  goSugerirEnCurso = true;
+  const status = document.getElementById('go-sugerir-status');
+  const pendientes = Object.keys(dataGO).filter(name => {
+    if (!POKEMON_LISTS.go.includes(name)) return false;
+    const d = dataGO[name];
+    return !d.movRapido && !d.movCargado;
+  });
+  if (!pendientes.length) {
+    if (status) status.textContent = 'No hay filas vacías para completar.';
+    goSugerirEnCurso = false;
+    return;
+  }
+  let hechos = 0;
+  for (const name of pendientes) {
+    if (status) status.textContent = `Sugiriendo... ${hechos + 1}/${pendientes.length} (${name})`;
+    try {
+      const apiData = await championsFetchPokeApiData(name);
+      const sugerido = goComputeSuggestion(apiData);
+      dataGO[name] = { ...EMPTY_GO(), ...dataGO[name], ...sugerido };
+    } catch (e) {
+      console.log('Sin sugerencia para', name, e);
+    }
+    hechos++;
+  }
+  persistAll();
+  renderTableGO();
+  if (status) status.textContent = `Listo: se completaron ${hechos} Pokémon.`;
+  goSugerirEnCurso = false;
+}
+
 const MOVE_FIELD_TO_TYPE_FIELD = {
   ataque1: 'tipo1', ataque2: 'tipo2', ataque3: 'tipo3', ataque4: 'tipo4',
   movRapido: 'tipoRapido', movCargado: 'tipoCargado'
@@ -4930,7 +5058,10 @@ function renderTableGO() {
           <span class="liga-icon-wrap">${ligaIconHTML(d.liga)}</span>
         </div>
       </td>
-      <td style="text-align:center"><button class="delete-btn" onclick="confirmDelete('${name.replace(/'/g,"\\'")}')">🗑️</button></td>
+      <td style="text-align:center">
+        <button class="delete-btn" title="Sugerir movimientos" onclick="goSugerirUno('${name.replace(/'/g,"\\'")}')">🪄</button>
+        <button class="delete-btn" onclick="confirmDelete('${name.replace(/'/g,"\\'")}')">🗑️</button>
+      </td>
     </tr>`;
   }).join('');
 
