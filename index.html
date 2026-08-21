@@ -3028,7 +3028,7 @@ function selectGoConsultaLiga(liga) {
 
   loadNamesFromStorage();
   const nombres = (POKEMON_LISTS.go || [])
-    .filter(p => getGOData(p).liga === liga)
+    .filter(p => (getGOData(p).ligas || []).includes(liga))
     .sort((a, b) => a.localeCompare(b, 'es', { sensitivity: 'base' }));
 
   const listEl = document.getElementById('go-liga-list');
@@ -3178,7 +3178,7 @@ function handleSearch(val) {
   const q = val.toLowerCase();
   let activeList = POKEMON_LISTS[currentMode] || [];
   if (currentMode === 'go' && currentGoConsultaLiga) {
-    activeList = activeList.filter(p => getGOData(p).liga === currentGoConsultaLiga);
+    activeList = activeList.filter(p => (getGOData(p).ligas || []).includes(currentGoConsultaLiga));
   }
   filteredList = activeList.filter(p => p.toLowerCase().includes(q)).slice(0, 8);
 
@@ -3199,7 +3199,7 @@ function handleKey(e) {
   const items = document.querySelectorAll('.autocomplete-item');
   let activeList = POKEMON_LISTS[currentMode] || [];
   if (currentMode === 'go' && currentGoConsultaLiga) {
-    activeList = activeList.filter(p => getGOData(p).liga === currentGoConsultaLiga);
+    activeList = activeList.filter(p => (getGOData(p).ligas || []).includes(currentGoConsultaLiga));
   }
   if (!items.length) {
     if (e.key === 'Enter') {
@@ -3443,8 +3443,8 @@ async function showResult(name) {
         <div class="ri-value ${isEmpty(d.movCargado)?'empty':''}">${d.tipoCargado ? typeIconHTML(d.tipoCargado) : ''}${val(d.movCargado,'Sin datos')}</div>
       </div>
       <div class="result-item">
-        <div class="ri-label">Liga</div>
-        <div class="ri-value ${isEmpty(d.liga)?'empty':''}">${d.liga ? ligaIconHTML(d.liga) : ''}${val(d.liga,'Sin datos')}</div>
+        <div class="ri-label">Ligas</div>
+        <div class="ri-value ${(!d.ligas || !d.ligas.length)?'empty':''}">${(d.ligas && d.ligas.length) ? d.ligas.map(l => ligaIconHTML(l)).join('') + d.ligas.join(', ') : 'Sin datos'}</div>
       </div>`;
   } else if (currentMode === 'tcg') {
     const d = getTCGData(name);
@@ -3799,7 +3799,7 @@ function goToLitePage(mode, delta) {
 }
 
 const EMPTY_CHAMPIONS = () => ({ naturaleza:'', objeto:'', ataque1:'', tipo1:'', ataque2:'', tipo2:'', ataque3:'', tipo3:'', ataque4:'', tipo4:'' });
-const EMPTY_GO         = () => ({ cpMax:'', statsSuper:'', statsUltra:'', statsMaster:'', movRapido:'', tipoRapido:'', movCargado:'', tipoCargado:'', liga:'' });
+const EMPTY_GO         = () => ({ cpMax:'', statsSuper:'', statsUltra:'', statsMaster:'', movRapido:'', tipoRapido:'', movCargado:'', tipoCargado:'', ligas:[] });
 
 // ── ICONOS DE TIPO (Pokémon GO: ataque rápido / cargado) ────────────────────
 // Orden alfabético según el nombre en español (Agua, Bicho, Dragón, Eléctrico...)
@@ -3841,10 +3841,18 @@ function typeIconHTML(t) {
 const LIGA_LIST = ['Liga Super', 'Liga Ultra', 'Liga Master'];
 const LIGA_COLORS = { 'Liga Super': '#2f6fed', 'Liga Ultra': '#232323', 'Liga Master': '#7b2fbe' };
 const LIGA_ACCENTS = { 'Liga Super': '#e63946', 'Liga Ultra': '#f5c518', 'Liga Master': '#ff5fb0' };
-function ligaOptionsHTML(selected) {
-  return '<option value="">—</option>' + LIGA_LIST.map(l =>
-    `<option value="${l}" ${l === selected ? 'selected' : ''}>${l}</option>`
-  ).join('');
+function ligaCheckboxesHTML(name, ligasSeleccionadas) {
+  const seleccionadas = Array.isArray(ligasSeleccionadas) ? ligasSeleccionadas : [];
+  return LIGA_LIST.map(l => `
+    <label style="display:flex;align-items:center;gap:4px;font-size:0.78rem;white-space:nowrap">
+      <input type="checkbox" class="liga-checkbox" data-pokemon="${esc(name)}" data-liga="${l}" ${seleccionadas.includes(l) ? 'checked' : ''}>
+      ${l.replace('Liga ', '')}
+    </label>`).join('');
+}
+function ligaIconsHTML(ligas) {
+  const lista = Array.isArray(ligas) ? ligas : [];
+  if (!lista.length) return '<span class="liga-icon liga-icon-empty"></span>';
+  return lista.map(l => ligaIconHTML(l)).join('');
 }
 function ligaIconHTML(liga) {
   if (!liga || !LIGA_COLORS[liga]) return '<span class="liga-icon liga-icon-empty"></span>';
@@ -4812,8 +4820,24 @@ function loadFromStorage() {
     // Corrige nombres de expansiones de TCG Pocket que hayan quedado
     // guardados de versiones viejas (mal traducidos o incompletos).
     migrarNombresExpansionesTcg();
+    migrarLigaUnicaAMultiple();
     podarDatosHuerfanos();
   } catch(e) {}
+}
+
+// Antes, cada Pokémon de GO solo podía tener UNA liga asignada (campo
+// "liga", un desplegable de una sola opción). Esto migra ese valor viejo a
+// "ligas" (un array), para que ahora se puedan elegir varias ligas a la vez
+// sin perder lo que ya estaba cargado.
+function migrarLigaUnicaAMultiple() {
+  if (!dataGO) return;
+  Object.keys(dataGO).forEach(name => {
+    const d = dataGO[name];
+    if (!d) return;
+    if (!Array.isArray(d.ligas)) d.ligas = [];
+    if (d.liga && !d.ligas.includes(d.liga)) d.ligas.push(d.liga);
+    delete d.liga;
+  });
 }
 loadFromStorage();
 
@@ -4998,6 +5022,7 @@ function initFirebaseSync() {
       if (latestDocs['expansiones']) { anyExists = true; applyExpansionesDoc(latestDocs['expansiones']); }
 
       if (!anyExists) return;
+      migrarLigaUnicaAMultiple();
       podarDatosHuerfanos();
       const huboMigracion = migrarNombresExpansionesTcg();
       persistLocalOnly();
@@ -5255,10 +5280,10 @@ function renderTableGO() {
         </div>
       </td>
       <td>
-        <div class="move-type-row">
-          <select class="liga-select" data-pokemon="${esc(name)}" data-field="liga">${ligaOptionsHTML(d.liga)}</select>
-          <span class="liga-icon-wrap">${ligaIconHTML(d.liga)}</span>
+        <div style="display:flex;flex-direction:column;gap:2px">
+          ${ligaCheckboxesHTML(name, d.ligas)}
         </div>
+        <span class="liga-icon-wrap" data-pokemon="${esc(name)}">${ligaIconsHTML(d.ligas)}</span>
       </td>
       <td style="text-align:center">
         <button class="delete-btn" title="Sugerir movimientos" onclick="goSugerirUno('${name.replace(/'/g,"\\'")}')">🪄</button>
@@ -5297,13 +5322,17 @@ function renderTableGO() {
       if (wrap) wrap.innerHTML = typeIconHTML(select.value);
     });
   });
-  tbody.querySelectorAll('.liga-select').forEach(select => {
-    select.addEventListener('change', () => {
-      const p = select.dataset.pokemon, f = select.dataset.field;
+  tbody.querySelectorAll('.liga-checkbox').forEach(checkbox => {
+    checkbox.addEventListener('change', () => {
+      const p = checkbox.dataset.pokemon, liga = checkbox.dataset.liga;
       if (!dataGO[p]) dataGO[p] = EMPTY_GO();
-      dataGO[p][f] = select.value;
-      const wrap = select.nextElementSibling;
-      if (wrap) wrap.innerHTML = ligaIconHTML(select.value);
+      if (!Array.isArray(dataGO[p].ligas)) dataGO[p].ligas = [];
+      const ligas = dataGO[p].ligas;
+      const idx = ligas.indexOf(liga);
+      if (checkbox.checked && idx === -1) ligas.push(liga);
+      else if (!checkbox.checked && idx !== -1) ligas.splice(idx, 1);
+      const wrap = document.querySelector(`.liga-icon-wrap[data-pokemon="${CSS.escape(p)}"]`);
+      if (wrap) wrap.innerHTML = ligaIconsHTML(ligas);
     });
   });
   bindNameCellEvents(tbody);
@@ -6282,6 +6311,7 @@ function applyImportedData(parsed) {
   ['champions', 'go', 'tcg', 'tcglive'].forEach(mode => {
     POKEMON_LISTS[mode].sort((a, b) => a.localeCompare(b, 'es', { sensitivity: 'base' }));
   });
+  migrarLigaUnicaAMultiple();
   persistAll();
   rebuildExpansionesDatalist(currentDatosMode === 'tcglive' ? 'tcglive' : 'tcg');
   renderCurrentTable();
