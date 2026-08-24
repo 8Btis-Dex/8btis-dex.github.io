@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<title>Telémetro · Medidor por cámara</title>
+<style>
+  :root{
+    --bg-void:#0a0d0d;
+    --panel:#14191a;
+    --panel-2:#1c2224;
+    --steel:#33393b;
+    --accent-lime:#c8ff3d;
+    --accent-cyan:#3ddbd9;
+    --danger:#ff5d5d;
+    --text:#e8ece9;
+    --text-dim:#8b9694;
+    --mono: ui-monospace, 'SF Mono', 'Cascadia Mono', Consolas, 'Courier New', monospace;
+    --sans: -apple-system, 'Segoe UI', Roboto, system-ui, sans-serif;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent; user-select:none;}
+  html,body{margin:0; padding:0; width:100%; height:100%; overflow:hidden; background:var(--bg-void); font-family:var(--sans); color:var(--text);}
+
+  #stage{position:fixed; inset:0; background:#000;}
+  video{position:absolute; inset:0; width:100%; height:100%; object-fit:cover; filter:saturate(1.05) contrast(1.02);}
+  canvas{position:absolute; inset:0; width:100%; height:100%; touch-action:none;}
+
+  #scanlines{position:absolute; inset:0; pointer-events:none; opacity:.05;
+    background:repeating-linear-gradient(0deg, #fff 0px, #fff 1px, transparent 1px, transparent 3px);}
+  #vignette{position:absolute; inset:0; pointer-events:none;
+    background:radial-gradient(ellipse at center, transparent 55%, rgba(0,0,0,.55) 100%);}
+
+  /* ---- top bar ---- */
+  #topbar{position:absolute; top:0; left:0; right:0; z-index:5;
+    display:flex; align-items:center; justify-content:space-between;
+    padding:calc(env(safe-area-inset-top,0px) + 12px) 14px 10px;
+    background:linear-gradient(to bottom, rgba(10,13,13,.85), transparent);}
+  #brand{display:flex; align-items:center; gap:8px;}
+  #brand .dot{width:8px; height:8px; border-radius:50%; background:var(--accent-lime); box-shadow:0 0 8px var(--accent-lime);}
+  #brand span{font-family:var(--mono); font-size:12px; letter-spacing:.14em; text-transform:uppercase; color:var(--text-dim);}
+  .iconbtn{width:38px; height:38px; border-radius:10px; border:1px solid var(--steel); background:rgba(20,25,26,.7);
+    display:flex; align-items:center; justify-content:center; color:var(--text); font-size:17px; cursor:pointer; backdrop-filter:blur(4px);}
+  .iconbtn:active{background:var(--panel-2);}
+
+  /* ---- mode switch ---- */
+  #modewrap{position:absolute; top:calc(env(safe-area-inset-top,0px) + 58px); left:50%; transform:translateX(-50%); z-index:5;
+    display:flex; gap:2px; background:rgba(20,25,26,.75); border:1px solid var(--steel); border-radius:999px; padding:3px; backdrop-filter:blur(4px);}
+  .modebtn{font-family:var(--mono); font-size:11px; letter-spacing:.08em; text-transform:uppercase; padding:7px 14px; border-radius:999px; border:none; background:transparent; color:var(--text-dim); cursor:pointer;}
+  .modebtn.active{background:var(--accent-lime); color:#0a0d0d; font-weight:700;}
+  .modebtn:disabled{opacity:.35;}
+
+  /* ---- readout HUD (bottom) ---- */
+  #hud{position:absolute; left:0; right:0; bottom:0; z-index:5;
+    padding:14px 14px calc(env(safe-area-inset-bottom,0px) + 14px);
+    background:linear-gradient(to top, rgba(10,13,13,.92), rgba(10,13,13,.55) 60%, transparent);}
+
+  #readout{background:var(--panel); border:1px solid var(--steel); border-radius:14px; padding:14px 16px; margin-bottom:10px;
+    box-shadow:0 8px 24px rgba(0,0,0,.4);}
+  #readout .label{font-family:var(--mono); font-size:10px; letter-spacing:.16em; text-transform:uppercase; color:var(--text-dim); margin-bottom:4px;}
+  #readout .value{font-family:var(--mono); font-size:34px; font-weight:600; color:var(--accent-lime); text-shadow:0 0 14px rgba(200,255,61,.35); line-height:1.1; letter-spacing:.02em;}
+  #readout .value small{font-size:16px; color:var(--text-dim); margin-left:6px; text-shadow:none;}
+  #readout .sub{font-family:var(--mono); font-size:11px; color:var(--text-dim); margin-top:4px;}
+  #readout.dim .value{color:var(--text-dim); text-shadow:none;}
+
+  #calbox{display:none; gap:10px; align-items:center; background:var(--panel); border:1px solid var(--accent-cyan); border-radius:14px; padding:12px 14px; margin-bottom:10px;}
+  #calbox.show{display:flex;}
+  #calbox label{font-family:var(--mono); font-size:11px; color:var(--text-dim); flex:1; line-height:1.4;}
+  #calbox input{width:78px; font-family:var(--mono); font-size:16px; background:var(--panel-2); border:1px solid var(--steel); color:var(--text); border-radius:8px; padding:8px; text-align:center;}
+  #calbox button{font-family:var(--mono); font-size:11px; text-transform:uppercase; letter-spacing:.06em; background:var(--accent-cyan); color:#0a0d0d; border:none; border-radius:8px; padding:9px 12px; font-weight:700; white-space:nowrap;}
+
+  #actions{display:flex; gap:8px;}
+  .btn{flex:1; font-family:var(--mono); font-size:12px; text-transform:uppercase; letter-spacing:.06em; padding:12px 10px;
+    border-radius:12px; border:1px solid var(--steel); background:var(--panel-2); color:var(--text); font-weight:600; cursor:pointer;}
+  .btn:active{background:var(--steel);}
+  .btn.primary{background:var(--accent-lime); color:#0a0d0d; border-color:var(--accent-lime);}
+  .btn.primary:disabled{opacity:.3; background:var(--steel); color:var(--text-dim);}
+  .btn.danger{color:var(--danger); border-color:rgba(255,93,93,.4);}
+
+  #hint{text-align:center; font-family:var(--mono); font-size:11px; color:var(--text-dim); margin-top:10px; letter-spacing:.02em;}
+
+  /* ---- list drawer ---- */
+  #drawer{position:absolute; inset:0; z-index:20; background:rgba(10,13,13,.97); backdrop-filter:blur(6px);
+    transform:translateY(100%); transition:transform .28s ease; display:flex; flex-direction:column;}
+  #drawer.open{transform:translateY(0);}
+  #drawer header{display:flex; justify-content:space-between; align-items:center; padding:calc(env(safe-area-inset-top,0px) + 16px) 18px 12px; border-bottom:1px solid var(--steel);}
+  #drawer header h2{font-family:var(--mono); font-size:13px; letter-spacing:.14em; text-transform:uppercase; margin:0; color:var(--text-dim);}
+  #list{flex:1; overflow-y:auto; padding:10px 14px;}
+  .item{display:flex; justify-content:space-between; align-items:center; background:var(--panel); border:1px solid var(--steel); border-radius:12px; padding:12px 14px; margin-bottom:8px;}
+  .item .n{font-family:var(--mono); font-size:11px; color:var(--text-dim); margin-bottom:2px;}
+  .item .v{font-family:var(--mono); font-size:20px; color:var(--accent-lime); font-weight:600;}
+  .item button{background:transparent; border:none; color:var(--danger); font-size:18px; padding:6px 10px; cursor:pointer;}
+  #empty{text-align:center; color:var(--text-dim); font-family:var(--mono); font-size:12px; margin-top:40px; padding:0 20px; line-height:1.6;}
+
+  /* ---- boot / error overlay ---- */
+  #overlay{position:absolute; inset:0; z-index:50; background:var(--bg-void); display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:30px;}
+  #overlay h1{font-family:var(--mono); font-size:15px; letter-spacing:.1em; text-transform:uppercase; color:var(--accent-lime); margin:0 0 10px;}
+  #overlay p{font-family:var(--sans); font-size:14px; color:var(--text-dim); max-width:340px; line-height:1.6; margin:0 0 18px;}
+  #overlay button{font-family:var(--mono); text-transform:uppercase; letter-spacing:.06em; background:var(--accent-lime); color:#0a0d0d; border:none; border-radius:10px; padding:12px 22px; font-weight:700; font-size:13px;}
+  #overlay .spinner{width:26px; height:26px; border-radius:50%; border:2px solid var(--steel); border-top-color:var(--accent-lime); animation:spin .8s linear infinite; margin-bottom:16px;}
+  @keyframes spin{to{transform:rotate(360deg);}}
+</style>
+</head>
+<body>
+
+<div id="stage">
+  <video id="video" autoplay playsinline muted></video>
+  <canvas id="canvas"></canvas>
+  <div id="scanlines"></div>
+  <div id="vignette"></div>
+</div>
+
+<div id="topbar">
+  <div id="brand"><span class="dot"></span><span>Telémetro</span></div>
+  <div style="display:flex; gap:8px;">
+    <button class="iconbtn" id="btnList" title="Mediciones guardadas">☰</button>
+    <button class="iconbtn" id="btnFlip" title="Cambiar cámara">⟲</button>
+  </div>
+</div>
+
+<div id="modewrap">
+  <button class="modebtn active" id="modeCal">Calibrar</button>
+  <button class="modebtn" id="modeMed" disabled>Medir</button>
+</div>
+
+<div id="hud">
+  <div id="calbox">
+    <label>Longitud real del segmento marcado (cm):</label>
+    <input type="number" id="calInput" inputmode="decimal" placeholder="8.56" step="0.01">
+    <button id="calConfirm">Fijar</button>
+  </div>
+
+  <div id="readout" class="dim">
+    <div class="label" id="roLabel">Distancia</div>
+    <div class="value" id="roValue">—<small>cm</small></div>
+    <div class="sub" id="roSub">Marcá un objeto de largo conocido para calibrar</div>
+  </div>
+
+  <div id="actions">
+    <button class="btn danger" id="btnClear">Borrar puntos</button>
+    <button class="btn" id="btnRecal">Recalibrar</button>
+    <button class="btn primary" id="btnSave" disabled>Guardar</button>
+  </div>
+
+  <div id="hint">Tocá dos puntos sobre la pantalla · arrastrá para ajustar</div>
+</div>
+
+<div id="drawer">
+  <header>
+    <h2>Mediciones guardadas</h2>
+    <button class="iconbtn" id="btnCloseList">✕</button>
+  </header>
+  <div id="list"></div>
+</div>
+
+<div id="overlay">
+  <div class="spinner"></div>
+  <h1>Activando cámara</h1>
+  <p>Se va a pedir permiso de cámara. No se instala nada ni se sube ninguna imagen: todo el cálculo se hace en el propio dispositivo.</p>
+</div>
+
+<script>
+(function(){
+  const video = document.getElementById('video');
+  const canvas = document.getElementById('canvas');
+  const ctx = canvas.getContext('2d');
+  const overlay = document.getElementById('overlay');
+  const modeCal = document.getElementById('modeCal');
+  const modeMed = document.getElementById('modeMed');
+  const roLabel = document.getElementById('roLabel');
+  const roValue = document.getElementById('roValue');
+  const roSub = document.getElementById('roSub');
+  const readoutBox = document.getElementById('readout');
+  const calbox = document.getElementById('calbox');
+  const calInput = document.getElementById('calInput');
+  const btnSave = document.getElementById('btnSave');
+  const btnClear = document.getElementById('btnClear');
+  const btnRecal = document.getElementById('btnRecal');
+  const btnFlip = document.getElementById('btnFlip');
+  const btnList = document.getElementById('btnList');
+  const btnCloseList = document.getElementById('btnCloseList');
+  const drawer = document.getElementById('drawer');
+  const list = document.getElementById('list');
+
+  let mode = 'cal';          // 'cal' | 'med'
+  let points = [];           // [{x,y}]
+  let dragIndex = -1;
+  let pxPerCm = null;
+  let facing = 'environment';
+  let stream = null;
+  let saved = [];
+  let saveCounter = 1;
+
+  function dist(a,b){ return Math.hypot(a.x-b.x, a.y-b.y); }
+
+  function resizeCanvas(){
+    canvas.width = canvas.clientWidth * devicePixelRatio;
+    canvas.height = canvas.clientHeight * devicePixelRatio;
+    ctx.setTransform(devicePixelRatio,0,0,devicePixelRatio,0,0);
+  }
+  window.addEventListener('resize', resizeCanvas);
+
+  async function startCamera(){
+    if(stream){ stream.getTracks().forEach(t=>t.stop()); }
+    try{
+      stream = await navigator.mediaDevices.getUserMedia({
+        video:{ facingMode:{ideal:facing}, width:{ideal:1920}, height:{ideal:1080} },
+        audio:false
+      });
+      video.srcObject = stream;
+      await video.play();
+      overlay.style.display = 'none';
+      resizeCanvas();
+    }catch(err){
+      overlay.innerHTML = `
+        <h1 style="color:#ff5d5d">Sin acceso a la cámara</h1>
+        <p>${err.name === 'NotAllowedError'
+            ? 'Se denegó el permiso de cámara. Revisá el ícono de candado/cámara en la barra de direcciones y permitilo, después recargá.'
+            : 'No se pudo abrir la cámara (' + err.name + '). Si abriste el archivo con doble clic y no funciona, subilo a un hosting propio (por ej. tu GitHub Pages) y abrilo desde ahí por https.'}</p>
+        <button onclick="location.reload()">Reintentar</button>`;
+    }
+  }
+
+  function pointFromEvent(e){
+    const r = canvas.getBoundingClientRect();
+    const p = e.touches ? e.touches[0] : e;
+    return { x: p.clientX - r.left, y: p.clientY - r.top };
+  }
+
+  function nearestPointIndex(p, threshold=26){
+    let best=-1, bd=threshold;
+    points.forEach((pt,i)=>{ const d=dist(pt,p); if(d<bd){bd=d; best=i;} });
+    return best;
+  }
+
+  function onDown(e){
+    e.preventDefault();
+    const p = pointFromEvent(e);
+    const idx = nearestPointIndex(p);
+    if(idx>=0){ dragIndex = idx; return; }
+    if(points.length < 2){ points.push(p); }
+    else { points = [p]; }
+    updateReadout();
+  }
+  function onMove(e){
+    if(dragIndex<0) return;
+    e.preventDefault();
+    points[dragIndex] = pointFromEvent(e);
+    updateReadout();
+  }
+  function onUp(){ dragIndex = -1; }
+
+  canvas.addEventListener('mousedown', onDown);
+  canvas.addEventListener('mousemove', onMove);
+  window.addEventListener('mouseup', onUp);
+  canvas.addEventListener('touchstart', onDown, {passive:false});
+  canvas.addEventListener('touchmove', onMove, {passive:false});
+  window.addEventListener('touchend', onUp);
+
+  function fmt(n, d){ return n.toLocaleString('es-AR', {minimumFractionDigits:d, maximumFractionDigits:d}); }
+
+  function updateReadout(){
+    calbox.classList.remove('show');
+    if(points.length < 2){
+      readoutBox.classList.add('dim');
+      btnSave.disabled = true;
+      if(mode==='cal'){
+        roLabel.textContent = 'Calibración';
+        roValue.innerHTML = '—<small>cm</small>';
+        roSub.textContent = points.length===0
+          ? 'Tocá los dos extremos de un objeto de largo conocido (ej. tarjeta = 8.56 cm)'
+          : 'Marcá el segundo punto';
+      } else {
+        roLabel.textContent = 'Distancia';
+        roValue.innerHTML = '—<small>cm</small>';
+        roSub.textContent = points.length===0
+          ? 'Tocá el primer punto'
+          : 'Marcá el segundo punto';
+      }
+      return;
+    }
+
+    const px = dist(points[0], points[1]);
+
+    if(mode==='cal'){
+      calbox.classList.add('show');
+      readoutBox.classList.add('dim');
+      roLabel.textContent = 'Segmento marcado';
+      roValue.innerHTML = fmt(px,0) + '<small>px</small>';
+      roSub.textContent = 'Ingresá su longitud real y confirmá';
+      btnSave.disabled = true;
+    } else {
+      readoutBox.classList.remove('dim');
+      const cm = px / pxPerCm;
+      roLabel.textContent = 'Distancia medida';
+      if(cm >= 100){
+        roValue.innerHTML = fmt(cm/100, 2) + '<small>m</small>';
+      } else {
+        roValue.innerHTML = fmt(cm, 1) + '<small>cm</small>';
+      }
+      roSub.textContent = fmt(cm,1) + ' cm exactos · calibrado a ' + fmt(pxPerCm,1) + ' px/cm';
+      btnSave.disabled = false;
+    }
+  }
+
+  calInput.addEventListener('input', ()=>{});
+  document.getElementById('calConfirm').addEventListener('click', ()=>{
+    const realCm = parseFloat(calInput.value);
+    if(!realCm || realCm<=0 || points.length<2) return;
+    const px = dist(points[0], points[1]);
+    pxPerCm = px / realCm;
+    modeMed.disabled = false;
+    setMode('med');
+    points = [];
+    calInput.value = '';
+    updateReadout();
+  });
+
+  function setMode(m){
+    mode = m;
+    modeCal.classList.toggle('active', m==='cal');
+    modeMed.classList.toggle('active', m==='med');
+    calbox.classList.remove('show');
+    updateReadout();
+  }
+  modeCal.addEventListener('click', ()=> setMode('cal'));
+  modeMed.addEventListener('click', ()=>{ if(!modeMed.disabled) setMode('med'); });
+
+  btnClear.addEventListener('click', ()=>{ points=[]; updateReadout(); });
+  btnRecal.addEventListener('click', ()=>{
+    pxPerCm = null; points = []; modeMed.disabled = true; setMode('cal');
+  });
+  btnFlip.addEventListener('click', ()=>{
+    facing = facing==='environment' ? 'user' : 'environment';
+    startCamera();
+  });
+
+  btnSave.addEventListener('click', ()=>{
+    if(points.length<2 || !pxPerCm) return;
+    const px = dist(points[0], points[1]);
+    const cm = px / pxPerCm;
+    saved.unshift({ id: saveCounter++, cm });
+    renderList();
+  });
+
+  function renderList(){
+    if(saved.length===0){
+      list.innerHTML = '<div id="empty">Todavía no guardaste ninguna medición.<br>Medí un objeto y tocá "Guardar".</div>';
+      return;
+    }
+    list.innerHTML = saved.map(s => `
+      <div class="item" data-id="${s.id}">
+        <div>
+          <div class="n">Medición #${s.id}</div>
+          <div class="v">${s.cm>=100 ? fmt(s.cm/100,2)+' m' : fmt(s.cm,1)+' cm'}</div>
+        </div>
+        <button data-del="${s.id}">✕</button>
+      </div>`).join('');
+  }
+  list.addEventListener('click', (e)=>{
+    const id = e.target.getAttribute('data-del');
+    if(id){ saved = saved.filter(s=>s.id!=id); renderList(); }
+  });
+
+  btnList.addEventListener('click', ()=>{ renderList(); drawer.classList.add('open'); });
+  btnCloseList.addEventListener('click', ()=> drawer.classList.remove('open'));
+
+  // ---- render loop: draw reticles + line on canvas overlay ----
+  function draw(){
+    requestAnimationFrame(draw);
+    ctx.clearRect(0,0,canvas.clientWidth, canvas.clientHeight);
+    if(points.length===0) return;
+
+    const color = mode==='cal' ? '#3ddbd9' : '#c8ff3d';
+
+    if(points.length===2){
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 2;
+      ctx.setLineDash([6,5]);
+      ctx.beginPath();
+      ctx.moveTo(points[0].x, points[0].y);
+      ctx.lineTo(points[1].x, points[1].y);
+      ctx.stroke();
+      ctx.setLineDash([]);
+    }
+
+    points.forEach(p=>{
+      // reticle
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.arc(p.x,p.y,12,0,Math.PI*2); ctx.stroke();
+      ctx.beginPath(); ctx.arc(p.x,p.y,2.5,0,Math.PI*2); ctx.fillStyle = color; ctx.fill();
+      // ticks
+      [[-18,-12],[18,12]].forEach(([a,b])=>{
+        ctx.beginPath(); ctx.moveTo(p.x+a,p.y); ctx.lineTo(p.x+b,p.y); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(p.x,p.y+a); ctx.lineTo(p.x,p.y+b); ctx.stroke();
+      });
+    });
+  }
+
+  video.addEventListener('loadedmetadata', resizeCanvas);
+  renderList();
+  updateReadout();
+  draw();
+  startCamera();
+})();
+</script>
+</body>
+</html>
