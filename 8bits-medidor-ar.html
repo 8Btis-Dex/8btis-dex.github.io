@@ -1,0 +1,756 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<title>Telémetro · Medidor AR</title>
+<style>
+  :root{
+    --bg-void:#0a0d0d;
+    --panel:#14191a;
+    --panel-2:#1c2224;
+    --steel:#33393b;
+    --accent-lime:#c8ff3d;
+    --accent-cyan:#3ddbd9;
+    --danger:#ff5d5d;
+    --text:#e8ece9;
+    --text-dim:#8b9694;
+    --mono: ui-monospace, 'SF Mono', 'Cascadia Mono', Consolas, 'Courier New', monospace;
+    --sans: -apple-system, 'Segoe UI', Roboto, system-ui, sans-serif;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent; user-select:none;}
+  html,body{margin:0; padding:0; width:100%; height:100%; overflow:hidden; background:var(--bg-void); font-family:var(--sans); color:var(--text);}
+  button{font:inherit;}
+
+  .hidden{display:none !important;}
+
+  /* ================= CHOOSER ================= */
+  #chooser{position:fixed; inset:0; z-index:1; display:flex; flex-direction:column;
+    padding:calc(env(safe-area-inset-top,0px) + 24px) 20px calc(env(safe-area-inset-bottom,0px) + 24px);
+    background:radial-gradient(ellipse at 50% 0%, #17201f 0%, var(--bg-void) 60%);}
+  #chooser .brandRow{display:flex; align-items:center; gap:8px; margin-bottom:6px;}
+  #chooser .brandRow .dot{width:8px; height:8px; border-radius:50%; background:var(--accent-lime); box-shadow:0 0 8px var(--accent-lime);}
+  #chooser .brandRow span{font-family:var(--mono); font-size:12px; letter-spacing:.14em; text-transform:uppercase; color:var(--text-dim);}
+  #chooser h1{font-family:var(--mono); font-size:22px; letter-spacing:.01em; margin:10px 0 4px; color:var(--text);}
+  #chooser .lead{font-size:14px; color:var(--text-dim); line-height:1.5; margin:0 0 26px; max-width:34ch;}
+  #chooser .listIcon{position:absolute; top:calc(env(safe-area-inset-top,0px) + 20px); right:20px;}
+
+  .modeCard{position:relative; text-align:left; background:var(--panel); border:1px solid var(--steel); border-radius:16px;
+    padding:18px 18px 16px; margin-bottom:14px; cursor:pointer; color:var(--text); overflow:hidden;}
+  .modeCard .tag{position:absolute; top:14px; right:14px; font-family:var(--mono); font-size:9px; letter-spacing:.1em; text-transform:uppercase;
+    padding:3px 8px; border-radius:999px; background:rgba(200,255,61,.12); color:var(--accent-lime); border:1px solid rgba(200,255,61,.3);}
+  .modeCard .tag.off{background:rgba(255,93,93,.1); color:var(--danger); border-color:rgba(255,93,93,.3);}
+  .modeCard h2{font-family:var(--mono); font-size:15px; margin:0 0 6px; letter-spacing:.02em;}
+  .modeCard p{font-size:13px; color:var(--text-dim); line-height:1.5; margin:0; max-width:30ch;}
+  .modeCard:active{background:var(--panel-2);}
+  .modeCard:disabled, .modeCard.disabled{opacity:.5; cursor:default;}
+  .modeCard.disabled:active{background:var(--panel);}
+  .modeCard .glow{position:absolute; inset:-1px; border-radius:16px; pointer-events:none; opacity:0;
+    box-shadow:0 0 0 1px var(--accent-cyan), 0 0 24px rgba(61,219,217,.25);}
+  .modeCard.ar .glow{opacity:1;}
+
+  #chooserFoot{margin-top:auto; font-family:var(--mono); font-size:11px; color:var(--text-dim); line-height:1.6; text-align:center;}
+
+  /* ================= SHARED HUD PARTS (reused visual language) ================= */
+  .iconbtn{width:38px; height:38px; border-radius:10px; border:1px solid var(--steel); background:rgba(20,25,26,.7);
+    display:flex; align-items:center; justify-content:center; color:var(--text); font-size:17px; cursor:pointer; backdrop-filter:blur(4px);}
+  .iconbtn:active{background:var(--panel-2);}
+
+  .readoutPanel{background:var(--panel); border:1px solid var(--steel); border-radius:14px; padding:14px 16px; margin-bottom:10px;
+    box-shadow:0 8px 24px rgba(0,0,0,.4);}
+  .readoutPanel .label{font-family:var(--mono); font-size:10px; letter-spacing:.16em; text-transform:uppercase; color:var(--text-dim); margin-bottom:4px;}
+  .readoutPanel .value{font-family:var(--mono); font-size:34px; font-weight:600; color:var(--accent-lime); text-shadow:0 0 14px rgba(200,255,61,.35); line-height:1.1; letter-spacing:.02em;}
+  .readoutPanel .value small{font-size:16px; color:var(--text-dim); margin-left:6px; text-shadow:none;}
+  .readoutPanel .sub{font-family:var(--mono); font-size:11px; color:var(--text-dim); margin-top:4px;}
+  .readoutPanel.dim .value{color:var(--text-dim); text-shadow:none;}
+
+  .actionsRow{display:flex; gap:8px;}
+  .btn{flex:1; font-family:var(--mono); font-size:12px; text-transform:uppercase; letter-spacing:.06em; padding:12px 10px;
+    border-radius:12px; border:1px solid var(--steel); background:var(--panel-2); color:var(--text); font-weight:600; cursor:pointer;}
+  .btn:active{background:var(--steel);}
+  .btn.primary{background:var(--accent-lime); color:#0a0d0d; border-color:var(--accent-lime);}
+  .btn.primary:disabled{opacity:.3; background:var(--steel); color:var(--text-dim);}
+  .btn.danger{color:var(--danger); border-color:rgba(255,93,93,.4);}
+
+  .hintText{text-align:center; font-family:var(--mono); font-size:11px; color:var(--text-dim); margin-top:10px; letter-spacing:.02em;}
+
+  /* ================= CLASSIC MODE ================= */
+  #classicApp{position:fixed; inset:0; z-index:2;}
+  #stage{position:fixed; inset:0; background:#000;}
+  #video{position:absolute; inset:0; width:100%; height:100%; object-fit:cover; filter:saturate(1.05) contrast(1.02);}
+  #canvas{position:absolute; inset:0; width:100%; height:100%; touch-action:none;}
+  #scanlines{position:absolute; inset:0; pointer-events:none; opacity:.05;
+    background:repeating-linear-gradient(0deg, #fff 0px, #fff 1px, transparent 1px, transparent 3px);}
+  #vignette{position:absolute; inset:0; pointer-events:none;
+    background:radial-gradient(ellipse at center, transparent 55%, rgba(0,0,0,.55) 100%);}
+
+  #topbar{position:absolute; top:0; left:0; right:0; z-index:5;
+    display:flex; align-items:center; justify-content:space-between;
+    padding:calc(env(safe-area-inset-top,0px) + 12px) 14px 10px;
+    background:linear-gradient(to bottom, rgba(10,13,13,.85), transparent);}
+  #brand{display:flex; align-items:center; gap:8px;}
+  #brand .dot{width:8px; height:8px; border-radius:50%; background:var(--accent-lime); box-shadow:0 0 8px var(--accent-lime);}
+  #brand span{font-family:var(--mono); font-size:12px; letter-spacing:.14em; text-transform:uppercase; color:var(--text-dim);}
+
+  #modewrap{position:absolute; top:calc(env(safe-area-inset-top,0px) + 58px); left:50%; transform:translateX(-50%); z-index:5;
+    display:flex; gap:2px; background:rgba(20,25,26,.75); border:1px solid var(--steel); border-radius:999px; padding:3px; backdrop-filter:blur(4px);}
+  .modebtn{font-family:var(--mono); font-size:11px; letter-spacing:.08em; text-transform:uppercase; padding:7px 14px; border-radius:999px; border:none; background:transparent; color:var(--text-dim); cursor:pointer;}
+  .modebtn.active{background:var(--accent-lime); color:#0a0d0d; font-weight:700;}
+  .modebtn:disabled{opacity:.35;}
+
+  #hud{position:absolute; left:0; right:0; bottom:0; z-index:5;
+    padding:14px 14px calc(env(safe-area-inset-bottom,0px) + 14px);
+    background:linear-gradient(to top, rgba(10,13,13,.92), rgba(10,13,13,.55) 60%, transparent);}
+
+  #calbox{display:none; gap:10px; align-items:center; background:var(--panel); border:1px solid var(--accent-cyan); border-radius:14px; padding:12px 14px; margin-bottom:10px;}
+  #calbox.show{display:flex;}
+  #calbox label{font-family:var(--mono); font-size:11px; color:var(--text-dim); flex:1; line-height:1.4;}
+  #calbox input{width:78px; font-family:var(--mono); font-size:16px; background:var(--panel-2); border:1px solid var(--steel); color:var(--text); border-radius:8px; padding:8px; text-align:center;}
+  #calbox button{font-family:var(--mono); font-size:11px; text-transform:uppercase; letter-spacing:.06em; background:var(--accent-cyan); color:#0a0d0d; border:none; border-radius:8px; padding:9px 12px; font-weight:700; white-space:nowrap;}
+
+  #camOverlay{position:absolute; inset:0; z-index:50; background:var(--bg-void); display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:30px;}
+  #camOverlay h1{font-family:var(--mono); font-size:15px; letter-spacing:.1em; text-transform:uppercase; color:var(--accent-lime); margin:0 0 10px;}
+  #camOverlay p{font-family:var(--sans); font-size:14px; color:var(--text-dim); max-width:340px; line-height:1.6; margin:0 0 18px;}
+  #camOverlay button{font-family:var(--mono); text-transform:uppercase; letter-spacing:.06em; background:var(--accent-lime); color:#0a0d0d; border:none; border-radius:10px; padding:12px 22px; font-weight:700; font-size:13px;}
+  #camOverlay .spinner{width:26px; height:26px; border-radius:50%; border:2px solid var(--steel); border-top-color:var(--accent-lime); animation:spin .8s linear infinite; margin-bottom:16px;}
+  @keyframes spin{to{transform:rotate(360deg);}}
+
+  /* ================= AR MODE ================= */
+  #arApp{position:fixed; inset:0; z-index:2;}
+  #arApp canvas{position:fixed; inset:0; width:100%; height:100%;}
+  #arOverlay{position:fixed; inset:0; pointer-events:none;}
+  #arOverlay > *{pointer-events:auto;}
+  #arTop{position:absolute; top:0; left:0; right:0; display:flex; justify-content:space-between; align-items:center;
+    padding:calc(env(safe-area-inset-top,0px) + 12px) 14px 10px;
+    background:linear-gradient(to bottom, rgba(10,13,13,.75), transparent);}
+  #arBadge{font-family:var(--mono); font-size:11px; letter-spacing:.1em; text-transform:uppercase; color:var(--text-dim);
+    background:rgba(20,25,26,.7); border:1px solid var(--steel); border-radius:999px; padding:6px 12px; backdrop-filter:blur(4px);}
+  #arBottom{position:absolute; left:0; right:0; bottom:0; padding:14px 14px calc(env(safe-area-inset-bottom,0px) + 14px);
+    background:linear-gradient(to top, rgba(10,13,13,.9), rgba(10,13,13,.5) 60%, transparent);}
+  #arStartScreen{position:fixed; inset:0; z-index:3; background:var(--bg-void); display:flex; flex-direction:column;
+    align-items:center; justify-content:center; text-align:center; padding:30px;}
+  #arStartScreen h1{font-family:var(--mono); font-size:15px; letter-spacing:.1em; text-transform:uppercase; color:var(--accent-cyan); margin:0 0 10px;}
+  #arStartScreen p{font-size:14px; color:var(--text-dim); max-width:320px; line-height:1.6; margin:0 0 20px;}
+  #arStartScreen button{font-family:var(--mono); text-transform:uppercase; letter-spacing:.06em; background:var(--accent-cyan); color:#0a0d0d; border:none; border-radius:10px; padding:13px 26px; font-weight:700; font-size:13px;}
+  #arStartScreen .spinner{width:26px; height:26px; border-radius:50%; border:2px solid var(--steel); border-top-color:var(--accent-cyan); animation:spin .8s linear infinite; margin-bottom:16px;}
+  #arStartScreen .back{margin-top:16px; background:none; color:var(--text-dim); border:none; text-decoration:underline; font-size:12px; padding:6px;}
+
+  /* ================= DRAWER (shared) ================= */
+  #drawer{position:fixed; inset:0; z-index:40; background:rgba(10,13,13,.97); backdrop-filter:blur(6px);
+    transform:translateY(100%); transition:transform .28s ease; display:flex; flex-direction:column;}
+  #drawer.open{transform:translateY(0);}
+  #drawer header{display:flex; justify-content:space-between; align-items:center; padding:calc(env(safe-area-inset-top,0px) + 16px) 18px 12px; border-bottom:1px solid var(--steel);}
+  #drawer header h2{font-family:var(--mono); font-size:13px; letter-spacing:.14em; text-transform:uppercase; margin:0; color:var(--text-dim);}
+  #list{flex:1; overflow-y:auto; padding:10px 14px;}
+  .item{display:flex; justify-content:space-between; align-items:center; background:var(--panel); border:1px solid var(--steel); border-radius:12px; padding:12px 14px; margin-bottom:8px;}
+  .item .n{font-family:var(--mono); font-size:11px; color:var(--text-dim); margin-bottom:2px;}
+  .item .v{font-family:var(--mono); font-size:20px; color:var(--accent-lime); font-weight:600;}
+  .item button{background:transparent; border:none; color:var(--danger); font-size:18px; padding:6px 10px; cursor:pointer;}
+  #empty{text-align:center; color:var(--text-dim); font-family:var(--mono); font-size:12px; margin-top:40px; padding:0 20px; line-height:1.6;}
+</style>
+</head>
+<body>
+
+<!-- ================= CHOOSER ================= -->
+<div id="chooser">
+  <button class="iconbtn listIcon" id="btnListChooser" title="Mediciones guardadas">☰</button>
+  <div class="brandRow"><span class="dot"></span><span>Telémetro</span></div>
+  <h1>Elegí el modo de medición</h1>
+  <p class="lead">El modo AR usa el sensor de profundidad del teléfono (ARCore) para que la medida no cambie si movés la cámara. El modo cámara simple funciona en cualquier dispositivo pero requiere calibrar con un objeto de referencia.</p>
+
+  <button class="modeCard ar" id="cardAR">
+    <div class="glow"></div>
+    <span class="tag" id="arTag">Verificando…</span>
+    <h2>Modo AR (ARCore)</h2>
+    <p>Medición 3D real. La distancia se mantiene estable aunque cambies de posición.</p>
+  </button>
+
+  <button class="modeCard" id="cardClassic">
+    <span class="tag off">Cualquier dispositivo</span>
+    <h2>Cámara simple</h2>
+    <p>Calibrás con un objeto de largo conocido (ej. una tarjeta). Ideal para superficies planas, sin moverte de lugar.</p>
+  </button>
+
+  <div id="chooserFoot">Solo Android + Chrome soporta el modo AR<br>por ahora. iPhone y PC usan cámara simple.</div>
+</div>
+
+<!-- ================= CLASSIC MODE ================= -->
+<div id="classicApp" class="hidden">
+  <div id="stage">
+    <video id="video" autoplay playsinline muted></video>
+    <canvas id="canvas"></canvas>
+    <div id="scanlines"></div>
+    <div id="vignette"></div>
+  </div>
+
+  <div id="topbar">
+    <button class="iconbtn" id="btnBackClassic" title="Cambiar modo">←</button>
+    <div style="display:flex; gap:8px;">
+      <button class="iconbtn" id="btnList" title="Mediciones guardadas">☰</button>
+      <button class="iconbtn" id="btnFlip" title="Cambiar cámara">⟲</button>
+    </div>
+  </div>
+
+  <div id="modewrap">
+    <button class="modebtn active" id="modeCal">Calibrar</button>
+    <button class="modebtn" id="modeMed" disabled>Medir</button>
+  </div>
+
+  <div id="hud">
+    <div id="calbox">
+      <label>Longitud real del segmento marcado (cm):</label>
+      <input type="number" id="calInput" inputmode="decimal" placeholder="8.56" step="0.01">
+      <button id="calConfirm">Fijar</button>
+    </div>
+
+    <div id="readoutClassic" class="readoutPanel dim">
+      <div class="label" id="roLabel">Distancia</div>
+      <div class="value" id="roValue">—<small>cm</small></div>
+      <div class="sub" id="roSub">Marcá un objeto de largo conocido para calibrar</div>
+    </div>
+
+    <div class="actionsRow">
+      <button class="btn danger" id="btnClear">Borrar puntos</button>
+      <button class="btn" id="btnRecal">Recalibrar</button>
+      <button class="btn primary" id="btnSave" disabled>Guardar</button>
+    </div>
+
+    <div class="hintText">Tocá dos puntos sobre la pantalla · arrastrá para ajustar</div>
+  </div>
+
+  <div id="camOverlay">
+    <div class="spinner"></div>
+    <h1>Activando cámara</h1>
+    <p>Se va a pedir permiso de cámara. No se instala nada ni se sube ninguna imagen: todo el cálculo se hace en el propio dispositivo.</p>
+  </div>
+</div>
+
+<!-- ================= AR MODE ================= -->
+<div id="arApp" class="hidden">
+  <div id="arStartScreen">
+    <div class="spinner"></div>
+    <h1>Iniciando AR</h1>
+    <p>Se va a pedir permiso de cámara y se va a activar el modo de realidad aumentada. Movés el teléfono despacio hasta que detecte una superficie.</p>
+    <button id="btnLaunchAR">Empezar</button>
+    <button class="back" id="btnBackAR1">← Elegir otro modo</button>
+  </div>
+
+  <div id="arOverlay">
+    <div id="arTop">
+      <button class="iconbtn" id="btnExitAR" title="Salir de AR">←</button>
+      <div id="arBadge">Guardadas: <span id="arSavedCount">0</span></div>
+    </div>
+    <div id="arBottom">
+      <div id="readoutAR" class="readoutPanel dim">
+        <div class="label" id="arLabel">Distancia</div>
+        <div class="value" id="arValue">—<small>cm</small></div>
+        <div class="sub" id="arSub">Mové el teléfono para detectar una superficie</div>
+      </div>
+      <div class="actionsRow">
+        <button class="btn danger" id="btnArReset">Nueva medición</button>
+        <button class="btn primary" id="btnArSave" disabled>Guardar</button>
+      </div>
+      <div class="hintText">Tocá la pantalla para marcar un punto sobre una superficie</div>
+    </div>
+  </div>
+</div>
+
+<!-- ================= DRAWER (shared) ================= -->
+<div id="drawer">
+  <header>
+    <h2>Mediciones guardadas</h2>
+    <button class="iconbtn" id="btnCloseList">✕</button>
+  </header>
+  <div id="list"></div>
+</div>
+
+<script>
+/* =========================================================
+   ESTADO Y LISTA COMPARTIDA (Guardar / drawer) — usada por
+   el modo clásico y el modo AR por igual.
+   ========================================================= */
+window.__telemetro = (function(){
+  let saved = [];
+  let counter = 1;
+  const list = document.getElementById('list');
+  const drawer = document.getElementById('drawer');
+  const arSavedCount = document.getElementById('arSavedCount');
+
+  function fmt(n, d){ return n.toLocaleString('es-AR', {minimumFractionDigits:d, maximumFractionDigits:d}); }
+
+  function renderList(){
+    if(saved.length === 0){
+      list.innerHTML = '<div id="empty">Todavía no guardaste ninguna medición.<br>Medí un objeto y tocá "Guardar".</div>';
+    } else {
+      list.innerHTML = saved.map(s => `
+        <div class="item" data-id="${s.id}">
+          <div>
+            <div class="n">Medición #${s.id} · ${s.mode}</div>
+            <div class="v">${s.cm>=100 ? fmt(s.cm/100,2)+' m' : fmt(s.cm,1)+' cm'}</div>
+          </div>
+          <button data-del="${s.id}">✕</button>
+        </div>`).join('');
+    }
+    arSavedCount.textContent = saved.length;
+  }
+
+  list.addEventListener('click', (e)=>{
+    const id = e.target.getAttribute('data-del');
+    if(id){ saved = saved.filter(s=>s.id!=id); renderList(); }
+  });
+
+  function save(cm, mode){
+    saved.unshift({ id: counter++, cm, mode });
+    renderList();
+  }
+
+  function open(){ renderList(); drawer.classList.add('open'); }
+  function close(){ drawer.classList.remove('open'); }
+
+  document.getElementById('btnCloseList').addEventListener('click', close);
+  document.getElementById('btnListChooser').addEventListener('click', open);
+
+  renderList();
+  return { save, open, close, fmt };
+})();
+
+/* =========================================================
+   CHOOSER
+   ========================================================= */
+(function(){
+  const chooser = document.getElementById('chooser');
+  const classicApp = document.getElementById('classicApp');
+  const arApp = document.getElementById('arApp');
+  const cardAR = document.getElementById('cardAR');
+  const arTag = document.getElementById('arTag');
+  const cardClassic = document.getElementById('cardClassic');
+
+  let arSupported = false;
+
+  async function checkAR(){
+    if(!('xr' in navigator)){
+      arTag.textContent = 'No disponible';
+      arTag.classList.add('off');
+      return;
+    }
+    try{
+      arSupported = await navigator.xr.isSessionSupported('immersive-ar');
+    }catch(e){ arSupported = false; }
+    if(arSupported){
+      arTag.textContent = 'Disponible';
+    } else {
+      arTag.textContent = 'No disponible en este equipo';
+      arTag.classList.add('off');
+      cardAR.classList.add('disabled');
+    }
+  }
+  checkAR();
+
+  cardAR.addEventListener('click', ()=>{
+    if(!arSupported) return;
+    chooser.classList.add('hidden');
+    arApp.classList.remove('hidden');
+    window.__arMode.reset();
+  });
+
+  cardClassic.addEventListener('click', ()=>{
+    chooser.classList.add('hidden');
+    classicApp.classList.remove('hidden');
+    window.__classicMode.start();
+  });
+
+  window.__goToChooser = function(){
+    classicApp.classList.add('hidden');
+    arApp.classList.add('hidden');
+    window.__classicMode.stop();
+    window.__arMode.stop();
+    chooser.classList.remove('hidden');
+  };
+
+  document.getElementById('btnBackClassic').addEventListener('click', window.__goToChooser);
+  document.getElementById('btnBackAR1').addEventListener('click', window.__goToChooser);
+  document.getElementById('btnExitAR').addEventListener('click', ()=> window.__arMode.endSession());
+})();
+
+/* =========================================================
+   MODO CLÁSICO (cámara + calibración por referencia)
+   ========================================================= */
+window.__classicMode = (function(){
+  const video = document.getElementById('video');
+  const canvas = document.getElementById('canvas');
+  const ctx = canvas.getContext('2d');
+  const camOverlay = document.getElementById('camOverlay');
+  const modeCal = document.getElementById('modeCal');
+  const modeMed = document.getElementById('modeMed');
+  const roLabel = document.getElementById('roLabel');
+  const roValue = document.getElementById('roValue');
+  const roSub = document.getElementById('roSub');
+  const readoutBox = document.getElementById('readoutClassic');
+  const calbox = document.getElementById('calbox');
+  const calInput = document.getElementById('calInput');
+  const btnSave = document.getElementById('btnSave');
+  const btnClear = document.getElementById('btnClear');
+  const btnRecal = document.getElementById('btnRecal');
+  const btnFlip = document.getElementById('btnFlip');
+  const btnList = document.getElementById('btnList');
+
+  let mode = 'cal';
+  let points = [];
+  let dragIndex = -1;
+  let pxPerCm = null;
+  let facing = 'environment';
+  let stream = null;
+  let rafId = null;
+  const fmt = window.__telemetro.fmt;
+
+  function dist(a,b){ return Math.hypot(a.x-b.x, a.y-b.y); }
+
+  function resizeCanvas(){
+    canvas.width = canvas.clientWidth * devicePixelRatio;
+    canvas.height = canvas.clientHeight * devicePixelRatio;
+    ctx.setTransform(devicePixelRatio,0,0,devicePixelRatio,0,0);
+  }
+  window.addEventListener('resize', resizeCanvas);
+
+  async function startCamera(){
+    if(stream){ stream.getTracks().forEach(t=>t.stop()); }
+    camOverlay.style.display = 'flex';
+    try{
+      stream = await navigator.mediaDevices.getUserMedia({
+        video:{ facingMode:{ideal:facing}, width:{ideal:1920}, height:{ideal:1080} },
+        audio:false
+      });
+      video.srcObject = stream;
+      await video.play();
+      camOverlay.style.display = 'none';
+      resizeCanvas();
+    }catch(err){
+      camOverlay.innerHTML = `
+        <h1 style="color:#ff5d5d">Sin acceso a la cámara</h1>
+        <p>${err.name === 'NotAllowedError'
+            ? 'Se denegó el permiso de cámara. Revisá los permisos del sitio en la configuración del navegador y recargá.'
+            : 'No se pudo abrir la cámara (' + err.name + ').'}</p>
+        <button onclick="location.reload()">Reintentar</button>`;
+    }
+  }
+
+  function stopCamera(){
+    if(stream){ stream.getTracks().forEach(t=>t.stop()); stream = null; }
+    if(rafId){ cancelAnimationFrame(rafId); rafId = null; }
+  }
+
+  function pointFromEvent(e){
+    const r = canvas.getBoundingClientRect();
+    const p = e.touches ? e.touches[0] : e;
+    return { x: p.clientX - r.left, y: p.clientY - r.top };
+  }
+  function nearestPointIndex(p, threshold=26){
+    let best=-1, bd=threshold;
+    points.forEach((pt,i)=>{ const d=dist(pt,p); if(d<bd){bd=d; best=i;} });
+    return best;
+  }
+  function onDown(e){
+    e.preventDefault();
+    const p = pointFromEvent(e);
+    const idx = nearestPointIndex(p);
+    if(idx>=0){ dragIndex = idx; return; }
+    if(points.length < 2){ points.push(p); }
+    else { points = [p]; }
+    updateReadout();
+  }
+  function onMove(e){
+    if(dragIndex<0) return;
+    e.preventDefault();
+    points[dragIndex] = pointFromEvent(e);
+    updateReadout();
+  }
+  function onUp(){ dragIndex = -1; }
+  canvas.addEventListener('mousedown', onDown);
+  canvas.addEventListener('mousemove', onMove);
+  window.addEventListener('mouseup', onUp);
+  canvas.addEventListener('touchstart', onDown, {passive:false});
+  canvas.addEventListener('touchmove', onMove, {passive:false});
+  window.addEventListener('touchend', onUp);
+
+  function updateReadout(){
+    calbox.classList.remove('show');
+    if(points.length < 2){
+      readoutBox.classList.add('dim');
+      btnSave.disabled = true;
+      if(mode==='cal'){
+        roLabel.textContent = 'Calibración';
+        roValue.innerHTML = '—<small>cm</small>';
+        roSub.textContent = points.length===0
+          ? 'Tocá los dos extremos de un objeto de largo conocido (ej. tarjeta = 8.56 cm)'
+          : 'Marcá el segundo punto';
+      } else {
+        roLabel.textContent = 'Distancia';
+        roValue.innerHTML = '—<small>cm</small>';
+        roSub.textContent = points.length===0 ? 'Tocá el primer punto' : 'Marcá el segundo punto';
+      }
+      return;
+    }
+    const px = dist(points[0], points[1]);
+    if(mode==='cal'){
+      calbox.classList.add('show');
+      readoutBox.classList.add('dim');
+      roLabel.textContent = 'Segmento marcado';
+      roValue.innerHTML = fmt(px,0) + '<small>px</small>';
+      roSub.textContent = 'Ingresá su longitud real y confirmá';
+      btnSave.disabled = true;
+    } else {
+      readoutBox.classList.remove('dim');
+      const cm = px / pxPerCm;
+      roLabel.textContent = 'Distancia medida';
+      roValue.innerHTML = cm >= 100 ? fmt(cm/100,2)+'<small>m</small>' : fmt(cm,1)+'<small>cm</small>';
+      roSub.textContent = fmt(cm,1) + ' cm exactos · calibrado a ' + fmt(pxPerCm,1) + ' px/cm';
+      btnSave.disabled = false;
+    }
+  }
+
+  document.getElementById('calConfirm').addEventListener('click', ()=>{
+    const realCm = parseFloat(calInput.value);
+    if(!realCm || realCm<=0 || points.length<2) return;
+    const px = dist(points[0], points[1]);
+    pxPerCm = px / realCm;
+    modeMed.disabled = false;
+    setMode('med');
+    points = [];
+    calInput.value = '';
+    updateReadout();
+  });
+
+  function setMode(m){
+    mode = m;
+    modeCal.classList.toggle('active', m==='cal');
+    modeMed.classList.toggle('active', m==='med');
+    calbox.classList.remove('show');
+    updateReadout();
+  }
+  modeCal.addEventListener('click', ()=> setMode('cal'));
+  modeMed.addEventListener('click', ()=>{ if(!modeMed.disabled) setMode('med'); });
+  btnClear.addEventListener('click', ()=>{ points=[]; updateReadout(); });
+  btnRecal.addEventListener('click', ()=>{ pxPerCm=null; points=[]; modeMed.disabled=true; setMode('cal'); });
+  btnFlip.addEventListener('click', ()=>{ facing = facing==='environment' ? 'user' : 'environment'; startCamera(); });
+  btnSave.addEventListener('click', ()=>{
+    if(points.length<2 || !pxPerCm) return;
+    const px = dist(points[0], points[1]);
+    window.__telemetro.save(px / pxPerCm, 'cámara simple');
+  });
+  btnList.addEventListener('click', window.__telemetro.open);
+
+  function draw(){
+    rafId = requestAnimationFrame(draw);
+    ctx.clearRect(0,0,canvas.clientWidth, canvas.clientHeight);
+    if(points.length===0) return;
+    const color = mode==='cal' ? '#3ddbd9' : '#c8ff3d';
+    if(points.length===2){
+      ctx.strokeStyle = color; ctx.lineWidth = 2; ctx.setLineDash([6,5]);
+      ctx.beginPath(); ctx.moveTo(points[0].x, points[0].y); ctx.lineTo(points[1].x, points[1].y); ctx.stroke();
+      ctx.setLineDash([]);
+    }
+    points.forEach(p=>{
+      ctx.strokeStyle = color; ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.arc(p.x,p.y,12,0,Math.PI*2); ctx.stroke();
+      ctx.beginPath(); ctx.arc(p.x,p.y,2.5,0,Math.PI*2); ctx.fillStyle = color; ctx.fill();
+      [[-18,-12],[18,12]].forEach(([a,b])=>{
+        ctx.beginPath(); ctx.moveTo(p.x+a,p.y); ctx.lineTo(p.x+b,p.y); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(p.x,p.y+a); ctx.lineTo(p.x,p.y+b); ctx.stroke();
+      });
+    });
+  }
+
+  video.addEventListener('loadedmetadata', resizeCanvas);
+
+  return {
+    start(){ points=[]; pxPerCm=null; modeMed.disabled=true; setMode('cal'); draw(); startCamera(); },
+    stop(){ stopCamera(); }
+  };
+})();
+
+/* =========================================================
+   MODO AR (WebXR hit-test, motor ARCore vía Chrome)
+   ========================================================= */
+window.__arMode = (function(){
+  const startScreen = document.getElementById('arStartScreen');
+  const btnLaunch = document.getElementById('btnLaunchAR');
+  const arLabel = document.getElementById('arLabel');
+  const arValue = document.getElementById('arValue');
+  const arSub = document.getElementById('arSub');
+  const readoutAR = document.getElementById('readoutAR');
+  const btnArReset = document.getElementById('btnArReset');
+  const btnArSave = document.getElementById('btnArSave');
+  const fmt = window.__telemetro.fmt;
+
+  let THREE, renderer, scene, camera, reticle, hitTestSource, localSpace, session;
+  let markers = [];
+  let lastCm = null;
+
+  function reset(){
+    startScreen.classList.remove('hidden');
+    startScreen.querySelector('h1').textContent = 'Iniciando AR';
+    startScreen.querySelector('h1').style.color = '';
+    startScreen.querySelector('p').textContent = 'Se va a pedir permiso de cámara y se va a activar el modo de realidad aumentada. Movés el teléfono despacio hasta que detecte una superficie.';
+    btnLaunch.classList.remove('hidden');
+    btnLaunch.textContent = 'Empezar';
+  }
+
+  async function ensureThree(){
+    if(THREE) return;
+    THREE = await import('https://unpkg.com/three@0.160.1/build/three.module.js');
+  }
+
+  function clearMarkers(){
+    markers.forEach(m => scene.remove(m.mesh));
+    if(scene.userData.line){ scene.remove(scene.userData.line); scene.userData.line = null; }
+    markers = [];
+    lastCm = null;
+    btnArSave.disabled = true;
+    readoutAR.classList.add('dim');
+    arLabel.textContent = 'Distancia';
+    arValue.innerHTML = '—<small>cm</small>';
+    arSub.textContent = 'Mové el teléfono para detectar una superficie';
+  }
+
+  function addMarker(matrix){
+    const geo = new THREE.SphereGeometry(0.012, 16, 16);
+    const mat = new THREE.MeshBasicMaterial({ color: 0x3ddbd9 });
+    const mesh = new THREE.Mesh(geo, mat);
+    mesh.position.setFromMatrixPosition(matrix);
+    scene.add(mesh);
+    if(markers.length >= 2){
+      markers.forEach(m => scene.remove(m.mesh));
+      if(scene.userData.line){ scene.remove(scene.userData.line); }
+      markers = [];
+    }
+    markers.push({ mesh });
+    updateLine();
+  }
+
+  function updateLine(){
+    if(scene.userData.line){ scene.remove(scene.userData.line); scene.userData.line = null; }
+    if(markers.length === 2){
+      const geo = new THREE.BufferGeometry().setFromPoints([markers[0].mesh.position, markers[1].mesh.position]);
+      const mat = new THREE.LineBasicMaterial({ color: 0xc8ff3d, linewidth: 2 });
+      const line = new THREE.Line(geo, mat);
+      scene.add(line);
+      scene.userData.line = line;
+
+      const m = markers[0].mesh.position.distanceTo(markers[1].mesh.position);
+      lastCm = m * 100;
+      readoutAR.classList.remove('dim');
+      arLabel.textContent = 'Distancia medida';
+      arValue.innerHTML = lastCm >= 100 ? fmt(lastCm/100,2)+'<small>m</small>' : fmt(lastCm,1)+'<small>cm</small>';
+      arSub.textContent = fmt(lastCm,1) + ' cm exactos · medición 3D real';
+      btnArSave.disabled = false;
+    }
+  }
+
+  async function launch(){
+    btnLaunch.disabled = true;
+    btnLaunch.textContent = 'Iniciando…';
+    try{
+      await ensureThree();
+
+      renderer = new THREE.WebGLRenderer({ antialias:true, alpha:true });
+      renderer.setPixelRatio(window.devicePixelRatio);
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      renderer.xr.enabled = true;
+      renderer.domElement.style.position = 'fixed';
+      renderer.domElement.style.inset = '0';
+      document.getElementById('arApp').insertBefore(renderer.domElement, document.getElementById('arOverlay'));
+
+      scene = new THREE.Scene();
+      camera = new THREE.PerspectiveCamera();
+
+      const reticleGeo = new THREE.RingGeometry(0.045, 0.05, 32).rotateX(-Math.PI/2);
+      const reticleMat = new THREE.MeshBasicMaterial({ color: 0xc8ff3d });
+      reticle = new THREE.Mesh(reticleGeo, reticleMat);
+      reticle.matrixAutoUpdate = false;
+      reticle.visible = false;
+      scene.add(reticle);
+
+      session = await navigator.xr.requestSession('immersive-ar', {
+        requiredFeatures: ['hit-test'],
+        optionalFeatures: ['dom-overlay'],
+        domOverlay: { root: document.getElementById('arOverlay') }
+      });
+
+      session.addEventListener('end', onSessionEnd);
+
+      renderer.xr.setReferenceSpaceType('local');
+      await renderer.xr.setSession(session);
+
+      const viewerSpace = await session.requestReferenceSpace('viewer');
+      hitTestSource = await session.requestHitTestSource({ space: viewerSpace });
+      localSpace = renderer.xr.getReferenceSpace();
+
+      session.addEventListener('select', () => {
+        if(reticle.visible){ addMarker(reticle.matrix); }
+      });
+
+      startScreen.classList.add('hidden');
+      clearMarkers();
+
+      renderer.setAnimationLoop((timestamp, frame) => {
+        if(frame && hitTestSource){
+          const results = frame.getHitTestResults(hitTestSource);
+          if(results.length){
+            const pose = results[0].getPose(localSpace);
+            reticle.visible = true;
+            reticle.matrix.fromArray(pose.transform.matrix);
+            if(markers.length < 2 && arSub.textContent.includes('detectar')){
+              arSub.textContent = 'Superficie detectada · tocá para marcar un punto';
+            }
+          } else {
+            reticle.visible = false;
+          }
+        }
+        renderer.render(scene, camera);
+      });
+
+    }catch(err){
+      startScreen.classList.remove('hidden');
+      btnLaunch.classList.add('hidden');
+      startScreen.querySelector('h1').textContent = 'No se pudo iniciar AR';
+      startScreen.querySelector('h1').style.color = '#ff5d5d';
+      startScreen.querySelector('p').textContent = err.name === 'NotAllowedError'
+        ? 'Se denegó el permiso de cámara. Revisá los permisos del sitio y volvé a intentar.'
+        : 'Ocurrió un error iniciando la sesión AR (' + (err.message || err.name) + '). Probá con el modo cámara simple.';
+    }
+  }
+
+  function onSessionEnd(){
+    if(renderer){
+      renderer.setAnimationLoop(null);
+      if(renderer.domElement && renderer.domElement.parentNode){
+        renderer.domElement.parentNode.removeChild(renderer.domElement);
+      }
+      renderer.dispose();
+    }
+    renderer = null; scene = null; camera = null; reticle = null;
+    hitTestSource = null; localSpace = null; session = null;
+    reset();
+  }
+
+  function endSession(){
+    if(session){ session.end(); } else { window.__goToChooser(); }
+  }
+
+  btnLaunch.addEventListener('click', launch);
+  btnArReset.addEventListener('click', clearMarkers);
+  btnArSave.addEventListener('click', ()=>{
+    if(lastCm == null) return;
+    window.__telemetro.save(lastCm, 'AR');
+    clearMarkers();
+  });
+
+  return {
+    reset,
+    endSession,
+    stop(){ if(session){ session.end(); } }
+  };
+})();
+</script>
+</body>
+</html>
