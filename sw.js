@@ -2,7 +2,11 @@
 // Cachea los archivos base de la app para que abra rápido y funcione
 // aunque no haya conexión (los datos de Firestore igual necesitan internet).
 
-const CACHE_NAME = '8bits-pokemon-v1';
+// Subí este número cada vez que publiques cambios importantes: al cambiar
+// el contenido de este archivo, el navegador detecta que el service worker
+// cambió y fuerza la actualización (borra la caché vieja, guarda la nueva),
+// incluso en celulares que se habían quedado con una versión anterior.
+const CACHE_NAME = '8bits-pokemon-v2';
 const APP_SHELL = [
   './',
   './index.html',
@@ -39,7 +43,11 @@ self.addEventListener('fetch', (event) => {
   }
 
   event.respondWith(
-    fetch(event.request)
+    // "no-store" evita que el navegador resuelva esto con su caché HTTP
+    // normal (que es lo que estaba dejando ver una versión vieja en el
+    // celular aunque la app pidiera "red primero"): así se obliga a pedirle
+    // siempre el archivo real y actual al servidor.
+    fetch(event.request, { cache: 'no-store' })
       .then((response) => {
         const responseClone = response.clone();
         caches.open(CACHE_NAME).then((cache) => cache.put(event.request, responseClone));
