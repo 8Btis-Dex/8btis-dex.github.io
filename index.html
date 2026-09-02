@@ -4166,6 +4166,16 @@ let dataTCGLive = {};
 let dataMazos = []; // Mazos de TCG Pocket: [{ nombre, cartas: [{ pokemon, idx }] }]
 let dataMazosLive = []; // Mazos de TCG Live: misma estructura, pero referencia dataTCGLive
 
+// Estado de "sección en reparación" por juego. Viaja como un campo más
+// dentro del mismo documento de Firestore de cada juego (ver pushToFirestore
+// / applyGameDoc), para que activarlo en un dispositivo se vea en todos los
+// demás. El localStorage es solo una caché para el primer render, antes de
+// que responda Firestore.
+let modosEnReparacion = { champions:false, go:false, tcg:false, tcglive:false };
+try {
+  Object.assign(modosEnReparacion, JSON.parse(localStorage.getItem('modosEnReparacion') || '{}'));
+} catch (e) {}
+
 POKEMON_LISTS.champions.forEach(p => { dataChampions[p] = EMPTY_CHAMPIONS(); });
 POKEMON_LISTS.go.forEach(p => { dataGO[p] = EMPTY_GO(); });
 POKEMON_LISTS.tcg.forEach(p => { dataTCG[p] = EMPTY_TCG(); });
@@ -4649,10 +4659,13 @@ function esTcgDatoCompleto(d) {
 // (ver aplicarEstadoReparacion), sin buscador ni resultados. Se activa/
 // desactiva desde el checkbox de cada modo en Datos.
 function getModoEnReparacion(mode) {
-  try { return localStorage.getItem(mode + '_en_reparacion') === 'true'; } catch (e) { return false; }
+  return !!modosEnReparacion[mode];
 }
 function toggleModoEnReparacion(mode, activo) {
-  try { localStorage.setItem(mode + '_en_reparacion', activo ? 'true' : 'false'); } catch (e) {}
+  modosEnReparacion[mode] = !!activo;
+  // persistAll guarda en localStorage (caché local) Y sube a Firestore, para
+  // que el cambio se vea en todos los dispositivos, no solo en este navegador.
+  if (typeof persistAll === 'function') persistAll();
   if (currentMode === mode) aplicarEstadoReparacion(mode);
 }
 // Muestra/oculta el cartel grande de "en reparación" para el modo actual
@@ -5071,6 +5084,7 @@ function persistLocalOnly() {
   localStorage.setItem('pokemonDataMazosLive', JSON.stringify(dataMazosLive));
   localStorage.setItem('pokemonDataExpansiones', JSON.stringify(EXPANSIONES_SUGERIDAS.tcg));
   localStorage.setItem('pokemonDataExpansionesLive', JSON.stringify(EXPANSIONES_SUGERIDAS.tcglive));
+  localStorage.setItem('modosEnReparacion', JSON.stringify(modosEnReparacion));
 }
 
 // Aplica un snapshot recibido de Firestore al estado en memoria (no persiste
@@ -5117,6 +5131,7 @@ function applyGameDoc(game, doc) {
   if (!doc) return;
   const list = parseSnapField(doc.list);
   const data = parseSnapField(doc[game]);
+  if (typeof doc.enReparacion === 'boolean') modosEnReparacion[game] = doc.enReparacion;
   if (game === 'champions') {
     if (Array.isArray(list)) POKEMON_LISTS.champions = list;
     if (data) dataChampions = data;
@@ -5151,10 +5166,10 @@ function pushToFirestore() {
   // nativo de Firestore, para evitar el límite de "demasiadas entradas de
   // índice" que genera un mapa con una clave por cada Pokémon.
   const writes = [
-    ['champions', { list: JSON.stringify(POKEMON_LISTS.champions), champions: JSON.stringify(dataChampions) }],
-    ['go', { list: JSON.stringify(POKEMON_LISTS.go), go: JSON.stringify(dataGO) }],
-    ['tcg', { list: JSON.stringify(POKEMON_LISTS.tcg), tcg: JSON.stringify(dataTCG) }],
-    ['tcglive', { list: JSON.stringify(POKEMON_LISTS.tcglive), tcglive: JSON.stringify(dataTCGLive) }],
+    ['champions', { list: JSON.stringify(POKEMON_LISTS.champions), champions: JSON.stringify(dataChampions), enReparacion: !!modosEnReparacion.champions }],
+    ['go', { list: JSON.stringify(POKEMON_LISTS.go), go: JSON.stringify(dataGO), enReparacion: !!modosEnReparacion.go }],
+    ['tcg', { list: JSON.stringify(POKEMON_LISTS.tcg), tcg: JSON.stringify(dataTCG), enReparacion: !!modosEnReparacion.tcg }],
+    ['tcglive', { list: JSON.stringify(POKEMON_LISTS.tcglive), tcglive: JSON.stringify(dataTCGLive), enReparacion: !!modosEnReparacion.tcglive }],
     ['mazos', { mazos: JSON.stringify(dataMazos), mazosLive: JSON.stringify(dataMazosLive) }],
     ['expansiones', { expansiones: JSON.stringify(EXPANSIONES_SUGERIDAS.tcg), expansionesLive: JSON.stringify(EXPANSIONES_SUGERIDAS.tcglive) }]
   ];
@@ -5246,6 +5261,7 @@ function initFirebaseSync() {
       if (huboMigracion && typeof pushToFirestore === 'function') pushToFirestore();
       if (typeof renderCurrentTable === 'function') renderCurrentTable();
       if (typeof ensurePokemonDatalistMazos === 'function') ensurePokemonDatalistMazos(mazoEditingMode);
+      if (currentMode) aplicarEstadoReparacion(currentMode);
       const searchInput = document.getElementById('search-input');
       if (currentMode && searchInput) showResult(searchInput.value.trim() || null);
     }
