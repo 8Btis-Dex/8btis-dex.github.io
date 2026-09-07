@@ -4452,14 +4452,92 @@ function championsComputeSuggestion({ stats, types, movepool }) {
   return resultado;
 }
 
+// ── SUGERENCIAS DESDE POKEBASE.APP (nueva fuente, reemplaza la heurística) ──
+// Pokebase.app no expone API pública ni permite fetch cross-origin (CORS),
+// así que se pasa por un proxy público. Si allorigins.win falla de forma
+// consistente, cambiar POKEBASE_CORS_PROXY por otro (ej. corsproxy.io).
+const POKEBASE_CORS_PROXY = 'https://api.allorigins.win/raw?url=';
+
+function championsPokebaseSlug(name) {
+  // Mismo slug (minúsculas, con guiones) que ya usa getPokemonSlug() para
+  // PokeAPI; pokebase.app usa el mismo formato en sus URLs.
+  return getPokemonSlug(name);
+}
+
+async function championsFetchPokebaseDoc(name) {
+  const slug = championsPokebaseSlug(name);
+  const targetUrl = `https://pokebase.app/pokemon-champions/pokemon/${slug}`;
+  const proxied = POKEBASE_CORS_PROXY + encodeURIComponent(targetUrl);
+  const res = await fetch(proxied);
+  if (!res.ok) throw new Error('No se pudo acceder a pokebase.app para ' + name);
+  const html = await res.text();
+  if (!html || html.length < 200) throw new Error('Respuesta vacía de pokebase.app para ' + name);
+  return new DOMParser().parseFromString(html, 'text/html');
+}
+
+// Texto limpio de un <li>, sin importar si trae un ícono adentro o no.
+function pokebaseLiText(li) {
+  if (!li) return '';
+  return li.textContent.replace(/\s+/g, ' ').trim();
+}
+
+// La página de un Pokémon en pokebase.app/pokemon-champions tiene una
+// grilla de 2 columnas: la izquierda trae el Objeto más usado (arriba) y la
+// Naturaleza más usada (en una sub-grilla debajo); la derecha trae los
+// Ataques más usados. Estructura relevada a mano con Jolteon el 07/09/2026;
+// si pokebase.app cambia el layout, esto puede dejar de encontrar el grid.
+function championsParsePokebaseDoc(doc) {
+  const grid = doc.querySelector('div.grid.lg\\:grid-cols-2.gap-3.pt-3');
+  if (!grid) throw new Error('No se encontró el layout esperado en pokebase.app (¿cambió la página?)');
+  const colIzquierda = grid.children[0];
+  const colDerecha = grid.children[1];
+  if (!colIzquierda || !colDerecha) throw new Error('No se encontraron las columnas esperadas en pokebase.app');
+
+  const cajaObjeto = colIzquierda.children[0];
+  const objetoEN = pokebaseLiText(cajaObjeto && cajaObjeto.querySelector('ul > li:nth-child(1)'));
+
+  const subGrid = colIzquierda.children[1];
+  const cajaNaturaleza = subGrid ? subGrid.children[1] : null;
+  const naturalezaEN = pokebaseLiText(cajaNaturaleza && cajaNaturaleza.querySelector('ul > li:nth-child(1)'));
+
+  const cajaAtaques = colDerecha.children[1];
+  const ataquesLis = cajaAtaques ? Array.from(cajaAtaques.querySelectorAll('ul > li')).slice(0, 4) : [];
+  const ataquesEN = ataquesLis.map(pokebaseLiText).filter(Boolean);
+
+  if (!objetoEN && !naturalezaEN && !ataquesEN.length) {
+    throw new Error('No se encontraron datos de Champions para este Pokémon en pokebase.app');
+  }
+  return { objetoEN, naturalezaEN, ataquesEN };
+}
+
+function championsBuildSuggestionFromPokebase({ objetoEN, naturalezaEN, ataquesEN }) {
+  const resultado = {
+    naturaleza: translateNatureIfEnglish(naturalezaEN) || naturalezaEN || '',
+    objeto: translateItemIfEnglish(objetoEN) || objetoEN || ''
+  };
+  [1, 2, 3, 4].forEach((i) => {
+    const enName = ataquesEN[i - 1];
+    if (enName) {
+      const { nombre, tipo } = championsSpanishMoveAndType(enName);
+      resultado['ataque' + i] = nombre;
+      resultado['tipo' + i] = tipo;
+    } else {
+      resultado['ataque' + i] = '';
+      resultado['tipo' + i] = '';
+    }
+  });
+  return resultado;
+}
+
 async function championsSugerirUno(name) {
   try {
-    const apiData = await championsFetchPokeApiData(name);
-    const sugerido = championsComputeSuggestion(apiData);
+    const doc = await championsFetchPokebaseDoc(name);
+    const datos = championsParsePokebaseDoc(doc);
+    const sugerido = championsBuildSuggestionFromPokebase(datos);
     dataChampions[name] = { ...EMPTY_CHAMPIONS(), ...dataChampions[name], ...sugerido };
     persistAll();
     renderTableChampions();
-    showToast('🪄 Sugerencia aplicada a ' + name);
+    showToast('🪄 Sugerencia aplicada a ' + name + ' (fuente: pokebase.app)');
   } catch (e) {
     console.error(e);
     showToast('❌ No se pudo generar una sugerencia para ' + name, true);
@@ -4483,10 +4561,11 @@ async function championsSugerirVacios() {
   }
   let hechos = 0;
   for (const name of pendientes) {
-    if (status) status.textContent = `Sugiriendo... ${hechos + 1}/${pendientes.length} (${name})`;
+    if (status) status.textContent = `Sugiriendo... ${hechos + 1}/${pendientes.length} (${name}) — pokebase.app`;
     try {
-      const apiData = await championsFetchPokeApiData(name);
-      const sugerido = championsComputeSuggestion(apiData);
+      const doc = await championsFetchPokebaseDoc(name);
+      const datos = championsParsePokebaseDoc(doc);
+      const sugerido = championsBuildSuggestionFromPokebase(datos);
       dataChampions[name] = { ...EMPTY_CHAMPIONS(), ...dataChampions[name], ...sugerido };
     } catch (e) {
       console.log('Sin sugerencia para', name, e);
@@ -4495,7 +4574,7 @@ async function championsSugerirVacios() {
   }
   persistAll();
   renderTableChampions();
-  if (status) status.textContent = `Listo: se completaron ${hechos} Pokémon.`;
+  if (status) status.textContent = `Listo: se completaron ${hechos} Pokémon (fuente: pokebase.app).`;
   championsSugerirEnCurso = false;
 }
 
