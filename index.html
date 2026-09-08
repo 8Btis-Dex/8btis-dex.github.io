@@ -2571,6 +2571,7 @@
               <th>Stats — Liga Master</th>
               <th>Mov. Rápido</th>
               <th>Mov. Cargado</th>
+              <th>Mov. Cargado 2</th>
               <th>Liga</th>
               <th style="text-align:center">Acciones</th>
             </tr>
@@ -3113,7 +3114,7 @@ function selectGoConsultaLiga(liga) {
 
   document.getElementById('go-liga-selector').style.display = 'none';
   document.getElementById('go-liga-list-section').style.display = 'block';
-  document.getElementById('normal-search-section').style.display = 'block';
+  document.getElementById('normal-search-section').style.display = 'none';
   showResult(null);
 }
 
@@ -3626,8 +3627,8 @@ async function showResult(name) {
         <div class="ri-value ${isEmpty(d.movCargado)?'empty':''}">${d.tipoCargado ? typeIconHTML(d.tipoCargado) : ''}${val(d.movCargado,'Sin datos')}</div>
       </div>
       <div class="result-item">
-        <div class="ri-label">Liga</div>
-        <div class="ri-value">${ligaIconHTML(currentGoConsultaLiga)}${esc(currentGoConsultaLiga)}</div>
+        <div class="ri-label">Movimiento cargado 2</div>
+        <div class="ri-value ${isEmpty(d.movCargado2)?'empty':''}">${d.tipoCargado2 ? typeIconHTML(d.tipoCargado2) : ''}${val(d.movCargado2,'Sin datos')}</div>
       </div>`;
   } else if (currentMode === 'tcg') {
     const d = getTCGData(name);
@@ -3982,7 +3983,7 @@ function goToLitePage(mode, delta) {
 }
 
 const EMPTY_CHAMPIONS = () => ({ naturaleza:'', objeto:'', ataque1:'', tipo1:'', ataque2:'', tipo2:'', ataque3:'', tipo3:'', ataque4:'', tipo4:'' });
-const EMPTY_GO         = () => ({ cpMax:'', cpSuper:'', cpUltra:'', statsSuper:'', statsUltra:'', statsMaster:'', movRapido:'', tipoRapido:'', movCargado:'', tipoCargado:'', ligas:[] });
+const EMPTY_GO         = () => ({ cpMax:'', cpSuper:'', cpUltra:'', statsSuper:'', statsUltra:'', statsMaster:'', movRapido:'', tipoRapido:'', movCargado:'', tipoCargado:'', movCargado2:'', tipoCargado2:'', ligas:[] });
 
 // ── ICONOS DE TIPO (Pokémon GO: ataque rápido / cargado) ────────────────────
 // Orden alfabético según el nombre en español (Agua, Bicho, Dragón, Eléctrico...)
@@ -4307,6 +4308,7 @@ function getKnownMoveType(moveName) {
   for (const d of Object.values(dataGO)) {
     if (d.movRapido && d.movRapido.trim().toLowerCase() === key && d.tipoRapido) return d.tipoRapido;
     if (d.movCargado && d.movCargado.trim().toLowerCase() === key && d.tipoCargado) return d.tipoCargado;
+    if (d.movCargado2 && d.movCargado2.trim().toLowerCase() === key && d.tipoCargado2) return d.tipoCargado2;
   }
   return null;
 }
@@ -4718,9 +4720,14 @@ function goComputeSuggestion({ types, movepool, stats }) {
     (GO_CHARGE_MOVES_BY_TYPE[t] || []).forEach(m => candidatosCargado.push({ ...m, tipo: t }));
   });
   const rapido = candidatosRapido.find(m => movepool.has(m.s)) || candidatosRapido[0] || null;
-  const cargado = candidatosCargado.find(m => movepool.has(m.s)) || candidatosCargado[0] || null;
+  const disponiblesCargado = candidatosCargado.filter(m => movepool.has(m.s));
+  const cargado = disponiblesCargado[0] || candidatosCargado[0] || null;
+  // Segundo cargado: el siguiente disponible en el movepool con nombre distinto
+  // al primero (para no repetir el mismo ataque en los dos slots).
+  const cargado2 = disponiblesCargado.find(m => !cargado || m.n !== cargado.n)
+    || candidatosCargado.find(m => !cargado || m.n !== cargado.n) || null;
 
-  const resultado = { movRapido: '', tipoRapido: '', movCargado: '', tipoCargado: '' };
+  const resultado = { movRapido: '', tipoRapido: '', movCargado: '', tipoCargado: '', movCargado2: '', tipoCargado2: '' };
   if (rapido) {
     resultado.movRapido = rapido.n;
     resultado.tipoRapido = rapido.tipo;
@@ -4728,6 +4735,10 @@ function goComputeSuggestion({ types, movepool, stats }) {
   if (cargado) {
     resultado.movCargado = cargado.n;
     resultado.tipoCargado = cargado.tipo;
+  }
+  if (cargado2) {
+    resultado.movCargado2 = cargado2.n;
+    resultado.tipoCargado2 = cargado2.tipo;
   }
 
   if (stats) {
@@ -4839,7 +4850,7 @@ async function goSugerirVacios() {
 
 const MOVE_FIELD_TO_TYPE_FIELD = {
   ataque1: 'tipo1', ataque2: 'tipo2', ataque3: 'tipo3', ataque4: 'tipo4',
-  movRapido: 'tipoRapido', movCargado: 'tipoCargado'
+  movRapido: 'tipoRapido', movCargado: 'tipoCargado', movCargado2: 'tipoCargado2'
 };
 
 // Se engancha en el evento "blur" (al salir del campo) de los inputs de
@@ -5652,6 +5663,13 @@ function renderTableGO() {
         </div>
       </td>
       <td>
+        <input class="editable-cell move-name-input" list="suggest-go-movimiento" data-pokemon="${esc(name)}" data-field="movCargado2" data-game="go" value="${esc(d.movCargado2)}" placeholder="Ej: Puño Trueno">
+        <div class="move-type-row">
+          <select class="move-type-select" data-pokemon="${esc(name)}" data-field="tipoCargado2">${typeOptionsHTML(d.tipoCargado2)}</select>
+          <span class="move-type-icon-wrap">${typeIconHTML(d.tipoCargado2)}</span>
+        </div>
+      </td>
+      <td>
         <div style="display:flex;flex-direction:column;gap:2px">
           ${ligaCheckboxesHTML(name, d.ligas)}
         </div>
@@ -6356,6 +6374,7 @@ function rebuildGoSuggestions() {
     if (d.cpUltra) cpValues.push(d.cpUltra);
     if (d.movRapido) movValues.push(d.movRapido);
     if (d.movCargado) movValues.push(d.movCargado);
+    if (d.movCargado2) movValues.push(d.movCargado2);
   });
   rebuildSuggestDatalist('suggest-go-cpmax', cpValues);
   rebuildSuggestDatalist('suggest-go-movimiento', movValues);
