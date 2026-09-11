@@ -1133,6 +1133,18 @@
     background: rgba(0,0,0,0.4);
   }
   .editable-cell::placeholder { color: var(--muted); font-style: italic; }
+  .name-cell-td { display: flex; align-items: center; gap: 4px; }
+  .name-cell-td .name-cell { flex: 1; }
+  .btn-nombre-mostrar {
+    background: transparent;
+    border: 1px solid transparent;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    padding: 2px 4px;
+    flex-shrink: 0;
+  }
+  .btn-nombre-mostrar:hover { background: rgba(255,255,255,0.1); }
   .delete-btn {
     background: transparent;
     border: 1px solid rgba(227,53,13,0.4);
@@ -1916,6 +1928,18 @@
     background: rgba(0,0,0,0.4);
   }
   .editable-cell::placeholder { color: var(--muted); font-style: italic; }
+  .name-cell-td { display: flex; align-items: center; gap: 4px; }
+  .name-cell-td .name-cell { flex: 1; }
+  .btn-nombre-mostrar {
+    background: transparent;
+    border: 1px solid transparent;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    padding: 2px 4px;
+    flex-shrink: 0;
+  }
+  .btn-nombre-mostrar:hover { background: rgba(255,255,255,0.1); }
   .delete-btn {
     background: transparent;
     border: 1px solid rgba(227,53,13,0.4);
@@ -2489,19 +2513,11 @@
     <div class="datos-header">
       <span class="datos-title" id="datos-title">🏆 Champions</span>
       <div class="datos-actions">
-        <button class="btn btn-import" onclick="openImportModal()">📥 Importar</button>
-        <button class="btn btn-export" onclick="exportData()">📤 Exportar</button>
         <button class="btn btn-yellow" onclick="showAddPokemon()">➕ Agregar Pokémon</button>
         <button class="btn" style="background:var(--purple);color:#fff" onclick="openExpansionesModal()">🏷️ Expansiones</button>
+        <button class="btn btn-danger" id="btn-borrar-vacios" onclick="borrarVaciosModoActual()">🗑️ Borrar vacíos</button>
         <button class="btn btn-primary" onclick="saveAllData()">💾 Guardar cambios</button>
         <button class="btn btn-danger" onclick="lockDatos()">🔒 Bloquear</button>
-      </div>
-    </div>
-    <div class="datos-header" style="margin-top:-6px">
-      <span></span>
-      <div class="datos-actions">
-        <button class="btn" id="btn-update-api" style="background:#2b7de9;color:#fff" onclick="updatePokemonListFromAPI()">🔄 Actualizar datos (API gratuita)</button>
-        <span id="update-api-status" style="font-size:0.78rem;color:var(--muted);align-self:center"></span>
       </div>
     </div>
     <div style="margin-bottom:12px">
@@ -2883,6 +2899,7 @@
     <p id="add-pokemon-hint">Ingresa el nombre del nuevo Pokémon</p>
     <input type="text" id="new-pokemon-name" class="password-input" style="width:100%;margin-bottom:16px" placeholder="Ej: Mewtwo">
     <div id="sprite-preview" style="text-align:center;min-height:80px;margin-bottom:12px"></div>
+    <input type="text" id="new-pokemon-display-name" class="password-input" style="width:100%;margin-bottom:16px" placeholder="Nombre a mostrar en Consulta (opcional)">
     <div class="modal-btns">
       <button class="btn btn-yellow" onclick="confirmAddPokemon()">✅ Agregar</button>
       <button class="btn" style="background:#444;color:#fff" onclick="closeModal('modal-add-pokemon')">Cancelar</button>
@@ -2978,8 +2995,8 @@ const POKEMON_LIST_BASE = ["Abomasnow","Absol","Aegislash","Aerodactyl","Aggron"
 let POKEMON_LISTS = {
   champions: [...POKEMON_LIST_BASE],
   go: [...POKEMON_LIST_BASE],
-  tcg: [...POKEMON_LIST_BASE],
-  tcglive: [...POKEMON_LIST_BASE]
+  tcg: [],
+  tcglive: []
 };
 
 // Cargar las listas de nombres actualizadas (el panel de Datos puede haber
@@ -3070,6 +3087,107 @@ const MODE_NAMES = {
   tcg:       'Pokémon TCG Pocket',
   tcglive:   'Pokémon TCG Live'
 };
+
+// ── TRADUCCIÓN DE NOMBRES PARA LA CONSULTA ───────────────────────────────
+// Cuando agregás un Pokémon con un nombre "técnico" en inglés (formas
+// regionales, razas, etc.), acá se traduce automáticamente para mostrarlo
+// en español en la pestaña Consulta. El nombre que escribiste al agregarlo
+// (la clave en la lista/datos) NO cambia, solo cambia lo que se ve.
+//
+// Si necesitás un caso puntual que la traducción automática no cubre,
+// agregalo a mano en TRADUCCIONES_NOMBRES, con el nombre EXACTO tal cual lo
+// escribiste al agregar el Pokémon (no importan mayúsculas/minúsculas ni
+// espacios extra), por ejemplo:
+//   'tauros paldean aqua': 'Tauros de Paldea (Raza Acuática)',
+const TRADUCCIONES_NOMBRES = {
+};
+
+// ── NOMBRE A MOSTRAR, EDITABLE DESDE LA INTERFAZ (sin tocar código) ──────
+// Además de TRADUCCIONES_NOMBRES (a mano en el código) y de las reglas
+// automáticas de región/raza, el admin puede fijar el nombre a mostrar
+// directamente desde la app: al agregar un Pokémon (modal "➕ Agregar
+// Pokémon") o después, desde la tabla de Datos con el botón 🈂️ junto al
+// nombre. Se guarda acá, en localStorage y Firestore, y tiene la prioridad
+// más alta de las tres formas de traducción.
+let NOMBRES_MOSTRAR = {};
+
+function claveNombre(n) {
+  return (n || '').trim().toLowerCase().replace(/\s+/g, ' ');
+}
+
+function getNombreMostrarGuardado(nombreReal) {
+  return NOMBRES_MOSTRAR[claveNombre(nombreReal)] || null;
+}
+
+// Fija (o borra, si nombreMostrar viene vacío) el nombre a mostrar para un
+// Pokémon puntual, y lo persiste (localStorage + Firestore).
+function setNombreMostrarGuardado(nombreReal, nombreMostrar) {
+  const clave = claveNombre(nombreReal);
+  if (!clave) return;
+  const valor = (nombreMostrar || '').trim();
+  if (valor) NOMBRES_MOSTRAR[clave] = valor;
+  else delete NOMBRES_MOSTRAR[clave];
+  persistAll();
+}
+
+// Deja editar/fijar el nombre a mostrar de un Pokémon ya agregado, desde la
+// tabla de Datos (botón 🈂️ junto al nombre).
+function editarNombreMostrar(nombreReal) {
+  const actual = getNombreMostrarGuardado(nombreReal) || '';
+  const nuevo = prompt(
+    `Nombre a mostrar en Consulta para "${nombreReal}"\n(dejalo vacío para usar la traducción automática o el nombre tal cual)`,
+    actual
+  );
+  if (nuevo === null) return; // canceló
+  setNombreMostrarGuardado(nombreReal, nuevo);
+  showToast(nuevo.trim() ? `✅ Se guardó el nombre a mostrar para ${nombreReal}` : `✅ Se quitó el nombre a mostrar de ${nombreReal}`);
+}
+
+// Regiones conocidas, en inglés (como suelen escribirse) → español
+const REGION_ES = {
+  paldean: 'Paldea', paldea: 'Paldea',
+  galarian: 'Galar', galar: 'Galar',
+  alolan: 'Alola', alola: 'Alola',
+  hisuian: 'Hisui', hisui: 'Hisui',
+  kantonian: 'Kanto', kanto: 'Kanto'
+};
+
+// Razas de Tauros de Paldea, en inglés → español
+const RAZA_TAUROS_ES = {
+  aqua: 'Acuática', water: 'Acuática',
+  blaze: 'Ígnea', fire: 'Ígnea',
+  combat: 'Luchadora', fighting: 'Luchadora'
+};
+
+// Traduce un nombre "tal cual se guardó" a su versión en español para
+// mostrarlo en la Consulta. Si no reconoce ningún patrón, devuelve el
+// nombre original sin cambios.
+function traducirNombrePokemon(nombreOriginal) {
+  if (!nombreOriginal) return nombreOriginal;
+  const clave = claveNombre(nombreOriginal);
+  if (NOMBRES_MOSTRAR[clave]) return NOMBRES_MOSTRAR[clave];
+  if (TRADUCCIONES_NOMBRES[clave]) return TRADUCCIONES_NOMBRES[clave];
+
+  const partes = nombreOriginal.trim().split(/\s+/);
+
+  // Caso "<Base> <Region> <Raza>" → ej. "Tauros Paldean Aqua"
+  if (partes.length === 3) {
+    const [base, region, raza] = partes;
+    const regionEs = REGION_ES[region.toLowerCase()];
+    const razaEs = RAZA_TAUROS_ES[raza.toLowerCase()];
+    if (regionEs && razaEs) return `${base} de ${regionEs} (Raza ${razaEs})`;
+  }
+
+  // Caso general de forma regional: "<Region> <Base...>" o "<Base...> <Region>"
+  if (partes.length >= 2) {
+    const primera = REGION_ES[partes[0].toLowerCase()];
+    if (primera) return `${partes.slice(1).join(' ')} de ${primera}`;
+    const ultima = REGION_ES[partes[partes.length - 1].toLowerCase()];
+    if (ultima) return `${partes.slice(0, -1).join(' ')} de ${ultima}`;
+  }
+
+  return nombreOriginal;
+}
 
 // ── SELECTOR DE LIGA EN CONSULTA (solo Pokémon GO) ──────────────────────
 // Cada Pokémon de GO tiene un único campo "liga" (se asigna a mano en
@@ -3280,7 +3398,7 @@ function handleSearch(val) {
     list.classList.remove('open');
   } else {
     list.innerHTML = filteredList.map((p, i) =>
-      `<div class="autocomplete-item" data-idx="${i}" onclick="selectPokemon('${p.replace(/'/g,"\\'")}')">${p}</div>`
+      `<div class="autocomplete-item" data-idx="${i}" onclick="selectPokemon('${p.replace(/'/g,"\\'")}')">${esc(traducirNombrePokemon(p))}</div>`
     ).join('');
     list.classList.add('open');
   }
@@ -3751,7 +3869,7 @@ async function showResult(name) {
         <div class="ri-value">
           <div class="pokemon-name-row">
             <img id="poke-sprite" class="pokemon-sprite" src="" alt="" style="display:none">
-            <span>${name}</span>
+            <span>${esc(traducirNombrePokemon(name))}</span>
           </div>
         </div>
       </div>
@@ -4191,6 +4309,70 @@ function podarDatosHuerfanos() {
   });
 }
 
+// ── BORRAR POKÉMON VACÍOS (Champions / GO) ───────────────────────────────
+// Nombres que NUNCA se deben borrar con el botón "🗑️ Borrar vacíos" aunque
+// no tengan datos cargados. Agregá acá los que quieras conservar sí o sí,
+// separados por comas y entre comillas, ej: ['Charizard', 'Gengar'].
+const PROTEGIDOS_VACIOS = {
+  champions: [],
+  go: []
+};
+
+function pokemonVacioChampions(nombre) {
+  const d = dataChampions[nombre] || EMPTY_CHAMPIONS();
+  return !d.naturaleza && !d.objeto && !d.ataque1 && !d.ataque2 && !d.ataque3 && !d.ataque4;
+}
+
+function pokemonVacioGo(nombre) {
+  const d = dataGO[nombre] || EMPTY_GO();
+  return !d.cpMax && !d.cpSuper && !d.cpUltra && !d.statsSuper && !d.statsUltra && !d.statsMaster &&
+    !d.movRapido && !d.movCargado && !d.movCargado2 && (!d.ligas || d.ligas.length === 0);
+}
+
+// Borra (lista + datos) todos los Pokémon vacíos del modo actual (Champions o
+// GO), respetando PROTEGIDOS_VACIOS. Pide confirmación antes de borrar y
+// muestra la lista de nombres afectados.
+function borrarVaciosModoActual() {
+  const modo = currentDatosMode;
+  if (modo !== 'champions' && modo !== 'go') return;
+  const lista = POKEMON_LISTS[modo];
+  const protegidos = new Set(PROTEGIDOS_VACIOS[modo] || []);
+  const esVacio = modo === 'champions' ? pokemonVacioChampions : pokemonVacioGo;
+  const aBorrar = lista.filter(p => !protegidos.has(p) && esVacio(p));
+  if (!aBorrar.length) {
+    showToast(`No hay Pokémon vacíos para borrar en ${MODE_TITLES[modo]}.`);
+    return;
+  }
+  const ok = confirm(
+    `Se van a borrar ${aBorrar.length} Pokémon vacíos de ${MODE_TITLES[modo]}:\n\n` +
+    aBorrar.join(', ') +
+    `\n\nEsta acción no se puede deshacer. ¿Continuar?`
+  );
+  if (!ok) return;
+  const dict = modo === 'champions' ? dataChampions : dataGO;
+  aBorrar.forEach(p => { delete dict[p]; });
+  POKEMON_LISTS[modo] = lista.filter(p => !aBorrar.includes(p));
+  persistAll();
+  renderCurrentTable();
+  showToast(`🗑️ Se borraron ${aBorrar.length} Pokémon vacíos de ${MODE_TITLES[modo]}.`);
+}
+
+// ── RESET ÚNICO DE POCKET Y LIVE ─────────────────────────────────────────
+// Vacía por completo la lista y los datos de TCG Pocket y TCG Live (tanto
+// localStorage como Firestore), una sola vez, para que el usuario empiece a
+// agregar sus propias cartas desde cero. Usa una marca en localStorage para
+// no volver a ejecutarse en cargas futuras (así no borra lo que el usuario
+// vaya agregando después).
+function resetPocketLiveOnce() {
+  if (localStorage.getItem('pocketLiveResetV1')) return false;
+  POKEMON_LISTS.tcg = [];
+  POKEMON_LISTS.tcglive = [];
+  dataTCG = {};
+  dataTCGLive = {};
+  localStorage.setItem('pocketLiveResetV1', '1');
+  return true;
+}
+
 let EXPANSIONES_SUGERIDAS = {
   tcg: EXPANSIONES_DEFAULT.map(e => ({ ...e })),
   tcglive: [] // TCG Live: el admin agrega manualmente las expansiones que le interesan
@@ -4213,6 +4395,9 @@ let dataMazosLive = []; // Mazos de TCG Live: misma estructura, pero referencia 
 let modosEnReparacion = { champions:false, go:false, tcg:false, tcglive:false, torneos:false, trueques:false };
 try {
   Object.assign(modosEnReparacion, JSON.parse(localStorage.getItem('modosEnReparacion') || '{}'));
+} catch (e) {}
+try {
+  Object.assign(NOMBRES_MOSTRAR, JSON.parse(localStorage.getItem('nombresMostrar') || '{}'));
 } catch (e) {}
 
 POKEMON_LISTS.champions.forEach(p => { dataChampions[p] = EMPTY_CHAMPIONS(); });
@@ -5213,6 +5398,7 @@ function persistLocalOnly() {
   localStorage.setItem('pokemonDataExpansiones', JSON.stringify(EXPANSIONES_SUGERIDAS.tcg));
   localStorage.setItem('pokemonDataExpansionesLive', JSON.stringify(EXPANSIONES_SUGERIDAS.tcglive));
   localStorage.setItem('modosEnReparacion', JSON.stringify(modosEnReparacion));
+  localStorage.setItem('nombresMostrar', JSON.stringify(NOMBRES_MOSTRAR));
 }
 
 // Aplica un snapshot recibido de Firestore al estado en memoria (no persiste
@@ -5288,6 +5474,8 @@ function applyConfigDoc(doc) {
   if (!doc) return;
   if (typeof doc.torneosEnReparacion === 'boolean') modosEnReparacion.torneos = doc.torneosEnReparacion;
   if (typeof doc.truequesEnReparacion === 'boolean') modosEnReparacion.trueques = doc.truequesEnReparacion;
+  const nombresMostrar = parseSnapField(doc.nombresMostrar);
+  if (nombresMostrar && typeof nombresMostrar === 'object') NOMBRES_MOSTRAR = nombresMostrar;
 }
 
 function applyExpansionesDoc(doc) {
@@ -5309,7 +5497,7 @@ function pushToFirestore() {
     ['tcglive', { list: JSON.stringify(POKEMON_LISTS.tcglive), tcglive: JSON.stringify(dataTCGLive), enReparacion: !!modosEnReparacion.tcglive }],
     ['mazos', { mazos: JSON.stringify(dataMazos), mazosLive: JSON.stringify(dataMazosLive) }],
     ['expansiones', { expansiones: JSON.stringify(EXPANSIONES_SUGERIDAS.tcg), expansionesLive: JSON.stringify(EXPANSIONES_SUGERIDAS.tcglive) }],
-    ['config', { torneosEnReparacion: !!modosEnReparacion.torneos, truequesEnReparacion: !!modosEnReparacion.trueques }]
+    ['config', { torneosEnReparacion: !!modosEnReparacion.torneos, truequesEnReparacion: !!modosEnReparacion.trueques, nombresMostrar: JSON.stringify(NOMBRES_MOSTRAR) }]
   ];
   return Promise.all(writes.map(([id, payload]) =>
     col.doc(id).set(payload).catch(err => ({ id, err }))
@@ -5396,8 +5584,9 @@ function initFirebaseSync() {
       migrarLigaUnicaAMultiple();
       podarDatosHuerfanos();
       const huboMigracion = migrarNombresExpansionesTcg();
+      const huboResetPocketLive = resetPocketLiveOnce();
       persistLocalOnly();
-      if (huboMigracion && typeof pushToFirestore === 'function') pushToFirestore();
+      if ((huboMigracion || huboResetPocketLive) && typeof pushToFirestore === 'function') pushToFirestore();
       if (typeof renderCurrentTable === 'function') renderCurrentTable();
       if (typeof ensurePokemonDatalistMazos === 'function') ensurePokemonDatalistMazos(mazoEditingMode);
       if (currentMode) aplicarEstadoReparacion(currentMode);
@@ -5531,6 +5720,8 @@ function showMode(mode) {
   document.querySelectorAll('.mode-tab-btn').forEach(b => b.classList.remove('active'));
   document.getElementById('modetab-' + mode).classList.add('active');
   document.getElementById('datos-title').textContent = MODE_TITLES[mode];
+  const btnVacios = document.getElementById('btn-borrar-vacios');
+  if (btnVacios) btnVacios.style.display = (mode === 'champions' || mode === 'go') ? '' : 'none';
   renderCurrentTable();
 }
 
@@ -5565,7 +5756,7 @@ function renderTableChampions() {
     return `<tr data-name="${esc(name).toLowerCase()}">
       <td style="text-align:center"><input type="checkbox" class="row-select-cb" value="${esc(name)}" onchange="updateBulkDeleteUI()"></td>
       <td style="color:var(--muted);font-size:0.8rem">${i+1}</td>
-      <td><input class="editable-cell name-cell" data-original-name="${esc(name)}" value="${esc(name)}" placeholder="Nombre"></td>
+      <td class="name-cell-td"><input class="editable-cell name-cell" data-original-name="${esc(name)}" value="${esc(name)}" placeholder="Nombre"><button type="button" class="btn-nombre-mostrar" title="Nombre a mostrar en Consulta" onclick="editarNombreMostrar('${esc(name).replace(/'/g,"\\'")}')">🈂️</button></td>
       <td><input class="editable-cell nature-input" list="suggest-champions-naturaleza" data-pokemon="${esc(name)}" data-field="naturaleza" value="${esc(d.naturaleza)}" placeholder="Ej: Jolly"></td>
       <td>
         <input class="editable-cell item-input" list="suggest-champions-objeto" data-pokemon="${esc(name)}" data-field="objeto" value="${esc(d.objeto)}" placeholder="Ej: Choice Band">
@@ -5641,7 +5832,7 @@ function renderTableGO() {
     return `<tr data-name="${esc(name).toLowerCase()}">
       <td style="text-align:center"><input type="checkbox" class="row-select-cb" value="${esc(name)}" onchange="updateBulkDeleteUI()"></td>
       <td style="color:var(--muted);font-size:0.8rem">${i+1}</td>
-      <td><input class="editable-cell name-cell" data-original-name="${esc(name)}" value="${esc(name)}" placeholder="Nombre"></td>
+      <td class="name-cell-td"><input class="editable-cell name-cell" data-original-name="${esc(name)}" value="${esc(name)}" placeholder="Nombre"><button type="button" class="btn-nombre-mostrar" title="Nombre a mostrar en Consulta" onclick="editarNombreMostrar('${esc(name).replace(/'/g,"\\'")}')">🈂️</button></td>
       <td><input class="editable-cell" list="suggest-go-cpmax" data-pokemon="${esc(name)}" data-field="cpSuper" value="${esc(d.cpSuper)}" placeholder="Ej: 1498"></td>
       <td><input class="editable-cell" list="suggest-go-cpmax" data-pokemon="${esc(name)}" data-field="cpUltra" value="${esc(d.cpUltra)}" placeholder="Ej: 2497"></td>
       <td><input class="editable-cell" list="suggest-go-cpmax" data-pokemon="${esc(name)}" data-field="cpMax" value="${esc(d.cpMax)}" placeholder="Ej: 3500"></td>
@@ -5748,7 +5939,7 @@ function renderTableTCG() {
     return `<tr data-name="${esc(name).toLowerCase()}">
       <td style="text-align:center"><input type="checkbox" class="row-select-cb" value="${esc(name)}" onchange="updateBulkDeleteUI()"></td>
       <td style="color:var(--muted);font-size:0.8rem">${i+1}</td>
-      <td><input class="editable-cell name-cell" data-original-name="${esc(name)}" value="${esc(name)}" placeholder="Nombre"></td>
+      <td class="name-cell-td"><input class="editable-cell name-cell" data-original-name="${esc(name)}" value="${esc(name)}" placeholder="Nombre"><button type="button" class="btn-nombre-mostrar" title="Nombre a mostrar en Consulta" onclick="editarNombreMostrar('${esc(name).replace(/'/g,"\\'")}')">🈂️</button></td>
       <td style="font-size:0.85rem">${mazosHTML}</td>
       <td>
         <span class="tcg-cards-summary">${cartas.length} carta(s)</span>
@@ -5805,7 +5996,7 @@ function renderTableTCGLive() {
     return `<tr data-name="${esc(name).toLowerCase()}">
       <td style="text-align:center"><input type="checkbox" class="row-select-cb" value="${esc(name)}" onchange="updateBulkDeleteUI()"></td>
       <td style="color:var(--muted);font-size:0.8rem">${i+1}</td>
-      <td><input class="editable-cell name-cell" data-original-name="${esc(name)}" value="${esc(name)}" placeholder="Nombre"></td>
+      <td class="name-cell-td"><input class="editable-cell name-cell" data-original-name="${esc(name)}" value="${esc(name)}" placeholder="Nombre"><button type="button" class="btn-nombre-mostrar" title="Nombre a mostrar en Consulta" onclick="editarNombreMostrar('${esc(name).replace(/'/g,"\\'")}')">🈂️</button></td>
       <td style="font-size:0.85rem">${mazosHTML}</td>
       <td>
         <span class="tcg-cards-summary">${cartas.length} carta(s)</span>
@@ -6859,6 +7050,10 @@ let addSpriteTimer = null;
 function showAddPokemon() {
   document.getElementById('new-pokemon-name').value = '';
   document.getElementById('sprite-preview').innerHTML = '';
+  const displayInput = document.getElementById('new-pokemon-display-name');
+  displayInput.value = '';
+  displayInput.dataset.userEdited = '';
+  displayInput.oninput = () => { displayInput.dataset.userEdited = '1'; };
   const hint = document.getElementById('add-pokemon-hint');
   if (hint) hint.textContent = `Ingresa el nombre del nuevo Pokémon (se agrega solo a ${MODE_TITLES[currentDatosMode] || currentDatosMode})`;
   document.getElementById('modal-add-pokemon').classList.add('open');
@@ -6869,6 +7064,13 @@ function showAddPokemon() {
     const name = this.value.trim();
     const preview = document.getElementById('sprite-preview');
     if (!name) { preview.innerHTML = ''; return; }
+    // Si la traducción automática (o una ya guardada a mano para ese nombre)
+    // reconoce algo distinto al nombre tal cual, lo sugerimos en el campo
+    // "Nombre a mostrar", sin pisar lo que el admin ya haya escrito ahí.
+    if (!displayInput.dataset.userEdited) {
+      const sugerido = traducirNombrePokemon(name);
+      displayInput.value = (sugerido !== name) ? sugerido : '';
+    }
     addSpriteTimer = setTimeout(async () => {
       preview.innerHTML = '<div style="font-size:0.75rem;color:var(--muted)">Buscando sprite...</div>';
       try {
@@ -6889,6 +7091,7 @@ function confirmAddPokemon() {
   const name = document.getElementById('new-pokemon-name').value.trim();
   if (!name) { showToast('❌ Ingresa un nombre', true); return; }
   const formatted = name.charAt(0).toUpperCase() + name.slice(1);
+  const nombreMostrar = document.getElementById('new-pokemon-display-name').value.trim();
 
   const mode = currentDatosMode; // 'champions' | 'go' | 'tcg'
   if (!POKEMON_LISTS[mode]) { showToast('❌ Elige primero un modo (Champions, GO o TCG)', true); return; }
@@ -6902,6 +7105,8 @@ function confirmAddPokemon() {
 
   list.push(formatted);
   list.sort((a, b) => a.localeCompare(b, 'es', { sensitivity: 'base' }));
+
+  if (nombreMostrar) setNombreMostrarGuardado(formatted, nombreMostrar);
 
   persistAll();
   document.getElementById('datos-search').value = '';
