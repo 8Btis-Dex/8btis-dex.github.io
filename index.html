@@ -2480,6 +2480,15 @@
         <button class="btn" style="background:#444;color:#fff;margin-top:12px" onclick="goLigaListaVolver()">← Elegir otra liga</button>
       </div>
 
+      <!-- Lista de mazos (TCG Pocket / TCG Live): en estos modos no se busca
+           un Pokémon por nombre, se elige directamente un mazo de la lista,
+           porque un mazo también puede tener cartas que no son de un
+           Pokémon (Entrenador, Objeto, Energía, etc.). -->
+      <div id="tcg-mazos-public-section" class="search-section" style="display:none">
+        <span class="search-label">🗂️ Mazos</span>
+        <div id="tcg-mazos-public-list" style="display:flex;flex-direction:column;gap:8px;margin-top:10px"></div>
+      </div>
+
       <!-- Buscador -->
       <div class="search-section" id="normal-search-section">
         <span class="search-label">🔍 Buscar Pokémon</span>
@@ -2667,7 +2676,7 @@
             <tr>
               <th style="text-align:center"><input type="checkbox" class="table-select-all-th" onchange="toggleSelectAllRows(this.checked)"></th>
               <th>#</th>
-              <th>Pokémon principal</th>
+              <th>Pokémon / Entrenador / Objeto</th>
               <th>Mazos</th>
               <th>Cartas</th>
               <th style="text-align:center">Borrar</th>
@@ -2699,7 +2708,7 @@
             <tr>
               <th style="text-align:center"><input type="checkbox" class="table-select-all-th" onchange="toggleSelectAllRows(this.checked)"></th>
               <th>#</th>
-              <th>Pokémon principal</th>
+              <th>Pokémon / Entrenador / Objeto</th>
               <th>Mazos</th>
               <th>Cartas</th>
               <th style="text-align:center">Borrar</th>
@@ -2987,7 +2996,7 @@
   <div id="mazo-editor-template">
     <div class="mazo-cards-list" id="mazo-cards-list"></div>
     <div class="mazo-add-card-row">
-      <input type="text" id="mazo-add-pokemon-input" placeholder="Buscar Pokémon..." list="pokemon-datalist-mazos" oninput="onMazoPokemonInput()">
+      <input type="text" id="mazo-add-pokemon-input" placeholder="Buscar Pokémon, Entrenador u Objeto..." list="pokemon-datalist-mazos" oninput="onMazoPokemonInput()">
       <select id="mazo-add-carta-select" style="display:none"></select>
       <button class="btn btn-primary" onclick="addCardToMazo()">➕ Agregar</button>
     </div>
@@ -3344,6 +3353,8 @@ function selectMode(mode) {
   const ligaSelector = document.getElementById('go-liga-selector');
   const ligaListSection = document.getElementById('go-liga-list-section');
   const normalSearch = document.getElementById('normal-search-section');
+  const tcgMazosSection = document.getElementById('tcg-mazos-public-section');
+  const resultCard = document.getElementById('consulta-result-card');
 
   if (aplicarEstadoReparacion(mode)) return;
 
@@ -3351,6 +3362,8 @@ function selectMode(mode) {
     ligaSelector.style.display = 'block';
     ligaListSection.style.display = 'none';
     normalSearch.style.display = 'none';
+    tcgMazosSection.style.display = 'none';
+    resultCard.style.display = 'block';
     LIGA_LIST.forEach(l => {
       const btn = document.getElementById('go-liga-btn-' + l);
       if (btn) {
@@ -3360,14 +3373,87 @@ function selectMode(mode) {
         btn.style.gap = '8px';
       }
     });
+  } else if (mode === 'tcg' || mode === 'tcglive') {
+    ligaSelector.style.display = 'none';
+    ligaListSection.style.display = 'none';
+    normalSearch.style.display = 'none';
+    tcgMazosSection.style.display = 'block';
+    resultCard.style.display = 'none';
+    renderTcgMazosPublicList(mode);
   } else {
     ligaSelector.style.display = 'none';
     ligaListSection.style.display = 'none';
     normalSearch.style.display = 'block';
+    tcgMazosSection.style.display = 'none';
+    resultCard.style.display = 'block';
   }
 
   showResult(null);
   document.getElementById('search-input').focus();
+}
+
+// ── LISTA PÚBLICA DE MAZOS (Consulta, TCG Pocket / TCG Live) ────────────────
+// A diferencia de Champions y GO, acá no se busca por nombre de Pokémon: se
+// elige directamente un mazo de la lista, porque un mazo puede tener cartas
+// que no son de ningún Pokémon (Entrenador, Objeto, Energía, etc.) y esas
+// cartas no tendrían por dónde aparecer en un buscador de Pokémon.
+function renderTcgMazosPublicList(mode) {
+  const store = mode === 'tcglive' ? getMazosLiveData() : getMazosData();
+  const tcgData = mode === 'tcglive' ? getAllTCGLiveData() : getAllTCGData();
+  const listEl = document.getElementById('tcg-mazos-public-list');
+  if (!listEl) return;
+  window._mazosPublicCache = { store, tcgData };
+  if (!store.length) {
+    listEl.innerHTML = '<div class="result-empty">Todavía no hay mazos creados.</div>';
+    return;
+  }
+  listEl.innerHTML = store.map((mazo, idx) => {
+    const { carta } = getMazoPrincipal(mazo, tcgData);
+    const thumbHTML = carta && carta.imagen
+      ? `<img src="${esc(carta.imagen)}" class="mazo-row-thumb" onerror="this.style.display='none'">`
+      : '<div class="mazo-row-thumb mazo-row-thumb-empty"></div>';
+    return `
+    <div class="mazo-row" onclick="toggleMazoPublicDetail(${idx}, this)">
+      ${thumbHTML}
+      <span class="mazo-row-name">${esc(mazo.nombre || 'Sin nombre')}</span>
+      <span class="mazo-row-count">${(mazo.cartas || []).length} carta(s)</span>
+      <span class="mazo-row-arrow">▾</span>
+    </div>
+    <div class="mazo-detail" id="mazo-public-detail-${idx}"></div>`;
+  }).join('');
+}
+
+function toggleMazoPublicDetail(idx, rowEl) {
+  const detailEl = document.getElementById(`mazo-public-detail-${idx}`);
+  if (!detailEl) return;
+
+  const isOpen = detailEl.classList.contains('open');
+  document.querySelectorAll('#tcg-mazos-public-list .mazo-detail.open').forEach(el => el.classList.remove('open'));
+  document.querySelectorAll('#tcg-mazos-public-list .mazo-row.open').forEach(el => el.classList.remove('open'));
+
+  if (isOpen) return; // ya estaba abierto: lo dejamos cerrado
+
+  const { store, tcgData } = window._mazosPublicCache || { store: [], tcgData: {} };
+  const mazo = store[idx];
+  if (!mazo) return;
+
+  const principalIdx = Number.isInteger(mazo.principal) ? mazo.principal : 0;
+  const cartasHTML = (mazo.cartas || []).map((ref, i) => {
+    const cartasDelPokemon = (tcgData[ref.pokemon] && Array.isArray(tcgData[ref.pokemon].cartas))
+      ? tcgData[ref.pokemon].cartas : [];
+    const carta = resolverCartaDeRef(ref, cartasDelPokemon);
+    const img = carta && carta.imagen ? carta.imagen : '';
+    return `<div class="mazo-detail-card">
+      ${img
+        ? `<img src="${esc(img)}" class="mazo-detail-thumb" onerror="this.style.display='none'">`
+        : '<div class="mazo-detail-thumb mazo-detail-thumb-empty"></div>'}
+      <span class="mazo-detail-name">${i === principalIdx ? '⭐ ' : ''}${esc(ref.pokemon)}</span>
+    </div>`;
+  }).join('');
+
+  detailEl.innerHTML = cartasHTML || '<div class="result-empty" style="padding:6px 0">Este mazo no tiene cartas registradas</div>';
+  detailEl.classList.add('open');
+  rowEl.classList.add('open');
 }
 
 function toggleMazoDetail(idx, rowEl) {
@@ -5085,6 +5171,7 @@ function aplicarEstadoReparacion(mode) {
   const ligaSelector = document.getElementById('go-liga-selector');
   const ligaListSection = document.getElementById('go-liga-list-section');
   const normalSearch = document.getElementById('normal-search-section');
+  const tcgMazosSection = document.getElementById('tcg-mazos-public-section');
   const resultCard = document.getElementById('consulta-result-card');
   if (banner) banner.style.display = enReparacion ? 'block' : 'none';
   if (resultCard) resultCard.style.display = enReparacion ? 'none' : 'block';
@@ -5092,6 +5179,7 @@ function aplicarEstadoReparacion(mode) {
     if (ligaSelector) ligaSelector.style.display = 'none';
     if (ligaListSection) ligaListSection.style.display = 'none';
     if (normalSearch) normalSearch.style.display = 'none';
+    if (tcgMazosSection) tcgMazosSection.style.display = 'none';
   }
   return enReparacion;
 }
@@ -5707,6 +5795,7 @@ function initFirebaseSync() {
       if (typeof ensurePokemonDatalistMazos === 'function') ensurePokemonDatalistMazos(mazoEditingMode);
       if (currentMode) aplicarEstadoReparacion(currentMode);
       if (currentTab === 'torneos' || currentTab === 'trueques') showTab(currentTab);
+      if ((currentMode === 'tcg' || currentMode === 'tcglive') && typeof renderTcgMazosPublicList === 'function') renderTcgMazosPublicList(currentMode);
       const searchInput = document.getElementById('search-input');
       if (currentMode && searchInput) showResult(searchInput.value.trim() || null);
     }
@@ -6921,8 +7010,8 @@ function addCardToMazo() {
   const input = document.getElementById('mazo-add-pokemon-input');
   const select = document.getElementById('mazo-add-carta-select');
   const name = getMazosPokemonList(mazoEditingMode).find(p => p.toLowerCase() === input.value.trim().toLowerCase());
-  if (!name) { showToast('❌ Elige un Pokémon válido de la lista', true); return; }
-  if (select.style.display === 'none' || !select.value) { showToast('❌ Ese Pokémon no tiene cartas registradas', true); return; }
+  if (!name) { showToast('❌ Elige un Pokémon, Entrenador u Objeto válido de la lista', true); return; }
+  if (select.style.display === 'none' || !select.value) { showToast('❌ Esa carta no tiene variantes registradas', true); return; }
   if (mazo.cartas.length >= MAZO_MAX_CARTAS) { showToast(`⚠️ Este mazo ya tiene el máximo de ${MAZO_MAX_CARTAS} cartas`, true); return; }
   const idx = parseInt(select.value, 10);
   const tcgData = getMazosTcgData(mazoEditingMode);
@@ -7337,7 +7426,12 @@ function showAddPokemon() {
   displayInput.dataset.userEdited = '';
   displayInput.oninput = () => { displayInput.dataset.userEdited = '1'; };
   const hint = document.getElementById('add-pokemon-hint');
-  if (hint) hint.textContent = `Ingresa el nombre del nuevo Pokémon (se agrega solo a ${MODE_TITLES[currentDatosMode] || currentDatosMode})`;
+  const esModoTcg = currentDatosMode === 'tcg' || currentDatosMode === 'tcglive';
+  if (hint) {
+    hint.textContent = esModoTcg
+      ? `Ingresa el nombre (puede ser un Pokémon, un Entrenador o un Objeto) — se agrega solo a ${MODE_TITLES[currentDatosMode] || currentDatosMode}`
+      : `Ingresa el nombre del nuevo Pokémon (se agrega solo a ${MODE_TITLES[currentDatosMode] || currentDatosMode})`;
+  }
   document.getElementById('modal-add-pokemon').classList.add('open');
   setTimeout(() => document.getElementById('new-pokemon-name').focus(), 100);
 
