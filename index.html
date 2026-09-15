@@ -2979,6 +2979,11 @@
 <div class="modal-overlay" id="modal-tcg-cards">
   <div class="modal" style="max-width:600px">
     <h3>🃏 CARTAS DE <span id="tcg-cards-pokemon-name"></span></h3>
+    <div id="tcg-search-box" style="display:none;margin-bottom:10px;padding:8px;border:1px solid #333;border-radius:8px;background:#1c1c1c">
+      <button class="btn btn-primary" style="width:100%" onclick="buscarCartasOficialesTcg()">🔍 Buscar cartas oficiales (TCG Pocket)</button>
+      <div id="tcg-search-status" style="font-size:0.78rem;color:var(--muted);margin-top:6px"></div>
+      <div id="tcg-search-results" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:8px"></div>
+    </div>
     <div id="tcg-cards-list"></div>
     <div class="modal-btns" style="margin-bottom:10px">
       <button class="btn btn-primary" style="width:100%" onclick="addTcgCardRow()">➕ Agregar carta</button>
@@ -6206,7 +6211,215 @@ function openTcgCardsModal(name, mode) {
   list.innerHTML = '';
   cartas.forEach(c => addTcgCardRow(c));
   if (cartas.length === 0) addTcgCardRow();
+
+  const searchBox = document.getElementById('tcg-search-box');
+  if (searchBox) {
+    // La búsqueda automática solo aplica a TCG Pocket (el dataset es de ese juego).
+    searchBox.style.display = (tcgEditingMode === 'tcg') ? 'block' : 'none';
+    document.getElementById('tcg-search-status').textContent = '';
+    document.getElementById('tcg-search-results').innerHTML = '';
+  }
+
   document.getElementById('modal-tcg-cards').classList.add('open');
+}
+
+// ── BÚSQUEDA DE CARTAS OFICIALES (TCG Pocket) ────────────────────────────────
+// Datos: hugoburguete/pokemon-tcg-pocket-card-database (nombre, rareza, set, id)
+// Imágenes: zererr/pokemon-tcg-pocket-images (id "a2b-002" -> cards/a2b/002.png)
+// Ambos son datasets comunitarios de terceros: pueden quedar desactualizados
+// respecto a la última expansión, o dejar de existir en algún momento.
+const TCG_API_SETS_URL = 'https://api.github.com/repos/hugoburguete/pokemon-tcg-pocket-card-database/contents/cards/en';
+const TCG_API_IMG_BASE = 'https://raw.githubusercontent.com/zererr/pokemon-tcg-pocket-images/main/images/png/cards';
+const TCG_API_CACHE_KEY = 'tcgApiCardsCacheV1';
+const TCG_API_CACHE_MS = 1000 * 60 * 60 * 24; // 1 día
+
+// Orden oficial de expansiones (coincide con el orden de EXPANSIONES_DEFAULT)
+const TCG_SET_ES_MAP = {
+  'genetic apex': 'Genes Formidables',
+  'mythical island': 'La Isla Singular',
+  'space-time smackdown': 'Pugna Espaciotemporal',
+  'triumphant light': 'Luz Triunfal',
+  'shining revelry': 'Festival Brillante',
+  'celestial guardians': 'Guardianes Celestiales',
+  'extradimensional crisis': 'Crisis Dimensional',
+  'eevee grove': 'Arboleda de Eevee',
+  'wisdom of sea and sky': 'Saber Marino y Celeste',
+  'secluded springs': 'Manantial Oculto',
+  'deluxe pack ex': 'Sobre Deluxe ex',
+  'mega rising': 'Megaascenso',
+  'crimson blaze': 'Fuego Carmesí',
+  'promo-a': 'Promo-A',
+  'promo-b': 'Promo-B'
+};
+
+function traducirExpansionTcgApi(setRaw) {
+  // "Shining Revelry (A2b)" -> "Festival Brillante"
+  const limpio = (setRaw || '').replace(/\s*\([^)]*\)\s*$/, '').trim().toLowerCase();
+  return TCG_SET_ES_MAP[limpio] || (setRaw || '').replace(/\s*\([^)]*\)\s*$/, '').trim();
+}
+
+function mapearRarezaTcgApi(rarezaRaw) {
+  const r = (rarezaRaw || '').toLowerCase();
+  if (r.includes('crown')) return 'CR';
+  if (r.includes('immersive')) return 'IM';
+  if (r.includes('shiny') && r.includes('super')) return 'SHEX';
+  if (r.includes('shiny')) return 'SH';
+  if (r.includes('super')) return 'SAR';
+  if (r.includes('art')) return 'AR';
+  if (r.includes('double')) return 'RR';
+  if (r.includes('uncommon')) return 'U';
+  if (r.includes('common')) return 'C';
+  if (r.includes('rare')) return 'R';
+  return 'C'; // por defecto, si el dataset trae un valor no reconocido
+}
+
+function idACartaImagenUrl(id) {
+  const idx = (id || '').indexOf('-');
+  if (idx === -1) return '';
+  const setCode = id.slice(0, idx);
+  const numero = id.slice(idx + 1);
+  return `${TCG_API_IMG_BASE}/${setCode}/${numero}.png`;
+}
+
+// Ícono genérico de expansión (logo del sobre), carpeta "packs" del mismo repo de imágenes
+const TCG_API_PACK_ICON_BASE = 'https://raw.githubusercontent.com/zererr/pokemon-tcg-pocket-images/main/images/png/packs';
+
+function idASetCode(id) {
+  const idx = (id || '').indexOf('-');
+  return idx === -1 ? '' : id.slice(0, idx);
+}
+
+function setCodeAIconoUrl(code) {
+  return code ? `${TCG_API_PACK_ICON_BASE}/${code}.png` : '';
+}
+
+let tcgApiDatabase = null;   // array de cartas {id,name,rarity,set} ya combinadas de todos los sets
+let tcgApiLoadingPromise = null;
+
+async function cargarBaseDeCartasTcgApi(forzar) {
+  if (tcgApiDatabase && !forzar) return tcgApiDatabase;
+  if (tcgApiLoadingPromise) return tcgApiLoadingPromise;
+
+  if (!forzar) {
+    try {
+      const cache = JSON.parse(localStorage.getItem(TCG_API_CACHE_KEY) || 'null');
+      if (cache && Array.isArray(cache.cards) && (Date.now() - cache.ts) < TCG_API_CACHE_MS) {
+        tcgApiDatabase = cache.cards;
+        return tcgApiDatabase;
+      }
+    } catch (e) { /* cache corrupto, se ignora */ }
+  }
+
+  tcgApiLoadingPromise = (async () => {
+    const statusEl = document.getElementById('tcg-search-status');
+    if (statusEl) statusEl.textContent = '⏳ Descargando base de datos de cartas (puede tardar unos segundos la primera vez)...';
+    const res = await fetch(TCG_API_SETS_URL);
+    if (!res.ok) throw new Error('No se pudo listar los sets (' + res.status + ')');
+    const files = (await res.json()).filter(f => f.name && f.name.endsWith('.json'));
+    const all = [];
+    for (const f of files) {
+      try {
+        const r = await fetch(f.download_url);
+        const cartas = await r.json();
+        if (Array.isArray(cartas)) {
+          cartas.forEach(c => all.push({ id: c.id, name: c.name, rarity: c.rarity, set: c.set }));
+        }
+      } catch (e) {
+        console.warn('No se pudo cargar el set', f.name, e);
+      }
+    }
+    tcgApiDatabase = all;
+    try { localStorage.setItem(TCG_API_CACHE_KEY, JSON.stringify({ ts: Date.now(), cards: all })); } catch (e) {}
+    return all;
+  })();
+
+  try {
+    return await tcgApiLoadingPromise;
+  } finally {
+    tcgApiLoadingPromise = null;
+  }
+}
+
+async function buscarCartasOficialesTcg() {
+  const nombre = (tcgEditingPokemon || '').trim();
+  const statusEl = document.getElementById('tcg-search-status');
+  const resultsEl = document.getElementById('tcg-search-results');
+  if (!nombre || !statusEl || !resultsEl) return;
+  resultsEl.innerHTML = '';
+  statusEl.textContent = '⏳ Buscando...';
+
+  let db;
+  try {
+    db = await cargarBaseDeCartasTcgApi();
+  } catch (e) {
+    statusEl.textContent = '❌ No se pudo cargar la base de datos externa (revisá la conexión, o si tu red bloquea GitHub).';
+    return;
+  }
+
+  const q = nombre.toLowerCase();
+  const exactas = db.filter(c => (c.name || '').toLowerCase() === q);
+  const variantes = db.filter(c => {
+    const n = (c.name || '').toLowerCase();
+    return n !== q && n.startsWith(q + ' '); // ej: "Pikachu ex"
+  });
+
+  if (exactas.length === 0 && variantes.length === 0) {
+    statusEl.textContent = `Sin resultados para "${nombre}" (puede ser un set que el dataset todavía no cargó, o el nombre no coincide exacto).`;
+    return;
+  }
+
+  statusEl.textContent = `${exactas.length} carta(s) con nombre exacto` +
+    (variantes.length ? ` · ${variantes.length} variante(s) (ex, etc.)` : '');
+
+  function renderCarta(c) {
+    const img = idACartaImagenUrl(c.id);
+    const setCode = idASetCode(c.id);
+    const icono = setCodeAIconoUrl(setCode);
+    const nombreEs = traducirExpansionTcgApi(c.set);
+    const div = document.createElement('div');
+    div.style.cssText = 'width:96px;text-align:center;cursor:pointer;border:1px solid #333;border-radius:8px;padding:4px;background:#111';
+    div.title = 'Click para agregar esta carta';
+    div.innerHTML = `
+      <img src="${img}" style="width:100%;border-radius:4px" onerror="this.style.opacity=0.15">
+      <div style="font-size:0.65rem;color:var(--muted);margin-top:2px">${esc(c.rarity || '')}</div>
+      <div style="display:flex;align-items:center;justify-content:center;gap:3px;margin-top:2px">
+        <img src="${icono}" style="width:14px;height:14px;object-fit:contain" onerror="this.style.display='none'">
+        <span style="font-size:0.6rem;color:var(--muted)">${esc(nombreEs)}</span>
+      </div>
+    `;
+    div.onclick = () => {
+      agregarCartaDesdeApi(c, img);
+      // Marca visual de que esta carta ya se agregó, para no perder de vista
+      // cuáles se clickearon en una tanda de resultados larga.
+      div.style.border = '2px solid #4CAF50';
+      div.style.boxShadow = '0 0 6px rgba(76,175,80,0.5)';
+    };
+    return div;
+  }
+
+  exactas.forEach(c => resultsEl.appendChild(renderCarta(c)));
+  variantes.forEach(c => resultsEl.appendChild(renderCarta(c)));
+}
+
+function agregarCartaDesdeApi(c, img) {
+  addTcgCardRow({
+    rareza: mapearRarezaTcgApi(c.rarity),
+    expansion: traducirExpansionTcgApi(c.set),
+    color: '#888888',
+    imagen: img
+  });
+  // si la expansión ya está en la lista sugerida, toma su color
+  const list = document.getElementById('tcg-cards-list');
+  const row = list.lastElementChild;
+  if (row) {
+    const expansionInput = row.querySelector('.tcg-expansion-input');
+    const colorInput = row.querySelector('.tcg-color-input');
+    if (expansionInput && colorInput) {
+      const match = EXPANSIONES_SUGERIDAS[tcgEditingMode].find(e => e.name.toLowerCase() === expansionInput.value.trim().toLowerCase());
+      if (match) colorInput.value = match.color;
+    }
+  }
+  showToast('✅ Carta agregada — no olvides "💾 Guardar cartas"');
 }
 // ── TABLA TCG LIVE ───────────────────────────────────────────────────────────
 function renderTableTCGLive() {
@@ -6531,6 +6744,14 @@ function renderMazos(mode) {
   const store = getMazosStore(mode);
   const tcgData = getMazosTcgData(mode);
   const list = document.getElementById(getMazosListElId(mode));
+  // Antes de reescribir el HTML de la lista, "aparcamos" el editor de cartas
+  // reutilizable en su holder (fuera de la lista). Si no hacemos esto acá y el
+  // editor estaba montado dentro de esta lista, el innerHTML de abajo lo
+  // destruye para siempre (en vez de solo desmontarlo), y todo lo que dependa
+  // de ese nodo (agregar otra carta, borrar el mazo) se rompe silenciosamente.
+  const editorHolder = document.getElementById('mazo-editor-holder');
+  const editorTemplate = document.getElementById('mazo-editor-template');
+  if (editorHolder && editorTemplate) editorHolder.appendChild(editorTemplate);
   if (!store.length) {
     mazoEditorOpenKey = null;
     list.innerHTML = '<div class="mazo-empty-hint">No hay mazos creados todavía. Toca "➕ Nuevo mazo" para crear el primero.</div>';
@@ -7018,8 +7239,8 @@ function addCardToMazo() {
   const carta = tcgData[name] && Array.isArray(tcgData[name].cartas) ? tcgData[name].cartas[idx] : null;
   if (!carta) { showToast('❌ No se encontró esa carta', true); return; }
   if (!carta.id) carta.id = genCartaId(); // por si es una carta muy vieja que quedó sin id
-  const already = mazo.cartas.some(c => c.pokemon === name && c.id === carta.id);
-  if (already) { showToast('⚠️ Esa carta ya está en el mazo', true); return; }
+  const already = mazo.cartas.filter(c => c.pokemon === name && c.id === carta.id).length;
+  if (already >= 2) { showToast('⚠️ Ya tenés 2 copias de esa carta en el mazo (el máximo permitido)', true); return; }
   mazo.cartas.push({ pokemon: name, id: carta.id, idx });
   if (!Number.isInteger(mazo.principal)) mazo.principal = 0;
   persistAll();
