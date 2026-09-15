@@ -2131,6 +2131,52 @@
   .mazo-empty-hint { color: var(--muted); font-size: 0.8rem; font-style: italic; }
   .mazo-card-footer { display: flex; gap: 10px; justify-content: space-between; align-items: center; }
 
+  /* Carta principal del mazo (estilo "elegí de la lista", como en GO) */
+  .mazo-principal-wrap {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 8px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+  .mazo-principal-wrap:hover { background: rgba(255,255,255,0.05); }
+  .mazo-principal-img {
+    width: 78px;
+    height: 108px;
+    object-fit: cover;
+    border-radius: 8px;
+    border: 2px solid var(--green);
+    background: rgba(0,0,0,0.2);
+    flex-shrink: 0;
+  }
+  .mazo-principal-img-empty {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    font-size: 0.65rem;
+    color: var(--muted);
+    padding: 4px;
+  }
+  .mazo-principal-info { flex: 1; min-width: 0; }
+  .mazo-principal-count { font-size: 0.78rem; color: var(--muted); margin-top: 2px; }
+  .mazo-principal-hint { font-size: 0.75rem; color: var(--muted); font-style: italic; }
+  .mazo-principal-arrow { font-size: 1.1rem; color: var(--muted); transition: transform 0.2s; flex-shrink: 0; }
+  .mazo-card.open .mazo-principal-arrow { transform: rotate(180deg); }
+  .mazo-editor-slot:empty { display: none; }
+  #mazo-editor-template { margin-top: 10px; padding-top: 10px; border-top: 1px dashed rgba(255,255,255,0.15); }
+  .mazo-card-row-star {
+    background: none;
+    border: none;
+    font-size: 1.1rem;
+    cursor: pointer;
+    opacity: 0.4;
+    flex-shrink: 0;
+  }
+  .mazo-card-row-star.active { opacity: 1; }
+
   /* MODAL GESTIONAR MAZO */
   .mazo-cards-list { max-height: 320px; overflow-y: auto; margin-bottom: 14px; text-align: left; }
   .mazo-card-row {
@@ -2546,8 +2592,6 @@
     <!-- ===== CHAMPIONS ===== -->
     <div class="mode-section active" id="mode-section-champions">
       <div class="translate-moves-toolbar">
-        <button class="btn btn-primary" onclick="championsSugerirVacios()">🪄 Sugerir para los vacíos</button>
-        <span id="champions-sugerir-status" style="font-size:0.78rem;color:var(--muted);align-self:center"></span>
         <label style="display:flex;align-items:center;gap:6px;font-size:0.8rem;margin-left:auto;cursor:pointer;white-space:nowrap">
           <input type="checkbox" id="champions-en-reparacion-check" onchange="toggleModoEnReparacion('champions', this.checked)">
           <img src="data:image/png;base64,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" alt="" width="16" height="16" style="vertical-align:-3px;flex-shrink:0"> Sección en reparación (ocultar en Consulta)
@@ -2806,7 +2850,10 @@
       </div>
 
       <div class="trueque-card">
-        <h3>📋 Tablón del grupo (<span id="trueque-count">0</span>)</h3>
+        <h3 style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap">
+          <span>📋 Tablón del grupo (<span id="trueque-count">0</span>)</span>
+          <button class="btn" id="trueque-admin-btn" style="padding:4px 10px;font-size:0.72rem" onclick="trueqeAdminToggle()">🔑 Admin</button>
+        </h3>
         <div class="trueque-filters">
           <button class="active" data-tf="todos" onclick="trueqeFiltrar('todos', this)">Todos</button>
           <button data-tf="tengo" onclick="trueqeFiltrar('tengo', this)">Tengo</button>
@@ -2934,18 +2981,15 @@
   </div>
 </div>
 
-<!-- MODAL GESTIONAR CARTAS DE MAZO -->
-<div class="modal-overlay" id="modal-mazo-cards">
-  <div class="modal" style="max-width:600px">
-    <h3>🗂️ CARTAS DEL MAZO: <span id="mazo-cards-name"></span></h3>
+<!-- EDITOR DE CARTAS DE MAZO: un único bloque reutilizable que se mueve (vía JS)
+     dentro del mazo que se esté editando, en vez de abrirse en un modal aparte. -->
+<div id="mazo-editor-holder" style="display:none">
+  <div id="mazo-editor-template">
     <div class="mazo-cards-list" id="mazo-cards-list"></div>
     <div class="mazo-add-card-row">
       <input type="text" id="mazo-add-pokemon-input" placeholder="Buscar Pokémon..." list="pokemon-datalist-mazos" oninput="onMazoPokemonInput()">
       <select id="mazo-add-carta-select" style="display:none"></select>
       <button class="btn btn-primary" onclick="addCardToMazo()">➕ Agregar</button>
-    </div>
-    <div class="modal-btns">
-      <button class="btn" style="background:#444;color:#fff" onclick="closeModal('modal-mazo-cards')">Cerrar</button>
     </div>
   </div>
 </div>
@@ -3341,16 +3385,17 @@ function toggleMazoDetail(idx, rowEl) {
   const mazo = todosMazos[idx];
   if (!mazo) return;
 
-  const cartasHTML = (mazo.cartas || []).map(ref => {
+  const principalIdx = Number.isInteger(mazo.principal) ? mazo.principal : 0;
+  const cartasHTML = (mazo.cartas || []).map((ref, i) => {
     const cartasDelPokemon = (todasCartasTCG[ref.pokemon] && Array.isArray(todasCartasTCG[ref.pokemon].cartas))
       ? todasCartasTCG[ref.pokemon].cartas : [];
-    const carta = cartasDelPokemon[ref.idx];
+    const carta = resolverCartaDeRef(ref, cartasDelPokemon);
     const img = carta && carta.imagen ? carta.imagen : '';
     return `<div class="mazo-detail-card">
       ${img
         ? `<img src="${esc(img)}" class="mazo-detail-thumb" onerror="this.style.display='none'">`
         : '<div class="mazo-detail-thumb mazo-detail-thumb-empty"></div>'}
-      <span class="mazo-detail-name">${esc(ref.pokemon)}</span>
+      <span class="mazo-detail-name">${i === principalIdx ? '⭐ ' : ''}${esc(ref.pokemon)}</span>
     </div>`;
   }).join('');
 
@@ -3726,7 +3771,9 @@ function esc(s) { return (s||'').replace(/"/g,'&quot;'); }
 async function showResult(name) {
   const el = document.getElementById('result-content');
   if (!name) {
-    el.innerHTML = '<div class="result-empty">Ingresa un nombre para ver la información</div>';
+    el.innerHTML = currentMode === 'go'
+      ? '<div class="result-empty">Elegí un Pokémon de la lista para ver su información</div>'
+      : '<div class="result-empty">Ingresa un nombre para ver la información</div>';
     return;
   }
 
@@ -3822,10 +3869,10 @@ async function showResult(name) {
       .filter(m => m.refs.length > 0);
 
     const mazosHTML = mazosDelPokemon.length
-      ? mazosDelPokemon.map(({ mazo, idx, refs }) => {
-          const primeraCarta = cartas[refs[0].idx];
-          const thumbHTML = primeraCarta && primeraCarta.imagen
-            ? `<img src="${esc(primeraCarta.imagen)}" class="mazo-row-thumb" onerror="this.style.display='none'">`
+      ? mazosDelPokemon.map(({ mazo, idx }) => {
+          const { carta: cartaPrincipal } = getMazoPrincipal(mazo, todasCartasTCG);
+          const thumbHTML = cartaPrincipal && cartaPrincipal.imagen
+            ? `<img src="${esc(cartaPrincipal.imagen)}" class="mazo-row-thumb" onerror="this.style.display='none'">`
             : '<div class="mazo-row-thumb mazo-row-thumb-empty"></div>';
           return `
           <div class="mazo-row" onclick="toggleMazoDetail(${idx}, this)">
@@ -3878,10 +3925,10 @@ async function showResult(name) {
       .filter(m => m.refs.length > 0);
 
     const mazosHTML = mazosDelPokemon.length
-      ? mazosDelPokemon.map(({ mazo, idx, refs }) => {
-          const primeraCarta = cartas[refs[0].idx];
-          const thumbHTML = primeraCarta && primeraCarta.imagen
-            ? `<img src="${esc(primeraCarta.imagen)}" class="mazo-row-thumb" onerror="this.style.display='none'">`
+      ? mazosDelPokemon.map(({ mazo, idx }) => {
+          const { carta: cartaPrincipal } = getMazoPrincipal(mazo, todasCartasTCG);
+          const thumbHTML = cartaPrincipal && cartaPrincipal.imagen
+            ? `<img src="${esc(cartaPrincipal.imagen)}" class="mazo-row-thumb" onerror="this.style.display='none'">`
             : '<div class="mazo-row-thumb mazo-row-thumb-empty"></div>';
           return `
           <div class="mazo-row" onclick="toggleMazoDetail(${idx}, this)">
@@ -5365,7 +5412,8 @@ function loadFromStorage() {
         if (Array.isArray(parsed)) {
           dataMazos = parsed.map(m => ({
             nombre: m.nombre || '',
-            cartas: Array.isArray(m.cartas) ? m.cartas.filter(c => c && c.pokemon != null && c.idx != null) : []
+            cartas: Array.isArray(m.cartas) ? m.cartas.filter(c => c && c.pokemon != null && c.idx != null) : [],
+            principal: Number.isInteger(m.principal) ? m.principal : 0
           }));
         }
       } catch(e) {}
@@ -5379,7 +5427,8 @@ function loadFromStorage() {
         if (Array.isArray(parsed)) {
           dataMazosLive = parsed.map(m => ({
             nombre: m.nombre || '',
-            cartas: Array.isArray(m.cartas) ? m.cartas.filter(c => c && c.pokemon != null && c.idx != null) : []
+            cartas: Array.isArray(m.cartas) ? m.cartas.filter(c => c && c.pokemon != null && c.idx != null) : [],
+            principal: Number.isInteger(m.principal) ? m.principal : 0
           }));
         }
       } catch(e) {}
@@ -5414,6 +5463,7 @@ function loadFromStorage() {
     migrarNombresExpansionesTcg();
     migrarLigaUnicaAMultiple();
     podarDatosHuerfanos();
+    migrarCartasAIds();
   } catch(e) {}
 }
 
@@ -5533,8 +5583,24 @@ function applyExpansionesDoc(doc) {
   const expansionesLive = parseSnapField(doc.expansionesLive); if (Array.isArray(expansionesLive)) EXPANSIONES_SUGERIDAS.tcglive = expansionesLive;
 }
 
+// Se pone en true recién cuando se confirmó el estado REAL de la nube (existan
+// o no los documentos), justo antes de la carga inicial de Firestore. Mientras
+// sea false, el estado en memoria puede venir del HTML de arranque (valores
+// por defecto embebidos) o de localStorage de este dispositivo, que podrían
+// estar desactualizados frente a lo que ya hay en Firestore (por ejemplo, si
+// se editó el HTML antes de subirlo a GitHub). Bloquear la subida hasta ese
+// momento evita que ese estado "viejo" pise datos ya sincronizados.
+let firestoreSyncCompleted = false;
+let pushToFirestorePendiente = false;
+
 function pushToFirestore() {
   if (!window._fbDb) return Promise.resolve();
+  if (!firestoreSyncCompleted) {
+    // Todavía no sabemos qué hay realmente en la nube: no se sube nada. En
+    // cuanto se confirme la sincronización inicial, se reintenta solo.
+    pushToFirestorePendiente = true;
+    return Promise.resolve();
+  }
   const col = window._fbDb.collection('appdata');
   // Cada campo se guarda como texto (JSON.stringify) en vez de objeto/mapa
   // nativo de Firestore, para evitar el límite de "demasiadas entradas de
@@ -5634,8 +5700,9 @@ function initFirebaseSync() {
       podarDatosHuerfanos();
       const huboMigracion = migrarNombresExpansionesTcg();
       const huboResetPocketLive = resetPocketLiveOnce();
+      const huboMigracionIds = typeof migrarCartasAIds === 'function' && migrarCartasAIds();
       persistLocalOnly();
-      if ((huboMigracion || huboResetPocketLive) && typeof pushToFirestore === 'function') pushToFirestore();
+      if ((huboMigracion || huboResetPocketLive || huboMigracionIds) && typeof pushToFirestore === 'function') pushToFirestore();
       if (typeof renderCurrentTable === 'function') renderCurrentTable();
       if (typeof ensurePokemonDatalistMazos === 'function') ensurePokemonDatalistMazos(mazoEditingMode);
       if (currentMode) aplicarEstadoReparacion(currentMode);
@@ -5655,9 +5722,18 @@ function initFirebaseSync() {
         applyAll();
         if (pendingInitialChecks > 0) {
           pendingInitialChecks--;
-          if (pendingInitialChecks === 0 && !anyExistedAtStart) {
-            // Todavía no hay nada en la nube: subimos lo que tengamos localmente como base inicial.
-            pushToFirestore();
+          if (pendingInitialChecks === 0) {
+            // Ya se conoce el estado real de la nube (existan o no los
+            // documentos): de acá en más sí es seguro subir cambios, porque
+            // el estado en memoria ya está reconciliado con Firestore.
+            firestoreSyncCompleted = true;
+            if (!anyExistedAtStart) {
+              // Todavía no hay nada en la nube: subimos lo que tengamos localmente como base inicial.
+              pushToFirestore();
+            } else if (pushToFirestorePendiente) {
+              pushToFirestorePendiente = false;
+              pushToFirestore();
+            }
           }
         }
       }, (err) => {
@@ -6079,6 +6155,7 @@ function addTcgCardRow(carta) {
   const list = document.getElementById('tcg-cards-list');
   const row = document.createElement('div');
   row.className = 'tcg-card-row';
+  row.dataset.cartaId = carta.id || ''; // se preserva para que las referencias en mazos no se rompan al re-guardar
 
   const preview = document.createElement('img');
   preview.className = 'tcg-card-thumb';
@@ -6266,7 +6343,8 @@ function saveTcgCards() {
     const expansion = row.querySelector('.tcg-expansion-input').value.trim();
     const color = row.querySelector('.tcg-color-input').value;
     const imagen = row.querySelector('.tcg-imagen-input').value.trim();
-    if (expansion) cartas.push({ rareza, expansion, color, imagen });
+    const id = row.dataset.cartaId || genCartaId();
+    if (expansion) cartas.push({ id, rareza, expansion, color, imagen });
   });
   if (!store[tcgEditingPokemon]) store[tcgEditingPokemon] = emptyFn();
   store[tcgEditingPokemon].cartas = cartas;
@@ -6283,11 +6361,81 @@ function getCartaLabel(carta) {
   return carta.expansion ? `${r.label} · ${carta.expansion}` : r.label;
 }
 
+// Id único y estable para cada carta (variante) de un Pokémon. Antes, un
+// mazo guardaba solo la POSICIÓN (idx) de la carta dentro de la lista de ese
+// Pokémon; si esa lista se volvía a guardar en otro orden (por ejemplo, al
+// borrar una variante del medio en "Gestionar"), todos los mazos que
+// referenciaban cartas de más adelante en la lista pasaban a apuntar a la
+// carta equivocada (o perdían la imagen). Con un id fijo por carta, la
+// imagen cargada una vez queda ligada a ESA carta para siempre, sin
+// importar en qué orden quede después ni en cuántos mazos se use.
+function genCartaId() {
+  return 'c' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+}
+
+// Resuelve a qué carta apunta una referencia de mazo ({pokemon, id, idx}),
+// priorizando el id estable; si la referencia es vieja (sin id todavía) o el
+// id ya no existe, se usa la posición (idx) como respaldo.
+function resolverCartaDeRef(ref, cartasDelPokemon) {
+  if (!ref || !Array.isArray(cartasDelPokemon)) return null;
+  if (ref.id) {
+    const porId = cartasDelPokemon.find(c => c.id === ref.id);
+    if (porId) return porId;
+  }
+  return cartasDelPokemon[ref.idx] || null;
+}
+
+// Migración: le asigna un id a toda carta que todavía no lo tenga, y
+// completa el id en las referencias de mazos que solo tenían idx guardado.
+// Se corre una sola vez por carga (ver loadFromStorage y applyAll) y,  si
+// cambió algo, el resultado (true) se usa para volver a subir a Firestore.
+function migrarCartasAIds() {
+  let changed = false;
+  function procesar(dataStore, mazosStore) {
+    if (!dataStore || !Array.isArray(mazosStore)) return;
+    Object.keys(dataStore).forEach(name => {
+      const d = dataStore[name];
+      if (!d || !Array.isArray(d.cartas)) return;
+      d.cartas.forEach(c => { if (c && !c.id) { c.id = genCartaId(); changed = true; } });
+    });
+    mazosStore.forEach(m => {
+      if (!Array.isArray(m.cartas)) return;
+      m.cartas.forEach(ref => {
+        if (!ref || ref.id) return;
+        const cartasDelPokemon = (dataStore[ref.pokemon] && Array.isArray(dataStore[ref.pokemon].cartas)) ? dataStore[ref.pokemon].cartas : [];
+        const carta = cartasDelPokemon[ref.idx];
+        if (carta && carta.id) { ref.id = carta.id; changed = true; }
+      });
+    });
+  }
+  procesar(dataTCG, dataMazos);
+  procesar(dataTCGLive, dataMazosLive);
+  return changed;
+}
+
 function getMazosStore(mode) { return mode === 'mazoslive' ? dataMazosLive : dataMazos; }
 function getMazosTcgData(mode) { return mode === 'mazoslive' ? dataTCGLive : dataTCG; }
 function getMazosPokemonList(mode) { return mode === 'mazoslive' ? POKEMON_LISTS.tcglive : POKEMON_LISTS.tcg; }
 function getMazosListElId(mode) { return mode === 'mazoslive' ? 'mazos-list-live' : 'mazos-list'; }
 function renderMazosTcgTable(mode) { if (mode === 'mazoslive') renderTableTCGLive(); else renderTableTCG(); }
+
+// Máximo de cartas por mazo (tamaño real de un mazo de TCG Pocket).
+const MAZO_MAX_CARTAS = 20;
+
+// Devuelve la carta marcada como "principal" de un mazo (o la primera si
+// todavía no se eligió ninguna), junto a su índice real dentro de mazo.cartas.
+function getMazoPrincipal(mazo, tcgData) {
+  if (!mazo.cartas.length) return { ref: null, carta: null, idx: -1 };
+  let idx = Number.isInteger(mazo.principal) && mazo.cartas[mazo.principal] ? mazo.principal : 0;
+  const ref = mazo.cartas[idx];
+  const cartasRef = (tcgData[ref.pokemon] && Array.isArray(tcgData[ref.pokemon].cartas)) ? tcgData[ref.pokemon].cartas : [];
+  return { ref, carta: resolverCartaDeRef(ref, cartasRef), idx };
+}
+
+// Clave del editor de cartas actualmente abierto ("modo-idx"), o null si
+// ninguno está expandido. Se usa para volver a mostrarlo en su lugar después
+// de redibujar la lista (por ejemplo, tras agregar o quitar una carta).
+let mazoEditorOpenKey = null;
 
 function renderMazos(mode) {
   mode = mode || 'mazos';
@@ -6295,35 +6443,34 @@ function renderMazos(mode) {
   const tcgData = getMazosTcgData(mode);
   const list = document.getElementById(getMazosListElId(mode));
   if (!store.length) {
+    mazoEditorOpenKey = null;
     list.innerHTML = '<div class="mazo-empty-hint">No hay mazos creados todavía. Toca "➕ Nuevo mazo" para crear el primero.</div>';
     return;
   }
   list.innerHTML = store.map((mazo, idx) => {
-    const thumbsHTML = mazo.cartas.length
-      ? mazo.cartas.map(ref => {
-          const cartasRef = (tcgData[ref.pokemon] && Array.isArray(tcgData[ref.pokemon].cartas)) ? tcgData[ref.pokemon].cartas : [];
-          const carta = cartasRef[ref.idx];
-          const img = carta && carta.imagen ? carta.imagen : '';
-          return `<div class="mazo-card-thumb-item" title="${esc(ref.pokemon)}">
-            ${img
-              ? `<img src="${esc(img)}" class="mazo-card-thumb-img" onerror="this.style.display='none'">`
-              : `<div class="mazo-card-thumb-img" style="display:flex;align-items:center;justify-content:center;font-size:0.55rem;color:var(--muted);text-align:center">${esc(ref.pokemon.slice(0,4))}</div>`}
-          </div>`;
-        }).join('')
-      : '<span class="mazo-empty-hint">Sin cartas todavía</span>';
-    return `<div class="mazo-card">
+    const { carta, ref } = getMazoPrincipal(mazo, tcgData);
+    const principalHTML = carta && carta.imagen
+      ? `<img src="${esc(carta.imagen)}" class="mazo-principal-img" onerror="this.style.display='none'">`
+      : ref
+        ? `<div class="mazo-principal-img mazo-principal-img-empty">${esc(ref.pokemon)}</div>`
+        : `<div class="mazo-principal-img mazo-principal-img-empty">Sin cartas</div>`;
+    return `<div class="mazo-card" data-mazo-idx="${idx}" data-mazo-mode="${mode}">
       <div class="mazo-card-header">
         <input class="mazo-name-input" data-mazo-idx="${idx}" value="${esc(mazo.nombre)}" placeholder="Nombre del mazo (ej: Mazo Control)">
         <button class="delete-btn" onclick="confirmDeleteMazo(${idx}, '${mode}')">🗑️</button>
       </div>
-      <div class="mazo-card-thumbs">${thumbsHTML}</div>
+      <div class="mazo-principal-wrap" onclick="toggleMazoEditor(${idx}, '${mode}', this)">
+        ${principalHTML}
+        <div class="mazo-principal-info">
+          <div class="mazo-principal-count">${mazo.cartas.length}/${MAZO_MAX_CARTAS} cartas</div>
+          ${mazo.cartas.length ? '<div class="mazo-principal-hint">Tocá para ver y editar todas las cartas</div>' : '<div class="mazo-principal-hint">Tocá para agregar la primera carta</div>'}
+        </div>
+        <span class="mazo-principal-arrow">▾</span>
+      </div>
       ${Array.isArray(mazo.entrenadores) && mazo.entrenadores.length ? `
       <div style="font-size:0.68rem;color:var(--muted);margin:6px 0 2px">🎫 Entrenador sugeridas: ${mazo.entrenadores.map(t => esc(t.nombre)).join(', ')}</div>
       ` : ''}
-      <div class="mazo-card-footer">
-        <span class="tcg-cards-summary">${mazo.cartas.length} carta(s)</span>
-        <button class="btn btn-primary" style="padding:6px 10px;font-size:0.75rem" onclick="openMazoCardsModal(${idx}, '${mode}')">🗂️ Gestionar cartas</button>
-      </div>
+      <div class="mazo-editor-slot" id="mazo-editor-slot-${mode}-${idx}"></div>
     </div>`;
   }).join('');
 
@@ -6334,11 +6481,50 @@ function renderMazos(mode) {
     });
     input.addEventListener('blur', () => { persistAll(); renderMazosTcgTable(mode); });
   });
+
+  // El innerHTML de arriba desmontó el editor si estaba abierto para un mazo
+  // de este modo: lo volvemos a colocar en su lugar para no cerrarlo solo
+  // porque se agregó/quitó una carta.
+  if (mazoEditorOpenKey) {
+    const [openMode, openIdxStr] = [mazoEditorOpenKey.slice(0, mazoEditorOpenKey.lastIndexOf('-')), mazoEditorOpenKey.slice(mazoEditorOpenKey.lastIndexOf('-') + 1)];
+    if (openMode === mode) {
+      const openIdx = parseInt(openIdxStr, 10);
+      const slot = document.getElementById(`mazo-editor-slot-${mode}-${openIdx}`);
+      const card = list.querySelector(`.mazo-card[data-mazo-idx="${openIdx}"]`);
+      if (slot && store[openIdx]) {
+        const template = document.getElementById('mazo-editor-template');
+        slot.appendChild(template);
+        if (card) card.classList.add('open');
+        renderMazoCardsList();
+      } else {
+        mazoEditorOpenKey = null;
+      }
+    }
+  }
+}
+
+function toggleMazoEditor(idx, mode, wrapEl) {
+  const key = mode + '-' + idx;
+  const template = document.getElementById('mazo-editor-template');
+  const card = wrapEl.closest('.mazo-card');
+  if (mazoEditorOpenKey === key) {
+    document.getElementById('mazo-editor-holder').appendChild(template);
+    if (card) card.classList.remove('open');
+    mazoEditorOpenKey = null;
+    return;
+  }
+  document.querySelectorAll('.mazo-card.open').forEach(el => el.classList.remove('open'));
+  const slot = document.getElementById(`mazo-editor-slot-${key}`);
+  if (!slot) return;
+  slot.appendChild(template);
+  if (card) card.classList.add('open');
+  mazoEditorOpenKey = key;
+  openMazoCardsModal(idx, mode);
 }
 
 function addNuevoMazo(mode) {
   mode = mode || 'mazos';
-  getMazosStore(mode).push({ nombre: 'Nuevo mazo', cartas: [] });
+  getMazosStore(mode).push({ nombre: 'Nuevo mazo', cartas: [], principal: 0 });
   persistAll();
   renderMazos(mode);
   showToast('✅ Mazo creado');
@@ -6572,7 +6758,8 @@ function tcgSugerirMazoCrear() {
   store.push({
     nombre: `Mazo ${nombreTipos}`,
     cartas: sugerirMazoResultado.pokemon.map(p => ({ pokemon: p.name, idx: 0 })),
-    entrenadores: sugerirMazoResultado.entrenadores.map(t => ({ nombre: t.name, imagen: t.image }))
+    entrenadores: sugerirMazoResultado.entrenadores.map(t => ({ nombre: t.name, imagen: t.image })),
+    principal: 0
   });
   persistAll();
   renderMazos(sugerirMazoModo);
@@ -6586,6 +6773,10 @@ async function confirmDeleteMazo(idx, mode) {
   const mazo = store[idx];
   if (!mazo) return;
   if (confirm(`¿Seguro que quieres borrar el mazo "${mazo.nombre || 'Sin nombre'}"?`)) {
+    // Los índices cambian al borrar: si había un editor de cartas abierto,
+    // lo cerramos primero para no dejarlo apuntando a otro mazo por error.
+    document.getElementById('mazo-editor-holder').appendChild(document.getElementById('mazo-editor-template'));
+    mazoEditorOpenKey = null;
     store.splice(idx, 1);
     renderMazos(mode);
     renderMazosTcgTable(mode);
@@ -6665,13 +6856,11 @@ function openMazoCardsModal(idx, mode) {
   mazoEditingMode = mode || 'mazos';
   const mazo = getMazosStore(mazoEditingMode)[idx];
   if (!mazo) return;
-  document.getElementById('mazo-cards-name').textContent = mazo.nombre || 'Sin nombre';
   ensurePokemonDatalistMazos(mazoEditingMode);
   document.getElementById('mazo-add-pokemon-input').value = '';
   document.getElementById('mazo-add-carta-select').style.display = 'none';
   document.getElementById('mazo-add-carta-select').innerHTML = '';
   renderMazoCardsList();
-  document.getElementById('modal-mazo-cards').classList.add('open');
 }
 
 function renderMazoCardsList() {
@@ -6682,20 +6871,34 @@ function renderMazoCardsList() {
     list.innerHTML = '<div class="mazo-empty-hint">Este mazo todavía no tiene cartas. Busca un Pokémon abajo para agregar una.</div>';
     return;
   }
+  const principalIdx = Number.isInteger(mazo.principal) ? mazo.principal : 0;
   list.innerHTML = mazo.cartas.map((ref, i) => {
     const cartasRef = (tcgData[ref.pokemon] && Array.isArray(tcgData[ref.pokemon].cartas)) ? tcgData[ref.pokemon].cartas : [];
-    const carta = cartasRef[ref.idx];
+    const carta = resolverCartaDeRef(ref, cartasRef);
     const img = carta && carta.imagen ? carta.imagen : '';
     const label = carta ? getCartaLabel(carta) : 'Carta no encontrada';
+    const esPrincipal = i === principalIdx;
     return `<div class="mazo-card-row">
       ${img ? `<img src="${esc(img)}" class="mazo-card-row-thumb" onerror="this.style.display='none'">` : '<div class="mazo-card-row-thumb"></div>'}
       <div class="mazo-card-row-info">
         <div class="mazo-card-row-name">${esc(ref.pokemon)}</div>
         <div class="mazo-card-row-exp">${esc(label)}</div>
       </div>
+      <button class="mazo-card-row-star ${esPrincipal ? 'active' : ''}" title="${esPrincipal ? 'Es la carta principal del mazo' : 'Usar como carta principal'}" onclick="setMazoPrincipal(${i})">⭐</button>
       <button class="delete-btn" onclick="removeCardFromMazo(${i})">✕</button>
     </div>`;
   }).join('');
+}
+
+// Marca una carta del mazo (por índice) como la "principal": la que se
+// muestra en grande en la lista de mazos y en Consulta.
+function setMazoPrincipal(i) {
+  const mazo = getMazosStore(mazoEditingMode)[mazoEditingIdx];
+  if (!mazo || !mazo.cartas[i]) return;
+  mazo.principal = i;
+  persistAll();
+  renderMazoCardsList();
+  renderMazos(mazoEditingMode);
 }
 
 function onMazoPokemonInput() {
@@ -6720,10 +6923,16 @@ function addCardToMazo() {
   const name = getMazosPokemonList(mazoEditingMode).find(p => p.toLowerCase() === input.value.trim().toLowerCase());
   if (!name) { showToast('❌ Elige un Pokémon válido de la lista', true); return; }
   if (select.style.display === 'none' || !select.value) { showToast('❌ Ese Pokémon no tiene cartas registradas', true); return; }
+  if (mazo.cartas.length >= MAZO_MAX_CARTAS) { showToast(`⚠️ Este mazo ya tiene el máximo de ${MAZO_MAX_CARTAS} cartas`, true); return; }
   const idx = parseInt(select.value, 10);
-  const already = mazo.cartas.some(c => c.pokemon === name && c.idx === idx);
+  const tcgData = getMazosTcgData(mazoEditingMode);
+  const carta = tcgData[name] && Array.isArray(tcgData[name].cartas) ? tcgData[name].cartas[idx] : null;
+  if (!carta) { showToast('❌ No se encontró esa carta', true); return; }
+  if (!carta.id) carta.id = genCartaId(); // por si es una carta muy vieja que quedó sin id
+  const already = mazo.cartas.some(c => c.pokemon === name && c.id === carta.id);
   if (already) { showToast('⚠️ Esa carta ya está en el mazo', true); return; }
-  mazo.cartas.push({ pokemon: name, idx });
+  mazo.cartas.push({ pokemon: name, id: carta.id, idx });
+  if (!Number.isInteger(mazo.principal)) mazo.principal = 0;
   persistAll();
   input.value = '';
   select.style.display = 'none';
@@ -6737,6 +6946,12 @@ function removeCardFromMazo(i) {
   const mazo = getMazosStore(mazoEditingMode)[mazoEditingIdx];
   if (!mazo) return;
   mazo.cartas.splice(i, 1);
+  // Si la carta borrada era la principal (o iba antes en la lista), corregimos
+  // el índice guardado para que siga apuntando a una carta válida.
+  if (!Number.isInteger(mazo.principal)) mazo.principal = 0;
+  else if (i < mazo.principal) mazo.principal--;
+  else if (i === mazo.principal) mazo.principal = 0;
+  if (mazo.principal >= mazo.cartas.length) mazo.principal = Math.max(0, mazo.cartas.length - 1);
   persistAll();
   renderMazoCardsList();
   renderMazos(mazoEditingMode);
@@ -6928,13 +7143,15 @@ function applyImportedData(parsed) {
     if (Array.isArray(parsed.mazos)) {
       dataMazos = dataMazos.concat(parsed.mazos.map(m => ({
         nombre: m.nombre || '',
-        cartas: Array.isArray(m.cartas) ? m.cartas.filter(c => c && c.pokemon != null && c.idx != null) : []
+        cartas: Array.isArray(m.cartas) ? m.cartas.filter(c => c && c.pokemon != null && c.idx != null) : [],
+        principal: Number.isInteger(m.principal) ? m.principal : 0
       })));
     }
     if (Array.isArray(parsed.mazosLive)) {
       dataMazosLive = dataMazosLive.concat(parsed.mazosLive.map(m => ({
         nombre: m.nombre || '',
-        cartas: Array.isArray(m.cartas) ? m.cartas.filter(c => c && c.pokemon != null && c.idx != null) : []
+        cartas: Array.isArray(m.cartas) ? m.cartas.filter(c => c && c.pokemon != null && c.idx != null) : [],
+        principal: Number.isInteger(m.principal) ? m.principal : 0
       })));
     }
     if (Array.isArray(parsed.expansiones)) {
@@ -6964,6 +7181,7 @@ function applyImportedData(parsed) {
     POKEMON_LISTS[mode].sort((a, b) => a.localeCompare(b, 'es', { sensitivity: 'base' }));
   });
   migrarLigaUnicaAMultiple();
+  migrarCartasAIds();
   persistAll();
   rebuildExpansionesDatalist(currentDatosMode === 'tcglive' ? 'tcglive' : 'tcg');
   renderCurrentTable();
@@ -8347,7 +8565,34 @@ function trueqeFiltrar(f, btn) {
   trueqeRenderBinder();
 }
 
-function trueqeSleeveHtml(c, showDelete) {
+// ── BORRADO POR ADMIN (misma contraseña que la sección Datos) ───────────────
+// Permite habilitar la "✕" de borrado en el tablón público (no solo en "Mis
+// publicaciones") si se conoce la contraseña de administrador, para poder
+// limpiar intercambios ya cerrados aunque el usuario que los publicó no esté.
+let trueqeAdminUnlocked = false;
+
+function trueqeAdminToggle() {
+  const btn = document.getElementById('trueque-admin-btn');
+  if (trueqeAdminUnlocked) {
+    trueqeAdminUnlocked = false;
+    if (btn) { btn.textContent = '🔑 Admin'; btn.classList.remove('btn-danger'); }
+    trueqeRenderBinder();
+    showToast('🔒 Modo administrador desactivado');
+    return;
+  }
+  const input = prompt('Contraseña de administrador:');
+  if (input == null) return;
+  if (btoa(unescape(encodeURIComponent(input))) === CORRECT_PASSWORD || btoa(input) === CORRECT_PASSWORD) {
+    trueqeAdminUnlocked = true;
+    if (btn) { btn.textContent = '🔓 Salir de modo admin'; btn.classList.add('btn-danger'); }
+    trueqeRenderBinder();
+    showToast('🔓 Modo administrador activado: ya podés borrar cualquier publicación del tablón');
+  } else {
+    showToast('❌ Contraseña incorrecta', true);
+  }
+}
+
+function trueqeSleeveHtml(c, showDelete, esAdmin) {
   const texto = 'Hola ' + c.userNombre + ', vi que ' + (c.tipo === 'tengo' ? 'tienes' : 'buscas') + ' ' + c.nombreCarta + ' en el tablón de intercambios.';
   const waLink = 'https://wa.me/' + c.userWhatsapp + '?text=' + encodeURIComponent(texto);
   return `<div class="trueque-sleeve">
@@ -8358,14 +8603,16 @@ function trueqeSleeveHtml(c, showDelete) {
     ${c.notas ? `<div class="notes">${trueqeEsc(c.notas)}</div>` : ''}
     <div class="owner">${trueqeEsc(c.userNombre)}</div>
     <a class="wa" href="${waLink}" target="_blank" rel="noopener">Escribir por WhatsApp</a>
-    ${showDelete ? `<button class="trueque-delete-btn" onclick="trueqeEliminarCarta('${c.id}')">🗑️ Eliminar (ya se cerró el trueque)</button>` : ''}
+    ${showDelete ? `<button class="trueque-delete-btn" onclick="trueqeEliminarCarta('${c.id}')">${esAdmin ? '✕ Eliminar (admin)' : '🗑️ Eliminar (ya se cerró el trueque)'}</button>` : ''}
   </div>`;
 }
 
 async function trueqeEliminarCarta(cardId) {
   if (!window._fbDb || !trueqeUser) return;
   const carta = trueqeCards.find(c => c.id === cardId);
-  if (!carta || carta.userId !== trueqeUser.id) return; // solo se pueden borrar publicaciones propias
+  if (!carta) return;
+  // Se puede borrar la publicación propia, o cualquiera si se activó el modo admin.
+  if (carta.userId !== trueqeUser.id && !trueqeAdminUnlocked) return;
   if (!confirm('¿Eliminar esta publicación? No se puede deshacer.')) return;
   try {
     await window._fbDb.collection('trueques_cartas').doc(cardId).delete();
@@ -8384,13 +8631,13 @@ function trueqeRenderBinder() {
   if (term) list = list.filter(c => c.nombreCarta.toLowerCase().includes(term));
   document.getElementById('trueque-count').textContent = trueqeCards.length;
   const binder = document.getElementById('trueque-binder');
-  binder.innerHTML = list.length ? list.map(c => trueqeSleeveHtml(c, false)).join('') : '<div class="mazo-empty-hint">Nada por aquí todavía. Sé el primero en publicar una carta.</div>';
+  binder.innerHTML = list.length ? list.map(c => trueqeSleeveHtml(c, trueqeAdminUnlocked, true)).join('') : '<div class="mazo-empty-hint">Nada por aquí todavía. Sé el primero en publicar una carta.</div>';
 }
 
 function trueqeRenderMine() {
   const mine = trueqeCards.filter(c => c.userId === trueqeUser.id);
   const el = document.getElementById('trueque-mine');
-  el.innerHTML = mine.length ? mine.map(c => trueqeSleeveHtml(c, true)).join('') : '<div class="mazo-empty-hint">Aún no has publicado ninguna carta.</div>';
+  el.innerHTML = mine.length ? mine.map(c => trueqeSleeveHtml(c, true, false)).join('') : '<div class="mazo-empty-hint">Aún no has publicado ninguna carta.</div>';
 }
 
 // ── TOAST ──────────────────────────────────────────────────────────────────
