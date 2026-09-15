@@ -795,6 +795,91 @@
   .mazo-detail-thumb-empty { background: rgba(255,255,255,0.08); }
   .mazo-detail-name { font-size: 0.82rem; color: var(--text); font-weight: 600; }
 
+  /* Detalle de mazo expandido (Consulta): carta principal grande a la
+     izquierda + el resto de las cartas del mazo (hasta 20) a la derecha,
+     al triple del tamaño que tenían antes (28x38 -> 84x114). */
+  .mazo-public-detail-wrap {
+    display: flex;
+    gap: 16px;
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+  .mazo-public-principal-col {
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+  }
+  .mazo-public-principal-img {
+    width: 240px;
+    max-width: 46vw;
+    aspect-ratio: 78 / 108;
+    height: auto;
+    object-fit: cover;
+    border-radius: 10px;
+    border: 3px solid var(--green);
+    background: rgba(0,0,0,0.2);
+  }
+  .mazo-public-principal-img-empty {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    font-size: 0.75rem;
+    color: var(--muted);
+    padding: 4px;
+  }
+  .mazo-public-principal-label { font-size: 0.72rem; color: var(--muted); text-align: center; max-width: 240px; }
+  .mazo-public-cards-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 8px;
+    flex: 1 1 320px;
+    max-width: 400px;
+  }
+  .mazo-public-card-thumb {
+    width: 100%;
+    aspect-ratio: 78 / 108;
+    object-fit: cover;
+    border-radius: 6px;
+    border: 1px solid rgba(255,255,255,0.15);
+    cursor: default;
+    transition: transform 0.12s;
+  }
+  .mazo-public-card-thumb:hover { transform: scale(1.05); border-color: var(--green); }
+  .mazo-public-card-thumb.es-principal { border-color: var(--green); border-width: 2px; }
+  .mazo-public-card-thumb-empty {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    font-size: 0.62rem;
+    color: var(--muted);
+    background: rgba(255,255,255,0.08);
+    padding: 4px;
+  }
+  @media (max-width: 640px) {
+    .mazo-public-detail-wrap { flex-direction: column; align-items: center; }
+    .mazo-public-principal-img { width: 60vw; max-width: 240px; }
+    .mazo-public-cards-grid { max-width: 100%; width: 100%; }
+  }
+
+  /* Toggle Lista / Expandido de la sección Mazos (Consulta) */
+  .tcg-mazos-vista-toggle { display: flex; gap: 6px; }
+  .tcg-mazos-vista-btn {
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.15);
+    color: var(--muted);
+    border-radius: 6px;
+    padding: 5px 10px;
+    font-size: 0.75rem;
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s, border-color 0.15s;
+  }
+  .tcg-mazos-vista-btn:hover { background: rgba(255,255,255,0.12); }
+  .tcg-mazos-vista-btn.active { background: rgba(76,175,80,0.2); border-color: var(--green); color: var(--white); font-weight: 600; }
+
 
 
   /* ACTION BAR (export/import in consulta) */
@@ -2485,7 +2570,13 @@
            porque un mazo también puede tener cartas que no son de un
            Pokémon (Entrenador, Objeto, Energía, etc.). -->
       <div id="tcg-mazos-public-section" class="search-section" style="display:none">
-        <span class="search-label">🗂️ Mazos</span>
+        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
+          <span class="search-label">🗂️ Mazos</span>
+          <div class="tcg-mazos-vista-toggle">
+            <button type="button" class="tcg-mazos-vista-btn active" id="tcg-mazos-vista-lista" onclick="setTcgMazosVistaModo('lista')">📃 Lista</button>
+            <button type="button" class="tcg-mazos-vista-btn" id="tcg-mazos-vista-expandido" onclick="setTcgMazosVistaModo('expandido')">🗂️ Expandido</button>
+          </div>
+        </div>
         <div id="tcg-mazos-public-list" style="display:flex;flex-direction:column;gap:8px;margin-top:10px"></div>
       </div>
 
@@ -3402,6 +3493,54 @@ function selectMode(mode) {
 // elige directamente un mazo de la lista, porque un mazo puede tener cartas
 // que no son de ningún Pokémon (Entrenador, Objeto, Energía, etc.) y esas
 // cartas no tendrían por dónde aparecer en un buscador de Pokémon.
+
+// "lista" = acordeón (un mazo abierto a la vez, ahorra espacio con muchos
+// mazos). "expandido" = todos los mazos se muestran ya desplegados.
+let tcgMazosVistaModo = 'lista';
+
+function setTcgMazosVistaModo(modo) {
+  tcgMazosVistaModo = modo;
+  const btnLista = document.getElementById('tcg-mazos-vista-lista');
+  const btnExpandido = document.getElementById('tcg-mazos-vista-expandido');
+  if (btnLista) btnLista.classList.toggle('active', modo === 'lista');
+  if (btnExpandido) btnExpandido.classList.toggle('active', modo === 'expandido');
+  if (currentMode === 'tcg' || currentMode === 'tcglive') renderTcgMazosPublicList(currentMode);
+}
+
+// Arma el HTML del detalle de un mazo (carta principal grande + grilla de
+// hasta 20 cartas), reutilizado tanto al expandir un mazo individual (modo
+// lista) como al mostrar todos ya desplegados (modo expandido).
+function construirMazoPublicDetailHTML(mazo, tcgData) {
+  if (!(mazo.cartas || []).length) {
+    return '<div class="result-empty" style="padding:6px 0">Este mazo no tiene cartas registradas</div>';
+  }
+  const principalIdx = Number.isInteger(mazo.principal) ? mazo.principal : 0;
+  const { carta: cartaPrincipal } = getMazoPrincipal(mazo, tcgData);
+
+  const principalHTML = cartaPrincipal && cartaPrincipal.imagen
+    ? `<img src="${esc(cartaPrincipal.imagen)}" class="mazo-public-principal-img" title="${esc(tooltipAtaquesCarta(cartaPrincipal))}" onerror="this.style.display='none'">`
+    : `<div class="mazo-public-principal-img mazo-public-principal-img-empty">Sin cartas</div>`;
+
+  const cartasHTML = mazo.cartas.map((ref, i) => {
+    const cartasDelPokemon = (tcgData[ref.pokemon] && Array.isArray(tcgData[ref.pokemon].cartas))
+      ? tcgData[ref.pokemon].cartas : [];
+    const carta = resolverCartaDeRef(ref, cartasDelPokemon);
+    const img = carta && carta.imagen ? carta.imagen : '';
+    const tooltip = esc(`${ref.pokemon}${i === principalIdx ? ' ⭐' : ''}\n${tooltipAtaquesCarta(carta)}`);
+    return img
+      ? `<img src="${esc(img)}" class="mazo-public-card-thumb${i === principalIdx ? ' es-principal' : ''}" title="${tooltip}" onerror="this.style.display='none'">`
+      : `<div class="mazo-public-card-thumb mazo-public-card-thumb-empty" title="${tooltip}">${esc(ref.pokemon)}</div>`;
+  }).join('');
+
+  return `<div class="mazo-public-detail-wrap">
+      <div class="mazo-public-principal-col">
+        ${principalHTML}
+        <div class="mazo-public-principal-label">Carta principal</div>
+      </div>
+      <div class="mazo-public-cards-grid">${cartasHTML}</div>
+    </div>`;
+}
+
 function renderTcgMazosPublicList(mode) {
   const store = mode === 'tcglive' ? getMazosLiveData() : getMazosData();
   const tcgData = mode === 'tcglive' ? getAllTCGLiveData() : getAllTCGData();
@@ -3412,23 +3551,26 @@ function renderTcgMazosPublicList(mode) {
     listEl.innerHTML = '<div class="result-empty">Todavía no hay mazos creados.</div>';
     return;
   }
+  const expandido = tcgMazosVistaModo === 'expandido';
   listEl.innerHTML = store.map((mazo, idx) => {
     const { carta } = getMazoPrincipal(mazo, tcgData);
     const thumbHTML = carta && carta.imagen
       ? `<img src="${esc(carta.imagen)}" class="mazo-row-thumb" onerror="this.style.display='none'">`
       : '<div class="mazo-row-thumb mazo-row-thumb-empty"></div>';
+    const detailHTML = expandido ? construirMazoPublicDetailHTML(mazo, tcgData) : '';
     return `
-    <div class="mazo-row" onclick="toggleMazoPublicDetail(${idx}, this)">
+    <div class="mazo-row${expandido ? ' open' : ''}" onclick="toggleMazoPublicDetail(${idx}, this)">
       ${thumbHTML}
       <span class="mazo-row-name">${esc(mazo.nombre || 'Sin nombre')}</span>
       <span class="mazo-row-count">${(mazo.cartas || []).length} carta(s)</span>
       <span class="mazo-row-arrow">▾</span>
     </div>
-    <div class="mazo-detail" id="mazo-public-detail-${idx}"></div>`;
+    <div class="mazo-detail${expandido ? ' open' : ''}" id="mazo-public-detail-${idx}">${detailHTML}</div>`;
   }).join('');
 }
 
 function toggleMazoPublicDetail(idx, rowEl) {
+  if (tcgMazosVistaModo === 'expandido') return; // en modo expandido ya están todos abiertos
   const detailEl = document.getElementById(`mazo-public-detail-${idx}`);
   if (!detailEl) return;
 
@@ -3442,21 +3584,7 @@ function toggleMazoPublicDetail(idx, rowEl) {
   const mazo = store[idx];
   if (!mazo) return;
 
-  const principalIdx = Number.isInteger(mazo.principal) ? mazo.principal : 0;
-  const cartasHTML = (mazo.cartas || []).map((ref, i) => {
-    const cartasDelPokemon = (tcgData[ref.pokemon] && Array.isArray(tcgData[ref.pokemon].cartas))
-      ? tcgData[ref.pokemon].cartas : [];
-    const carta = resolverCartaDeRef(ref, cartasDelPokemon);
-    const img = carta && carta.imagen ? carta.imagen : '';
-    return `<div class="mazo-detail-card">
-      ${img
-        ? `<img src="${esc(img)}" class="mazo-detail-thumb" onerror="this.style.display='none'">`
-        : '<div class="mazo-detail-thumb mazo-detail-thumb-empty"></div>'}
-      <span class="mazo-detail-name">${i === principalIdx ? '⭐ ' : ''}${esc(ref.pokemon)}</span>
-    </div>`;
-  }).join('');
-
-  detailEl.innerHTML = cartasHTML || '<div class="result-empty" style="padding:6px 0">Este mazo no tiene cartas registradas</div>';
+  detailEl.innerHTML = construirMazoPublicDetailHTML(mazo, tcgData);
   detailEl.classList.add('open');
   rowEl.classList.add('open');
 }
@@ -3476,21 +3604,7 @@ function toggleMazoDetail(idx, rowEl) {
   const mazo = todosMazos[idx];
   if (!mazo) return;
 
-  const principalIdx = Number.isInteger(mazo.principal) ? mazo.principal : 0;
-  const cartasHTML = (mazo.cartas || []).map((ref, i) => {
-    const cartasDelPokemon = (todasCartasTCG[ref.pokemon] && Array.isArray(todasCartasTCG[ref.pokemon].cartas))
-      ? todasCartasTCG[ref.pokemon].cartas : [];
-    const carta = resolverCartaDeRef(ref, cartasDelPokemon);
-    const img = carta && carta.imagen ? carta.imagen : '';
-    return `<div class="mazo-detail-card">
-      ${img
-        ? `<img src="${esc(img)}" class="mazo-detail-thumb" onerror="this.style.display='none'">`
-        : '<div class="mazo-detail-thumb mazo-detail-thumb-empty"></div>'}
-      <span class="mazo-detail-name">${i === principalIdx ? '⭐ ' : ''}${esc(ref.pokemon)}</span>
-    </div>`;
-  }).join('');
-
-  detailEl.innerHTML = cartasHTML || '<div class="result-empty" style="padding:6px 0">Este mazo no tiene cartas registradas</div>';
+  detailEl.innerHTML = construirMazoPublicDetailHTML(mazo, todasCartasTCG);
   detailEl.classList.add('open');
   rowEl.classList.add('open');
 }
@@ -6230,7 +6344,7 @@ function openTcgCardsModal(name, mode) {
 // respecto a la última expansión, o dejar de existir en algún momento.
 const TCG_API_SETS_URL = 'https://api.github.com/repos/hugoburguete/pokemon-tcg-pocket-card-database/contents/cards/en';
 const TCG_API_IMG_BASE = 'https://raw.githubusercontent.com/zererr/pokemon-tcg-pocket-images/main/images/png/cards';
-const TCG_API_CACHE_KEY = 'tcgApiCardsCacheV1';
+const TCG_API_CACHE_KEY = 'tcgApiCardsCacheV2'; // v2: ahora incluye "attacks" por carta
 const TCG_API_CACHE_MS = 1000 * 60 * 60 * 24; // 1 día
 
 // Orden oficial de expansiones (coincide con el orden de EXPANSIONES_DEFAULT)
@@ -6322,7 +6436,7 @@ async function cargarBaseDeCartasTcgApi(forzar) {
         const r = await fetch(f.download_url);
         const cartas = await r.json();
         if (Array.isArray(cartas)) {
-          cartas.forEach(c => all.push({ id: c.id, name: c.name, rarity: c.rarity, set: c.set }));
+          cartas.forEach(c => all.push({ id: c.id, name: c.name, rarity: c.rarity, set: c.set, attacks: Array.isArray(c.attacks) ? c.attacks : [] }));
         }
       } catch (e) {
         console.warn('No se pudo cargar el set', f.name, e);
@@ -6401,12 +6515,91 @@ async function buscarCartasOficialesTcg() {
   variantes.forEach(c => resultsEl.appendChild(renderCarta(c)));
 }
 
+// Traductor heurístico de texto de ataques (inglés → castellano). No existe
+// ninguna fuente en español para estos datos, así que esto traduce por
+// patrones de frases típicas de las cartas (lanzar moneda, estados,
+// daño, etc.). Es una traducción aproximada, no oficial: lo que no
+// coincide con ningún patrón queda igual, en inglés.
+const TCG_ATAQUE_TRADUCCIONES = [
+  [/Flip (a|an) coin\.?/gi, 'Lanza una moneda.'],
+  [/Flip (\d+) coins\.?/gi, 'Lanza $1 monedas.'],
+  [/If heads,/gi, 'Si sale cara,'],
+  [/If tails,/gi, 'Si sale cruz,'],
+  [/for each heads/gi, 'por cada cara'],
+  [/your opponent's Active Pokémon is now/gi, 'el Pokémon Activo rival queda'],
+  [/your opponent's Active Pokémon/gi, 'el Pokémon Activo rival'],
+  [/your opponent's Benched Pokémon/gi, 'los Pokémon en la Banca rival'],
+  [/this Pokémon is now/gi, 'este Pokémon queda'],
+  [/this Pokémon/gi, 'este Pokémon'],
+  [/This Pokémon/gi, 'Este Pokémon'],
+  [/is now Paralyzed/gi, 'queda Paralizado'],
+  [/is now Poisoned/gi, 'queda Envenenado'],
+  [/is now Asleep/gi, 'queda Dormido'],
+  [/is now Confused/gi, 'queda Confuso'],
+  [/is now Burned/gi, 'queda Quemado'],
+  [/Paralyzed/gi, 'Paralizado'],
+  [/Poisoned/gi, 'Envenenado'],
+  [/Asleep/gi, 'Dormido'],
+  [/Confused/gi, 'Confuso'],
+  [/Burned/gi, 'Quemado'],
+  [/(\d+) more damage/gi, '$1 de daño más'],
+  [/(\d+) less damage/gi, '$1 de daño menos'],
+  [/this attack does/gi, 'este ataque hace'],
+  [/does (\d+) damage/gi, 'hace $1 de daño'],
+  [/for each of your Benched Pokémon/gi, 'por cada Pokémon en tu Banca'],
+  [/for each/gi, 'por cada'],
+  [/Discard (a|an) Energy/gi, 'Descarta una Energía'],
+  [/Discard all Energy/gi, 'Descarta toda la Energía'],
+  [/Discard/gi, 'Descarta'],
+  [/discard/gi, 'descarta'],
+  [/Draw a card/gi, 'Roba una carta'],
+  [/draw a card/gi, 'roba una carta'],
+  [/Heal (\d+) damage/gi, 'Cura $1 de daño'],
+  [/heal (\d+) damage/gi, 'cura $1 de daño'],
+  [/during your opponent's next turn/gi, 'durante el próximo turno de tu rival'],
+  [/during your next turn/gi, 'durante tu próximo turno'],
+  [/Energy attached to/gi, 'Energía adjunta a'],
+  [/Basic Pokémon/gi, 'Pokémon Básico'],
+  [/Evolution Pokémon/gi, 'Pokémon de Evolución'],
+  [/can't attack/gi, 'no puede atacar'],
+  [/can't retreat/gi, 'no puede retirarse'],
+  [/switch (it|this Pokémon) out/gi, 'cambia a $1'],
+  [/coin flip/gi, 'lanzamiento de moneda'],
+  [/\bdamage\b/gi, 'de daño'],
+  [/\band\b/gi, 'y'],
+  [/\byou\b/gi, 'tú'],
+  [/\byour\b/gi, 'tu'],
+];
+
+function traducirTextoAtaqueTcg(texto) {
+  if (!texto) return '';
+  let out = texto;
+  TCG_ATAQUE_TRADUCCIONES.forEach(([patron, reemplazo]) => { out = out.replace(patron, reemplazo); });
+  return out;
+}
+
+// Arma el texto del tooltip (title) con los ataques de una carta, ya
+// traducidos. Si la carta se cargó manualmente (sin pasar por el buscador
+// oficial), no hay datos de ataques guardados.
+function tooltipAtaquesCarta(carta) {
+  if (!carta || !Array.isArray(carta.ataques) || !carta.ataques.length) {
+    return 'Sin datos de ataques (carta cargada manualmente)';
+  }
+  return carta.ataques.map(a => {
+    const nombre = a.name || 'Ataque';
+    const dano = (a.damage !== undefined && a.damage !== null && a.damage !== '') ? ` — ${a.damage} de daño` : '';
+    const efecto = a.effect ? `\n${traducirTextoAtaqueTcg(a.effect)}` : '';
+    return `${nombre}${dano}${efecto}`;
+  }).join('\n\n');
+}
+
 function agregarCartaDesdeApi(c, img) {
   addTcgCardRow({
     rareza: mapearRarezaTcgApi(c.rarity),
     expansion: traducirExpansionTcgApi(c.set),
     color: '#888888',
-    imagen: img
+    imagen: img,
+    ataques: c.attacks || []
   });
   // si la expansión ya está en la lista sugerida, toma su color
   const list = document.getElementById('tcg-cards-list');
@@ -6458,6 +6651,9 @@ function addTcgCardRow(carta) {
   const row = document.createElement('div');
   row.className = 'tcg-card-row';
   row.dataset.cartaId = carta.id || ''; // se preserva para que las referencias en mazos no se rompan al re-guardar
+  // Ataques (si vinieron del buscador oficial): se guardan sin editor visual,
+  // solo para poder mostrarlos como tooltip en Consulta al pasar el mouse.
+  row.dataset.ataques = JSON.stringify(Array.isArray(carta.ataques) ? carta.ataques : []);
 
   const preview = document.createElement('img');
   preview.className = 'tcg-card-thumb';
@@ -6646,7 +6842,9 @@ function saveTcgCards() {
     const color = row.querySelector('.tcg-color-input').value;
     const imagen = row.querySelector('.tcg-imagen-input').value.trim();
     const id = row.dataset.cartaId || genCartaId();
-    if (expansion) cartas.push({ id, rareza, expansion, color, imagen });
+    let ataques = [];
+    try { ataques = JSON.parse(row.dataset.ataques || '[]'); } catch (e) { ataques = []; }
+    if (expansion) cartas.push({ id, rareza, expansion, color, imagen, ataques });
   });
   if (!store[tcgEditingPokemon]) store[tcgEditingPokemon] = emptyFn();
   store[tcgEditingPokemon].cartas = cartas;
