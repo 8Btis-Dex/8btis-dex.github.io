@@ -2098,6 +2098,55 @@
   }
   .modal-btns { display: flex; gap: 10px; justify-content: center; }
 
+  /* Detalle de carta (modal que se abre al tocar una carta de un mazo) */
+  .carta-detalle-ataque {
+    background: rgba(255,255,255,0.05);
+    border-radius: 8px;
+    padding: 8px 10px;
+    margin-bottom: 8px;
+  }
+  .carta-detalle-ataque-header {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.85rem;
+    margin-bottom: 4px;
+  }
+  .btn-editar-ataque {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 0.8rem;
+    margin-left: auto;
+    opacity: 0.7;
+    padding: 2px 4px;
+  }
+  .btn-editar-ataque:hover { opacity: 1; }
+  .carta-detalle-ataque-efecto { font-size: 0.8rem; color: var(--text); white-space: pre-wrap; }
+  .carta-detalle-ataque-textarea {
+    width: 100%;
+    min-height: 70px;
+    background: var(--black);
+    border: 1px solid rgba(255,255,255,0.15);
+    border-radius: 6px;
+    color: var(--text);
+    font-size: 0.8rem;
+    padding: 6px;
+    font-family: inherit;
+    resize: vertical;
+  }
+  .carta-detalle-mazo-footer {
+    margin-top: 14px;
+    padding-top: 10px;
+    border-top: 1px solid rgba(255,255,255,0.1);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.78rem;
+    color: var(--muted);
+  }
+  .carta-detalle-mazo-footer img { width: 22px; height: 22px; object-fit: contain; }
+
   /* Notification toast */
   .toast {
     position: fixed;
@@ -2753,7 +2802,6 @@
               <th style="text-align:center"><input type="checkbox" class="table-select-all-th" onchange="toggleSelectAllRows(this.checked)"></th>
               <th>#</th>
               <th>Pokémon / Entrenador / Objeto</th>
-              <th>Mazos</th>
               <th>Cartas</th>
               <th style="text-align:center">Borrar</th>
             </tr>
@@ -3023,6 +3071,26 @@
     <div class="modal-btns">
       <button class="btn btn-yellow" onclick="saveTcgCards()">💾 Guardar cartas</button>
       <button class="btn" style="background:#444;color:#fff" onclick="closeModal('modal-tcg-cards')">Cerrar</button>
+    </div>
+  </div>
+</div>
+
+<!-- DETALLE DE CARTA (se abre al tocar una carta dentro de un mazo): nombre,
+     rareza/expansión y ataques traducidos, con edición manual del texto del
+     efecto para el admin. Se cierra tocando fuera de la ventana. -->
+<div class="modal-overlay" id="modal-carta-detalle" onclick="if(event.target===this) closeModal('modal-carta-detalle')">
+  <div class="modal" style="max-width:420px;text-align:left">
+    <div style="display:flex;gap:12px;align-items:flex-start;margin-bottom:12px">
+      <img id="carta-detalle-img" src="" style="width:90px;border-radius:8px;flex-shrink:0;background:rgba(0,0,0,0.2)" onerror="this.style.display='none'">
+      <div style="flex:1;min-width:0">
+        <h3 style="text-align:left;margin-bottom:4px;font-size:0.75rem" id="carta-detalle-nombre"></h3>
+        <div id="carta-detalle-rareza-exp" style="font-size:0.78rem;color:var(--muted)"></div>
+      </div>
+    </div>
+    <div id="carta-detalle-ataques"></div>
+    <div id="carta-detalle-mazo-footer" class="carta-detalle-mazo-footer"></div>
+    <div class="modal-btns" style="margin-top:14px">
+      <button class="btn" style="background:#444;color:#fff" onclick="closeModal('modal-carta-detalle')">Cerrar</button>
     </div>
   </div>
 </div>
@@ -3445,10 +3513,14 @@ function construirMazoPublicDetailHTML(mazo, tcgData) {
     return '<div class="result-empty" style="padding:6px 0">Este mazo no tiene cartas registradas</div>';
   }
   const principalIdx = Number.isInteger(mazo.principal) ? mazo.principal : 0;
-  const { carta: cartaPrincipal } = getMazoPrincipal(mazo, tcgData);
+  const { ref: refPrincipal, carta: cartaPrincipal } = getMazoPrincipal(mazo, tcgData);
+  const nombreMazoJs = (mazo.nombre || 'Sin nombre').replace(/'/g, "\\'");
 
+  const principalClickAttr = (cartaPrincipal && cartaPrincipal.id && refPrincipal)
+    ? ` onclick="abrirCartaDetalle('${refPrincipal.pokemon.replace(/'/g,"\\'")}','${cartaPrincipal.id}','${nombreMazoJs}')" style="cursor:pointer"`
+    : '';
   const principalHTML = cartaPrincipal && cartaPrincipal.imagen
-    ? `<img src="${esc(cartaPrincipal.imagen)}" class="mazo-public-principal-img" title="${esc(tooltipAtaquesCarta(cartaPrincipal))}" onerror="this.style.display='none'">`
+    ? `<img src="${esc(cartaPrincipal.imagen)}" class="mazo-public-principal-img"${principalClickAttr} onerror="this.style.display='none'">`
     : `<div class="mazo-public-principal-img mazo-public-principal-img-empty">Sin cartas</div>`;
 
   const cartasHTML = mazo.cartas.map((ref, i) => {
@@ -3456,10 +3528,13 @@ function construirMazoPublicDetailHTML(mazo, tcgData) {
       ? tcgData[ref.pokemon].cartas : [];
     const carta = resolverCartaDeRef(ref, cartasDelPokemon);
     const img = carta && carta.imagen ? carta.imagen : '';
-    const tooltip = esc(`${ref.pokemon}${i === principalIdx ? ' ⭐' : ''}\n${tooltipAtaquesCarta(carta)}`);
+    const nombreEs = traducirNombrePokemon(ref.pokemon);
+    const clickAttr = (carta && carta.id)
+      ? ` onclick="abrirCartaDetalle('${ref.pokemon.replace(/'/g,"\\'")}','${carta.id}','${nombreMazoJs}')" style="cursor:pointer"`
+      : '';
     return img
-      ? `<img src="${esc(img)}" class="mazo-public-card-thumb${i === principalIdx ? ' es-principal' : ''}" title="${tooltip}" onerror="this.style.display='none'">`
-      : `<div class="mazo-public-card-thumb mazo-public-card-thumb-empty" title="${tooltip}">${esc(ref.pokemon)}</div>`;
+      ? `<img src="${esc(img)}" class="mazo-public-card-thumb${i === principalIdx ? ' es-principal' : ''}"${clickAttr} onerror="this.style.display='none'">`
+      : `<div class="mazo-public-card-thumb mazo-public-card-thumb-empty"${clickAttr}>${esc(nombreEs)}</div>`;
   }).join('');
 
   return `<div class="mazo-public-detail-wrap">
@@ -6085,15 +6160,10 @@ function renderTableTCG() {
     i = i + offsetStart;
     const d = dataTCG[name] || EMPTY_TCG();
     const cartas = Array.isArray(d.cartas) ? d.cartas : [];
-    const mazosDelPokemon = dataMazos.filter(m => m.cartas.some(c => c.pokemon === name));
-    const mazosHTML = mazosDelPokemon.length
-      ? mazosDelPokemon.map(m => esc(m.nombre || 'Sin nombre')).join(', ')
-      : '<span style="color:var(--muted);font-style:italic">Sin mazos</span>';
     return `<tr data-name="${esc(name).toLowerCase()}">
       <td style="text-align:center"><input type="checkbox" class="row-select-cb" value="${esc(name)}" onchange="updateBulkDeleteUI()"></td>
       <td style="color:var(--muted);font-size:0.8rem">${i+1}</td>
       <td class="name-cell-td"><input class="editable-cell name-cell" data-original-name="${esc(name)}" value="${esc(name)}" placeholder="Nombre"><button type="button" class="btn-nombre-mostrar" title="Nombre a mostrar en Consulta" onclick="editarNombreMostrar('${esc(name).replace(/'/g,"\\'")}')">🈂️</button></td>
-      <td style="font-size:0.85rem">${mazosHTML}</td>
       <td>
         <span class="tcg-cards-summary">${cartas.length} carta(s)</span>
         <button class="btn btn-primary" style="padding:6px 10px;font-size:0.75rem" onclick="openTcgCardsModal('${name.replace(/'/g,"\\'")}', 'tcg')">🃏 Gestionar</button>
@@ -6531,21 +6601,88 @@ async function traducirConMyMemory(texto) {
   }
 }
 
-// Arma el texto del tooltip (title) con los ataques de una carta. Prioridad:
-// 1) traducción de MyMemory ya guardada (effectEs/nombreEs) — la mejor.
-// 2) si la carta es vieja y no la tiene, traductor por patrones al vuelo.
-// 3) si no hay ningún dato de ataques (carta cargada manualmente), aviso.
-function tooltipAtaquesCarta(carta) {
-  if (!carta || !Array.isArray(carta.ataques) || !carta.ataques.length) {
-    return 'Sin datos de ataques (carta cargada manualmente)';
+// ── MODAL "DETALLE DE CARTA" ────────────────────────────────────────────────
+// Se abre al tocar una carta dentro de un mazo (tanto en Consulta como en el
+// editor de mazos del admin). Muestra nombre (traducido), rareza/expansión y
+// ataques ya traducidos; el admin además puede corregir a mano el texto del
+// efecto de cada ataque (queda guardado para siempre, no es una traducción
+// que se recalcula cada vez).
+let cartaDetalleActual = null; // { pokemonInterno, cartaId }
+
+function abrirCartaDetalle(pokemonInterno, cartaId, mazoNombre) {
+  const cartas = (dataTCG[pokemonInterno] && Array.isArray(dataTCG[pokemonInterno].cartas)) ? dataTCG[pokemonInterno].cartas : [];
+  const carta = cartas.find(c => c.id === cartaId);
+  if (!carta) return;
+
+  cartaDetalleActual = { pokemonInterno, cartaId };
+
+  const img = document.getElementById('carta-detalle-img');
+  if (carta.imagen) { img.src = carta.imagen; img.style.display = ''; } else { img.style.display = 'none'; }
+  document.getElementById('carta-detalle-nombre').textContent = traducirNombrePokemon(pokemonInterno);
+  document.getElementById('carta-detalle-rareza-exp').textContent = getCartaLabel(carta);
+
+  renderCartaDetalleAtaques(carta);
+
+  const footer = document.getElementById('carta-detalle-mazo-footer');
+  footer.innerHTML = mazoNombre ? `🗂️ Del mazo: <strong>${esc(mazoNombre)}</strong>` : '';
+
+  document.getElementById('modal-carta-detalle').classList.add('open');
+}
+
+// Dibuja (o vuelve a dibujar, tras guardar/cancelar una edición) la lista de
+// ataques de la carta que está abierta en el modal.
+function renderCartaDetalleAtaques(carta) {
+  const cont = document.getElementById('carta-detalle-ataques');
+  const ataques = Array.isArray(carta.ataques) ? carta.ataques : [];
+  if (!ataques.length) {
+    cont.innerHTML = '<div style="font-size:0.8rem;color:var(--muted);font-style:italic">Sin datos de ataques (carta cargada manualmente)</div>';
+    return;
   }
-  return carta.ataques.map(a => {
+  cont.innerHTML = ataques.map((a, i) => {
     const nombre = a.nombreEs || a.name || 'Ataque';
-    const dano = (a.damage !== undefined && a.damage !== null && a.damage !== '') ? ` — ${a.damage} de daño` : '';
+    const dano = (a.damage !== undefined && a.damage !== null && a.damage !== '') ? ` — ${esc(String(a.damage))} de daño` : '';
     const efectoTexto = a.effectEs || (a.effect ? traducirTextoAtaqueTcg(a.effect) : '');
-    const efecto = efectoTexto ? `\n${efectoTexto}` : '';
-    return `${nombre}${dano}${efecto}`;
-  }).join('\n\n');
+    return `<div class="carta-detalle-ataque">
+      <div class="carta-detalle-ataque-header">
+        <strong>${esc(nombre)}</strong>${dano}
+        ${isSiteOwner() ? `<button type="button" class="btn-editar-ataque" title="Editar el texto de este ataque" onclick="editarAtaqueCarta(${i})">✏️</button>` : ''}
+      </div>
+      <div class="carta-detalle-ataque-efecto" id="carta-detalle-ataque-efecto-${i}">${efectoTexto ? esc(efectoTexto) : '<span style="color:var(--muted);font-style:italic">Sin texto de efecto</span>'}</div>
+    </div>`;
+  }).join('');
+}
+
+function obtenerCartaDetalleActual() {
+  if (!cartaDetalleActual) return null;
+  const cartas = (dataTCG[cartaDetalleActual.pokemonInterno] && dataTCG[cartaDetalleActual.pokemonInterno].cartas) || [];
+  return cartas.find(c => c.id === cartaDetalleActual.cartaId) || null;
+}
+
+function editarAtaqueCarta(i) {
+  const carta = obtenerCartaDetalleActual();
+  if (!carta || !Array.isArray(carta.ataques) || !carta.ataques[i]) return;
+  const a = carta.ataques[i];
+  const actual = a.effectEs || a.effect || '';
+  const el = document.getElementById(`carta-detalle-ataque-efecto-${i}`);
+  if (!el) return;
+  el.innerHTML = `
+    <textarea class="carta-detalle-ataque-textarea" id="carta-detalle-ataque-textarea-${i}">${esc(actual)}</textarea>
+    <div class="modal-btns" style="justify-content:flex-start;margin-top:6px">
+      <button type="button" class="btn btn-yellow" style="padding:4px 10px;font-size:0.72rem" onclick="guardarAtaqueCarta(${i})">💾 Guardar</button>
+      <button type="button" class="btn" style="padding:4px 10px;font-size:0.72rem;background:#444;color:#fff" onclick="renderCartaDetalleAtaques(obtenerCartaDetalleActual())">Cancelar</button>
+    </div>
+  `;
+}
+
+function guardarAtaqueCarta(i) {
+  const carta = obtenerCartaDetalleActual();
+  if (!carta || !Array.isArray(carta.ataques) || !carta.ataques[i]) return;
+  const textarea = document.getElementById(`carta-detalle-ataque-textarea-${i}`);
+  if (!textarea) return;
+  carta.ataques[i].effectEs = textarea.value.trim();
+  persistAll();
+  renderCartaDetalleAtaques(carta);
+  showToast('✅ Texto del ataque actualizado');
 }
 
 async function agregarCartaDesdeTcgdex(detalle, img) {
@@ -6917,7 +7054,7 @@ function renderMazos(mode) {
     const principalHTML = carta && carta.imagen
       ? `<img src="${esc(carta.imagen)}" class="mazo-principal-img" onerror="this.style.display='none'">`
       : ref
-        ? `<div class="mazo-principal-img mazo-principal-img-empty">${esc(ref.pokemon)}</div>`
+        ? `<div class="mazo-principal-img mazo-principal-img-empty">${esc(traducirNombrePokemon(ref.pokemon))}</div>`
         : `<div class="mazo-principal-img mazo-principal-img-empty">Sin cartas</div>`;
     return `<div class="mazo-card" data-mazo-idx="${idx}" data-mazo-mode="${mode}">
       <div class="mazo-card-header">
@@ -7306,16 +7443,21 @@ function renderMazoCardsList() {
     return;
   }
   const principalIdx = Number.isInteger(mazo.principal) ? mazo.principal : 0;
+  const nombreMazoJs = (mazo.nombre || 'Sin nombre').replace(/'/g, "\\'");
   list.innerHTML = mazo.cartas.map((ref, i) => {
     const cartasRef = (tcgData[ref.pokemon] && Array.isArray(tcgData[ref.pokemon].cartas)) ? tcgData[ref.pokemon].cartas : [];
     const carta = resolverCartaDeRef(ref, cartasRef);
     const img = carta && carta.imagen ? carta.imagen : '';
     const label = carta ? getCartaLabel(carta) : 'Carta no encontrada';
     const esPrincipal = i === principalIdx;
+    const nombreEs = traducirNombrePokemon(ref.pokemon);
+    const clickAttr = (carta && carta.id)
+      ? ` onclick="abrirCartaDetalle('${ref.pokemon.replace(/'/g,"\\'")}','${carta.id}','${nombreMazoJs}')" style="cursor:pointer"`
+      : '';
     return `<div class="mazo-card-row">
-      ${img ? `<img src="${esc(img)}" class="mazo-card-row-thumb" onerror="this.style.display='none'">` : '<div class="mazo-card-row-thumb"></div>'}
-      <div class="mazo-card-row-info">
-        <div class="mazo-card-row-name">${esc(ref.pokemon)}</div>
+      ${img ? `<img src="${esc(img)}" class="mazo-card-row-thumb"${clickAttr} onerror="this.style.display='none'">` : `<div class="mazo-card-row-thumb"${clickAttr}></div>`}
+      <div class="mazo-card-row-info"${clickAttr}>
+        <div class="mazo-card-row-name">${esc(nombreEs)}</div>
         <div class="mazo-card-row-exp">${esc(label)}</div>
       </div>
       <button class="mazo-card-row-star ${esPrincipal ? 'active' : ''}" title="${esPrincipal ? 'Es la carta principal del mazo' : 'Usar como carta principal'}" onclick="setMazoPrincipal(${i})">⭐</button>
