@@ -2123,6 +2123,17 @@
   }
   .btn-editar-ataque:hover { opacity: 1; }
   .carta-detalle-ataque-efecto { font-size: 0.8rem; color: var(--text); white-space: pre-wrap; }
+  .carta-detalle-ataque-input {
+    width: 100%;
+    background: var(--black);
+    border: 1px solid rgba(255,255,255,0.15);
+    border-radius: 6px;
+    color: var(--text);
+    font-size: 0.8rem;
+    padding: 6px;
+    font-family: inherit;
+    margin-bottom: 6px;
+  }
   .carta-detalle-ataque-textarea {
     width: 100%;
     min-height: 70px;
@@ -6699,22 +6710,25 @@ function renderCartaDetalleAtaques(carta) {
   const cont = document.getElementById('carta-detalle-ataques');
   const ataques = Array.isArray(carta.ataques) ? carta.ataques : [];
   const permitirEditar = !!(cartaDetalleActual && cartaDetalleActual.permitirEditar);
+  const botonAgregar = permitirEditar
+    ? `<button type="button" class="btn btn-primary" style="width:100%;margin-top:6px;padding:6px;font-size:0.75rem" onclick="agregarAtaqueManualCarta()">➕ Agregar ataque</button>`
+    : '';
   if (!ataques.length) {
-    cont.innerHTML = '<div style="font-size:0.8rem;color:var(--muted);font-style:italic">Sin datos de ataques (carta cargada manualmente)</div>';
+    cont.innerHTML = '<div style="font-size:0.8rem;color:var(--muted);font-style:italic;margin-bottom:6px">Sin datos de ataques (carta cargada manualmente)</div>' + botonAgregar;
     return;
   }
   cont.innerHTML = ataques.map((a, i) => {
     const nombre = a.nombreEs || a.name || 'Ataque';
     const dano = (a.damage !== undefined && a.damage !== null && a.damage !== '') ? ` — ${esc(String(a.damage))} de daño` : '';
     const efectoTexto = a.effectEs || (a.effect ? traducirTextoAtaqueTcg(a.effect) : '');
-    return `<div class="carta-detalle-ataque">
+    return `<div class="carta-detalle-ataque" id="carta-detalle-ataque-${i}">
       <div class="carta-detalle-ataque-header">
         <strong>${esc(nombre)}</strong>${dano}
-        ${permitirEditar ? `<button type="button" class="btn-editar-ataque" title="Editar el texto de este ataque" onclick="editarAtaqueCarta(${i})">✏️</button>` : ''}
+        ${permitirEditar ? `<button type="button" class="btn-editar-ataque" title="Editar este ataque" onclick="editarAtaqueCarta(${i})">✏️</button>` : ''}
       </div>
       <div class="carta-detalle-ataque-efecto" id="carta-detalle-ataque-efecto-${i}">${efectoTexto ? esc(efectoTexto) : '<span style="color:var(--muted);font-style:italic">Sin texto de efecto</span>'}</div>
     </div>`;
-  }).join('');
+  }).join('') + botonAgregar;
 }
 
 function obtenerCartaDetalleActual() {
@@ -6723,15 +6737,33 @@ function obtenerCartaDetalleActual() {
   return cartas.find(c => c.id === cartaDetalleActual.cartaId) || null;
 }
 
+// Agrega un ataque en blanco (para cartas cargadas manualmente, que no
+// tienen ningún dato de ataques) y abre directamente su edición.
+function agregarAtaqueManualCarta() {
+  const carta = obtenerCartaDetalleActual();
+  if (!carta) return;
+  if (!Array.isArray(carta.ataques)) carta.ataques = [];
+  carta.ataques.push({ name: '', nombreEs: '', damage: '', effect: '', effectEs: '' });
+  persistAll();
+  renderCartaDetalleAtaques(carta);
+  editarAtaqueCarta(carta.ataques.length - 1);
+}
+
+// Edita nombre, daño y efecto de un ataque (reemplaza todo el bloque, no
+// solo el texto del efecto, para poder ponerle nombre a un ataque nuevo).
 function editarAtaqueCarta(i) {
   const carta = obtenerCartaDetalleActual();
   if (!carta || !Array.isArray(carta.ataques) || !carta.ataques[i]) return;
   const a = carta.ataques[i];
-  const actual = a.effectEs || a.effect || '';
-  const el = document.getElementById(`carta-detalle-ataque-efecto-${i}`);
-  if (!el) return;
-  el.innerHTML = `
-    <textarea class="carta-detalle-ataque-textarea" id="carta-detalle-ataque-textarea-${i}">${esc(actual)}</textarea>
+  const nombreActual = a.nombreEs || a.name || '';
+  const danoActual = (a.damage !== undefined && a.damage !== null) ? a.damage : '';
+  const efectoActual = a.effectEs || a.effect || '';
+  const bloque = document.getElementById(`carta-detalle-ataque-${i}`);
+  if (!bloque) return;
+  bloque.innerHTML = `
+    <input type="text" class="carta-detalle-ataque-input" id="carta-detalle-ataque-nombre-${i}" placeholder="Nombre del ataque" value="${esc(nombreActual)}">
+    <input type="text" class="carta-detalle-ataque-input" id="carta-detalle-ataque-dano-${i}" placeholder="Daño (opcional)" value="${esc(String(danoActual))}">
+    <textarea class="carta-detalle-ataque-textarea" id="carta-detalle-ataque-textarea-${i}" placeholder="Efecto del ataque (opcional)">${esc(efectoActual)}</textarea>
     <div class="modal-btns" style="justify-content:flex-start;margin-top:6px">
       <button type="button" class="btn btn-yellow" style="padding:4px 10px;font-size:0.72rem" onclick="guardarAtaqueCarta(${i})">💾 Guardar</button>
       <button type="button" class="btn" style="padding:4px 10px;font-size:0.72rem;background:#444;color:#fff" onclick="renderCartaDetalleAtaques(obtenerCartaDetalleActual())">Cancelar</button>
@@ -6742,12 +6774,19 @@ function editarAtaqueCarta(i) {
 function guardarAtaqueCarta(i) {
   const carta = obtenerCartaDetalleActual();
   if (!carta || !Array.isArray(carta.ataques) || !carta.ataques[i]) return;
+  const nombreInput = document.getElementById(`carta-detalle-ataque-nombre-${i}`);
+  const danoInput = document.getElementById(`carta-detalle-ataque-dano-${i}`);
   const textarea = document.getElementById(`carta-detalle-ataque-textarea-${i}`);
-  if (!textarea) return;
+  if (!nombreInput || !textarea) return;
+  const nombre = nombreInput.value.trim();
+  carta.ataques[i].nombreEs = nombre;
+  if (!carta.ataques[i].name) carta.ataques[i].name = nombre; // ataque nuevo, sin nombre original en inglés
+  const danoVal = danoInput ? danoInput.value.trim() : '';
+  carta.ataques[i].damage = danoVal === '' ? undefined : danoVal;
   carta.ataques[i].effectEs = textarea.value.trim();
   persistAll();
   renderCartaDetalleAtaques(carta);
-  showToast('✅ Texto del ataque actualizado');
+  showToast('✅ Ataque actualizado');
 }
 
 async function agregarCartaDesdeTcgdex(detalle, img) {
