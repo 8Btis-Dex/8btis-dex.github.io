@@ -2146,7 +2146,8 @@
     color: var(--muted);
   }
   .carta-detalle-mazo-footer img { width: 22px; height: 22px; object-fit: contain; }
-  .carta-detalle-expansion-icon { height: 20px; width: auto; max-width: 90px; object-fit: contain; vertical-align: middle; }
+  .carta-detalle-expansion-row { margin-top: 6px; }
+  .carta-detalle-expansion-icon { height: 76px; width: auto; max-width: 100%; object-fit: contain; }
 
   /* Notification toast */
   .toast {
@@ -6673,7 +6674,8 @@ function abrirCartaDetalle(pokemonInterno, cartaId, mazoNombre, permitirEditar) 
     ? `<img src="${iconoExpansion}" class="carta-detalle-expansion-icon" title="${esc(carta.expansion || '')}" onerror="this.replaceWith(document.createTextNode('${esc(carta.expansion || '').replace(/'/g,"\\'")}'))">`
     : esc(carta.expansion || '');
   document.getElementById('carta-detalle-rareza-exp').innerHTML =
-    `<span class="tcg-rareza-icons" title="${esc(r.label)}">${rarezaIconsHTML}</span> ${expansionHTML}`;
+    `<div class="tcg-rareza-icons" title="${esc(r.label)}">${rarezaIconsHTML}</div>
+     <div class="carta-detalle-expansion-row">${expansionHTML}</div>`;
 
   renderCartaDetalleAtaques(carta);
 
