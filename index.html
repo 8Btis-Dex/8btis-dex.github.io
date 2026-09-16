@@ -6301,7 +6301,12 @@ const EXPANSION_ES_A_CODIGO = {
 // todavía no está en el mapa), devuelve cadena vacía y quien llama debe
 // mostrar el nombre de texto como respaldo.
 function iconoDeExpansionPorNombre(nombreEs) {
-  const codigo = EXPANSION_ES_A_CODIGO[(nombreEs || '').trim().toLowerCase()];
+  const clave = (nombreEs || '').trim().toLowerCase();
+  // Normalmente ya viene en español, pero TCGdex no siempre traduce el
+  // nombre del set (ej. "Paldean Wonders" se queda en inglés aunque se pida
+  // /es/), así que si no matchea directo, probamos traduciéndolo primero.
+  const codigo = EXPANSION_ES_A_CODIGO[clave]
+    || EXPANSION_ES_A_CODIGO[(traducirExpansionTcgApi(nombreEs) || '').trim().toLowerCase()];
   return codigo ? setCodeAIconoUrl(codigo) : '';
 }
 
@@ -6756,7 +6761,7 @@ async function agregarCartaDesdeTcgdex(detalle, img) {
   }));
   addTcgCardRow({
     rareza: mapearRarezaTcgdex(detalle.rarity),
-    expansion: (detalle.set && detalle.set.name) || '',
+    expansion: traducirExpansionTcgApi((detalle.set && detalle.set.name) || ''),
     color: '#888888',
     imagen: img,
     ataques
