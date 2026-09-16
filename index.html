@@ -2146,6 +2146,7 @@
     color: var(--muted);
   }
   .carta-detalle-mazo-footer img { width: 22px; height: 22px; object-fit: contain; }
+  .carta-detalle-expansion-icon { height: 20px; width: auto; max-width: 90px; object-fit: contain; vertical-align: middle; }
 
   /* Notification toast */
   .toast {
@@ -3517,7 +3518,7 @@ function construirMazoPublicDetailHTML(mazo, tcgData) {
   const nombreMazoJs = (mazo.nombre || 'Sin nombre').replace(/'/g, "\\'");
 
   const principalClickAttr = (cartaPrincipal && cartaPrincipal.id && refPrincipal)
-    ? ` onclick="abrirCartaDetalle('${refPrincipal.pokemon.replace(/'/g,"\\'")}','${cartaPrincipal.id}','${nombreMazoJs}')" style="cursor:pointer"`
+    ? ` onclick="abrirCartaDetalle('${refPrincipal.pokemon.replace(/'/g,"\\'")}','${cartaPrincipal.id}','${nombreMazoJs}',false)" style="cursor:pointer"`
     : '';
   const principalHTML = cartaPrincipal && cartaPrincipal.imagen
     ? `<img src="${esc(cartaPrincipal.imagen)}" class="mazo-public-principal-img"${principalClickAttr} onerror="this.style.display='none'">`
@@ -3530,7 +3531,7 @@ function construirMazoPublicDetailHTML(mazo, tcgData) {
     const img = carta && carta.imagen ? carta.imagen : '';
     const nombreEs = traducirNombrePokemon(ref.pokemon);
     const clickAttr = (carta && carta.id)
-      ? ` onclick="abrirCartaDetalle('${ref.pokemon.replace(/'/g,"\\'")}','${carta.id}','${nombreMazoJs}')" style="cursor:pointer"`
+      ? ` onclick="abrirCartaDetalle('${ref.pokemon.replace(/'/g,"\\'")}','${carta.id}','${nombreMazoJs}',false)" style="cursor:pointer"`
       : '';
     return img
       ? `<img src="${esc(img)}" class="mazo-public-card-thumb${i === principalIdx ? ' es-principal' : ''}"${clickAttr} onerror="this.style.display='none'">`
@@ -6264,6 +6265,45 @@ function traducirExpansionTcgApi(setRaw) {
   return TCG_SET_ES_MAP[limpio] || (setRaw || '').replace(/\s*\([^)]*\)\s*$/, '').trim();
 }
 
+// Mapa inverso: nombre de expansión en español (como se guarda en cada
+// carta) -> código de set (para poder buscar su ícono en el repo de
+// imágenes de zererr, que usa esos códigos en minúscula como nombre de
+// carpeta). Mismo orden oficial que EXPANSIONES_DEFAULT.
+const EXPANSION_ES_A_CODIGO = {
+  'genes formidables': 'a1',
+  'la isla singular': 'a1a',
+  'pugna espaciotemporal': 'a2',
+  'luz triunfal': 'a2a',
+  'festival brillante': 'a2b',
+  'guardianes celestiales': 'a3',
+  'crisis dimensional': 'a3a',
+  'arboleda de eevee': 'a3b',
+  'saber marino y celeste': 'a4',
+  'manantial oculto': 'a4a',
+  'sobre deluxe ex': 'a4b',
+  'megaascenso': 'b1',
+  'fuego carmesí': 'b1a',
+  'desfile de ensueño': 'b2',
+  'encantos de paldea': 'b2a',
+  'megavariocolor': 'b2b',
+  'aura pulsante': 'b3',
+  'impulso paradójico': 'b3a',
+  'maravillas cotidianas': 'b3b',
+  'dominador de los cielos': 'b4',
+  'ambición del team rocket': 'b4a',
+  'promo-a': 'pa',
+  'promo-b': 'pb'
+};
+
+// Ícono de expansión a partir del nombre en español guardado en la carta.
+// Si no se reconoce (expansión cargada con otro nombre, o una futura que
+// todavía no está en el mapa), devuelve cadena vacía y quien llama debe
+// mostrar el nombre de texto como respaldo.
+function iconoDeExpansionPorNombre(nombreEs) {
+  const codigo = EXPANSION_ES_A_CODIGO[(nombreEs || '').trim().toLowerCase()];
+  return codigo ? setCodeAIconoUrl(codigo) : '';
+}
+
 // Rareza de TCGdex viene como texto en español ("Un Diamante", "Dos
 // Diamantes"...). Mapeo aproximado a los códigos que ya usa la app.
 function mapearRarezaTcgdex(rarezaTexto) {
@@ -6607,19 +6647,33 @@ async function traducirConMyMemory(texto) {
 // ataques ya traducidos; el admin además puede corregir a mano el texto del
 // efecto de cada ataque (queda guardado para siempre, no es una traducción
 // que se recalcula cada vez).
-let cartaDetalleActual = null; // { pokemonInterno, cartaId }
+let cartaDetalleActual = null; // { pokemonInterno, cartaId, permitirEditar }
 
-function abrirCartaDetalle(pokemonInterno, cartaId, mazoNombre) {
+function abrirCartaDetalle(pokemonInterno, cartaId, mazoNombre, permitirEditar) {
   const cartas = (dataTCG[pokemonInterno] && Array.isArray(dataTCG[pokemonInterno].cartas)) ? dataTCG[pokemonInterno].cartas : [];
   const carta = cartas.find(c => c.id === cartaId);
   if (!carta) return;
 
-  cartaDetalleActual = { pokemonInterno, cartaId };
+  cartaDetalleActual = { pokemonInterno, cartaId, permitirEditar: !!permitirEditar };
 
   const img = document.getElementById('carta-detalle-img');
   if (carta.imagen) { img.src = carta.imagen; img.style.display = ''; } else { img.style.display = 'none'; }
   document.getElementById('carta-detalle-nombre').textContent = traducirNombrePokemon(pokemonInterno);
-  document.getElementById('carta-detalle-rareza-exp').textContent = getCartaLabel(carta);
+
+  // Rareza y expansión como íconos (no texto): la rareza usa los mismos
+  // diamantes/estrellas que ya se ven en Consulta, y la expansión su logo
+  // (si el nombre guardado coincide con uno conocido; si no, se cae al
+  // nombre de texto como respaldo, para no dejar el espacio vacío).
+  const r = RAREZA_INFO[carta.rareza] || { label: carta.rareza || '—', icon: null, count: 0 };
+  const rarezaIconsHTML = r.icon
+    ? Array.from({ length: r.count }).map(() => `<img src="${RAREZA_ICONS[r.icon]}" alt="" class="tcg-rareza-img">`).join('')
+    : esc(r.label);
+  const iconoExpansion = iconoDeExpansionPorNombre(carta.expansion);
+  const expansionHTML = iconoExpansion
+    ? `<img src="${iconoExpansion}" class="carta-detalle-expansion-icon" title="${esc(carta.expansion || '')}" onerror="this.replaceWith(document.createTextNode('${esc(carta.expansion || '').replace(/'/g,"\\'")}'))">`
+    : esc(carta.expansion || '');
+  document.getElementById('carta-detalle-rareza-exp').innerHTML =
+    `<span class="tcg-rareza-icons" title="${esc(r.label)}">${rarezaIconsHTML}</span> ${expansionHTML}`;
 
   renderCartaDetalleAtaques(carta);
 
@@ -6630,10 +6684,14 @@ function abrirCartaDetalle(pokemonInterno, cartaId, mazoNombre) {
 }
 
 // Dibuja (o vuelve a dibujar, tras guardar/cancelar una edición) la lista de
-// ataques de la carta que está abierta en el modal.
+// ataques de la carta que está abierta en el modal. El botón de editar
+// SOLO aparece si el modal se abrió desde Datos (mazoEditingMode del admin),
+// nunca desde Consulta — así ningún visitante puede cambiar información,
+// sin importar si su navegador tiene o no la contraseña de admin guardada.
 function renderCartaDetalleAtaques(carta) {
   const cont = document.getElementById('carta-detalle-ataques');
   const ataques = Array.isArray(carta.ataques) ? carta.ataques : [];
+  const permitirEditar = !!(cartaDetalleActual && cartaDetalleActual.permitirEditar);
   if (!ataques.length) {
     cont.innerHTML = '<div style="font-size:0.8rem;color:var(--muted);font-style:italic">Sin datos de ataques (carta cargada manualmente)</div>';
     return;
@@ -6645,7 +6703,7 @@ function renderCartaDetalleAtaques(carta) {
     return `<div class="carta-detalle-ataque">
       <div class="carta-detalle-ataque-header">
         <strong>${esc(nombre)}</strong>${dano}
-        ${isSiteOwner() ? `<button type="button" class="btn-editar-ataque" title="Editar el texto de este ataque" onclick="editarAtaqueCarta(${i})">✏️</button>` : ''}
+        ${permitirEditar ? `<button type="button" class="btn-editar-ataque" title="Editar el texto de este ataque" onclick="editarAtaqueCarta(${i})">✏️</button>` : ''}
       </div>
       <div class="carta-detalle-ataque-efecto" id="carta-detalle-ataque-efecto-${i}">${efectoTexto ? esc(efectoTexto) : '<span style="color:var(--muted);font-style:italic">Sin texto de efecto</span>'}</div>
     </div>`;
@@ -7452,7 +7510,7 @@ function renderMazoCardsList() {
     const esPrincipal = i === principalIdx;
     const nombreEs = traducirNombrePokemon(ref.pokemon);
     const clickAttr = (carta && carta.id)
-      ? ` onclick="abrirCartaDetalle('${ref.pokemon.replace(/'/g,"\\'")}','${carta.id}','${nombreMazoJs}')" style="cursor:pointer"`
+      ? ` onclick="abrirCartaDetalle('${ref.pokemon.replace(/'/g,"\\'")}','${carta.id}','${nombreMazoJs}',true)" style="cursor:pointer"`
       : '';
     return `<div class="mazo-card-row">
       ${img ? `<img src="${esc(img)}" class="mazo-card-row-thumb"${clickAttr} onerror="this.style.display='none'">` : `<div class="mazo-card-row-thumb"${clickAttr}></div>`}
