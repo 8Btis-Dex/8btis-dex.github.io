@@ -6772,7 +6772,7 @@ function renderCartaDetalleAtaques(carta) {
         <strong>${esc(nombre)}</strong>${dano}
         ${permitirEditar ? `<button type="button" class="btn-editar-ataque" title="Editar este ataque" onclick="editarAtaqueCarta(${i})">✏️</button>` : ''}
       </div>
-      <div class="carta-detalle-ataque-efecto" id="carta-detalle-ataque-efecto-${i}">${efectoTexto ? esc(efectoTexto) : '<span style="color:var(--muted);font-style:italic">Sin texto de efecto</span>'}</div>
+      ${efectoTexto ? `<div class="carta-detalle-ataque-efecto" id="carta-detalle-ataque-efecto-${i}">${esc(efectoTexto)}</div>` : ''}
     </div>`;
   }).join('') + botonAgregar;
 }
