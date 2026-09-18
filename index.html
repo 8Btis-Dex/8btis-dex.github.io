@@ -6764,12 +6764,12 @@ function renderCartaDetalleAtaques(carta) {
     return;
   }
   cont.innerHTML = ataques.map((a, i) => {
-    const nombre = a.nombreEs || a.name || 'Ataque';
+    const nombre = a.nombreEs || a.name || '';
     const dano = (a.damage !== undefined && a.damage !== null && a.damage !== '') ? ` — ${esc(String(a.damage))} de daño` : '';
     const efectoTexto = a.effectEs || (a.effect ? traducirTextoAtaqueTcg(a.effect) : '');
     return `<div class="carta-detalle-ataque" id="carta-detalle-ataque-${i}">
       <div class="carta-detalle-ataque-header">
-        <strong>${esc(nombre)}</strong>${dano}
+        ${nombre ? `<strong>${esc(nombre)}</strong>` : ''}${dano}
         ${permitirEditar ? `<button type="button" class="btn-editar-ataque" title="Editar este ataque" onclick="editarAtaqueCarta(${i})">✏️</button>` : ''}
       </div>
       ${efectoTexto ? `<div class="carta-detalle-ataque-efecto" id="carta-detalle-ataque-efecto-${i}">${esc(efectoTexto)}</div>` : ''}
