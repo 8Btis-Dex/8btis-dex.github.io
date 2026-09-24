@@ -3207,6 +3207,7 @@
 <!-- Firebase (sincronización de datos en la nube) -->
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 
 <script>
 // ── LISTA BASE DE POKÉMON (usada solo como semilla inicial de migración) ─
@@ -4349,8 +4350,12 @@ function showToast(msg, isError = false) {
 
 // ==================== PANEL DE DATOS (ADMIN) ====================
 
-// ── CONTRASEÑA (misma que el archivo principal) ─────────────────────────
-const CORRECT_PASSWORD = btoa("Maite1805");
+// ── CONTRASEÑA ────────────────────────────────────────────────────────────
+// Ahora se valida contra Firebase Authentication (no queda ninguna contraseña
+// escrita en este archivo). El email es fijo porque hay un solo admin; la
+// contraseña la define el propio Firebase, en Authentication → Users.
+// TODO: reemplazar por el email que crees en Firebase Authentication.
+const ADMIN_EMAIL = "cfedericotoledo@gmail.com";
 let datosUnlocked = false;
 let currentDatosMode = 'champions'; // 'champions' | 'go' | 'tcg'
 
@@ -5801,6 +5806,7 @@ function initFirebaseSync() {
   try {
     firebase.initializeApp(firebaseConfig);
     window._fbDb = firebase.firestore();
+    window._fbAuth = firebase.auth();
     // Encola las escrituras en IndexedDB si no hay conexión o si la app se
     // cierra antes de que termine el guardado; Firestore las reintenta solo
     // apenas hay red, incluso en una sesión posterior. Esto es clave en
@@ -5952,25 +5958,36 @@ function reiniciarContadorVisitas() {
 }
 
 // ── CONTRASEÑA ────────────────────────────────────────────────────────────
+// Antes comparaba contra una contraseña fija escrita en este archivo (visible
+// para cualquiera que abriera el código). Ahora delega en Firebase
+// Authentication: el input sigue siendo el mismo campo de "contraseña", pero
+// lo que se escribe se valida contra el usuario admin creado en la consola
+// de Firebase (Authentication → Users), no contra un texto en este archivo.
 function checkAdminPassword() {
   const input = document.getElementById('admin-pass-input').value;
-  if (btoa(unescape(encodeURIComponent(input))) === CORRECT_PASSWORD || btoa(input) === CORRECT_PASSWORD) {
-    datosUnlocked = true;
-    // Este dispositivo queda marcado como "dueño" para siempre: sus futuras
-    // visitas no se suman al contador público de visitas.
-    try { localStorage.setItem('siteOwner', 'true'); } catch (e) {}
-    document.getElementById('admin-pass-input').value = '';
-    document.getElementById('admin-pass-input').classList.remove('wrong');
-    const tabBtn = document.querySelector('.tab-btn.datos');
-    if (tabBtn) tabBtn.style.display = '';
-    // Antes de cargar Datos, se pregunta qué versión usar en este dispositivo.
-    document.getElementById('modal-datos-version').classList.add('open');
-  } else {
-    document.getElementById('admin-pass-input').value = '';
-    const input2 = document.getElementById('admin-pass-input');
-    input2.classList.add('wrong');
-    setTimeout(() => input2.classList.remove('wrong'), 600);
+  if (!window._fbAuth) {
+    showToast('⚠️ Todavía no se conectó a la nube, esperá un momento y volvé a intentar.', true);
+    return;
   }
+  window._fbAuth.signInWithEmailAndPassword(ADMIN_EMAIL, input)
+    .then(() => {
+      datosUnlocked = true;
+      // Este dispositivo queda marcado como "dueño" para siempre: sus futuras
+      // visitas no se suman al contador público de visitas.
+      try { localStorage.setItem('siteOwner', 'true'); } catch (e) {}
+      document.getElementById('admin-pass-input').value = '';
+      document.getElementById('admin-pass-input').classList.remove('wrong');
+      const tabBtn = document.querySelector('.tab-btn.datos');
+      if (tabBtn) tabBtn.style.display = '';
+      // Antes de cargar Datos, se pregunta qué versión usar en este dispositivo.
+      document.getElementById('modal-datos-version').classList.add('open');
+    })
+    .catch(() => {
+      document.getElementById('admin-pass-input').value = '';
+      const input2 = document.getElementById('admin-pass-input');
+      input2.classList.add('wrong');
+      setTimeout(() => input2.classList.remove('wrong'), 600);
+    });
 }
 
 // Se llama al elegir Lite o Completa en el modal que aparece tras la contraseña.
@@ -9139,10 +9156,12 @@ function trueqeFiltrar(f, btn) {
   trueqeRenderBinder();
 }
 
-// ── BORRADO POR ADMIN (misma contraseña que la sección Datos) ───────────────
+// ── BORRADO POR ADMIN (misma autenticación que la sección Datos) ───────────
 // Permite habilitar la "✕" de borrado en el tablón público (no solo en "Mis
-// publicaciones") si se conoce la contraseña de administrador, para poder
+// publicaciones") si se inicia sesión como administrador, para poder
 // limpiar intercambios ya cerrados aunque el usuario que los publicó no esté.
+// Ya no compara contra ninguna contraseña escrita en este archivo: valida
+// contra el mismo usuario de Firebase Authentication que la sección Datos.
 let trueqeAdminUnlocked = false;
 
 function trueqeAdminToggle() {
@@ -9154,16 +9173,22 @@ function trueqeAdminToggle() {
     showToast('🔒 Modo administrador desactivado');
     return;
   }
+  if (!window._fbAuth) {
+    showToast('⚠️ Todavía no se conectó a la nube, esperá un momento y volvé a intentar.', true);
+    return;
+  }
   const input = prompt('Contraseña de administrador:');
   if (input == null) return;
-  if (btoa(unescape(encodeURIComponent(input))) === CORRECT_PASSWORD || btoa(input) === CORRECT_PASSWORD) {
-    trueqeAdminUnlocked = true;
-    if (btn) { btn.textContent = '🔓 Salir de modo admin'; btn.classList.add('btn-danger'); }
-    trueqeRenderBinder();
-    showToast('🔓 Modo administrador activado: ya podés borrar cualquier publicación del tablón');
-  } else {
-    showToast('❌ Contraseña incorrecta', true);
-  }
+  window._fbAuth.signInWithEmailAndPassword(ADMIN_EMAIL, input)
+    .then(() => {
+      trueqeAdminUnlocked = true;
+      if (btn) { btn.textContent = '🔓 Salir de modo admin'; btn.classList.add('btn-danger'); }
+      trueqeRenderBinder();
+      showToast('🔓 Modo administrador activado: ya podés borrar cualquier publicación del tablón');
+    })
+    .catch(() => {
+      showToast('❌ Contraseña incorrecta', true);
+    });
 }
 
 function trueqeSleeveHtml(c, showDelete, esAdmin) {
