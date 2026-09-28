@@ -2825,6 +2825,7 @@
     <div class="mode-section" id="mode-section-go">
       <div class="translate-moves-toolbar">
         <button class="btn btn-primary" onclick="goSugerirVacios()">🪄 Sugerir para los vacíos</button>
+        <button class="btn" onclick="abrirOrdenarLigas()">↕️ Ordenar ligas</button>
         <span id="go-sugerir-status" style="font-size:0.78rem;color:var(--muted);align-self:center"></span>
         <label style="display:flex;align-items:center;gap:6px;font-size:0.8rem;margin-left:auto;cursor:pointer;white-space:nowrap">
           <input type="checkbox" id="go-en-reparacion-check" onchange="toggleModoEnReparacion('go', this.checked)">
@@ -3076,6 +3077,21 @@
     <div class="modal-btns">
       <button class="btn btn-danger" onclick="executeDelete()">🗑️ Borrar</button>
       <button class="btn" style="background:#444;color:#fff" onclick="closeModal('modal-delete')">Cancelar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL ORDENAR POKÉMON POR LIGA (GO) -->
+<div class="modal-overlay" id="modal-ordenar-ligas">
+  <div class="modal" style="max-width:480px">
+    <h3>↕️ ORDENAR POR LIGA</h3>
+    <p style="font-size:0.85rem;color:var(--muted);margin-bottom:10px">
+      Definí el orden en que aparecen en la lista pública de cada liga. Los que todavía no ordenaste a mano quedan al final, por orden alfabético.
+    </p>
+    <div class="modal-btns" id="ordenar-liga-tabs" style="margin-bottom:12px"></div>
+    <div id="ordenar-liga-list" style="max-height:50vh;overflow-y:auto;display:flex;flex-direction:column;gap:6px"></div>
+    <div class="modal-btns" style="margin-top:14px">
+      <button class="btn" style="background:#444;color:#fff" onclick="closeModal('modal-ordenar-ligas')">Cerrar</button>
     </div>
   </div>
 </div>
@@ -3462,9 +3478,9 @@ function selectGoConsultaLiga(liga) {
   });
 
   loadNamesFromStorage();
-  const nombres = (POKEMON_LISTS.go || [])
-    .filter(p => (getGOData(p).ligas || []).includes(liga))
-    .sort((a, b) => a.localeCompare(b, 'es', { sensitivity: 'base' }));
+  const enLiga = (POKEMON_LISTS.go || []).filter(p => (getGOData(p).ligas || []).includes(liga));
+  const ordenGuardado = (readStorageObj('pokemonLigaOrderGO')[liga]) || [];
+  const nombres = ordenarNombresPorLiga(enLiga, liga, ordenGuardado);
 
   const listEl = document.getElementById('go-liga-list');
   const labelEl = document.getElementById('go-liga-list-label');
@@ -4467,6 +4483,22 @@ function typeIconHTML(t) {
 const LIGA_LIST = ['Liga Super', 'Liga Ultra', 'Liga Master'];
 const LIGA_COLORS = { 'Liga Super': '#2f6fed', 'Liga Ultra': '#232323', 'Liga Master': '#7b2fbe' };
 const LIGA_ACCENTS = { 'Liga Super': '#e63946', 'Liga Ultra': '#f5c518', 'Liga Master': '#ff5fb0' };
+// Dado un array de nombres ya filtrados por pertenecer a una liga, devuelve
+// ese mismo conjunto pero ordenado: primero los que figuran en el orden
+// manual guardado para esa liga (en ese orden), y al final los que todavía
+// no fueron ordenados a mano, alfabéticamente. Así, agregar un Pokémon nuevo
+// a una liga no rompe el orden ya definido: simplemente aparece al final
+// hasta que se lo reordene.
+function ordenarNombresPorLiga(nombres, liga, ordenGuardado) {
+  const orden = Array.isArray(ordenGuardado) ? ordenGuardado : [];
+  const set = new Set(nombres);
+  const ordenados = orden.filter(n => set.has(n));
+  const yaUbicados = new Set(ordenados);
+  const restantes = nombres
+    .filter(n => !yaUbicados.has(n))
+    .sort((a, b) => a.localeCompare(b, 'es', { sensitivity: 'base' }));
+  return [...ordenados, ...restantes];
+}
 function ligaCheckboxesHTML(name, ligasSeleccionadas) {
   const seleccionadas = Array.isArray(ligasSeleccionadas) ? ligasSeleccionadas : [];
   return LIGA_LIST.map(l => `
@@ -4715,6 +4747,18 @@ try {
 } catch (e) {}
 try {
   Object.assign(NOMBRES_MOSTRAR, JSON.parse(localStorage.getItem('nombresMostrar') || '{}'));
+} catch (e) {}
+
+// Orden manual de Pokémon dentro de cada liga de Pokémon GO (Super/Ultra/
+// Master), definido desde el panel Datos. Es un objeto { 'Liga Super':
+// [nombres...], 'Liga Ultra': [...], 'Liga Master': [...] } con los nombres
+// en el orden elegido; los Pokémon de la liga que todavía no figuren en el
+// array se muestran al final, ordenados alfabéticamente (ver
+// ordenarNombresPorLiga). Viaja junto con el resto de los datos de GO, tanto
+// en localStorage como en Firestore.
+let ligaOrder = { 'Liga Super': [], 'Liga Ultra': [], 'Liga Master': [] };
+try {
+  Object.assign(ligaOrder, JSON.parse(localStorage.getItem('pokemonLigaOrderGO') || '{}'));
 } catch (e) {}
 
 POKEMON_LISTS.champions.forEach(p => { dataChampions[p] = EMPTY_CHAMPIONS(); });
@@ -5673,6 +5717,7 @@ function persistLocalOnly() {
   localStorage.setItem('pokemonDataExpansiones', JSON.stringify(EXPANSIONES_SUGERIDAS.tcg));
   localStorage.setItem('modosEnReparacion', JSON.stringify(modosEnReparacion));
   localStorage.setItem('nombresMostrar', JSON.stringify(NOMBRES_MOSTRAR));
+  localStorage.setItem('pokemonLigaOrderGO', JSON.stringify(ligaOrder));
 }
 
 // Aplica un snapshot recibido de Firestore al estado en memoria (no persiste
@@ -5722,6 +5767,8 @@ function applyGameDoc(game, doc) {
   } else if (game === 'go') {
     if (Array.isArray(list)) POKEMON_LISTS.go = list;
     if (data) dataGO = data;
+    const ordenGo = parseSnapField(doc.ligaOrder);
+    if (ordenGo && typeof ordenGo === 'object') ligaOrder = ordenGo;
   } else if (game === 'tcg') {
     if (Array.isArray(list)) POKEMON_LISTS.tcg = list;
     if (data) dataTCG = data;
@@ -5773,7 +5820,7 @@ function pushToFirestore() {
   // índice" que genera un mapa con una clave por cada Pokémon.
   const writes = [
     ['champions', { list: JSON.stringify(POKEMON_LISTS.champions), champions: JSON.stringify(dataChampions), enReparacion: !!modosEnReparacion.champions }],
-    ['go', { list: JSON.stringify(POKEMON_LISTS.go), go: JSON.stringify(dataGO), enReparacion: !!modosEnReparacion.go }],
+    ['go', { list: JSON.stringify(POKEMON_LISTS.go), go: JSON.stringify(dataGO), enReparacion: !!modosEnReparacion.go, ligaOrder: JSON.stringify(ligaOrder) }],
     ['tcg', { list: JSON.stringify(POKEMON_LISTS.tcg), tcg: JSON.stringify(dataTCG), enReparacion: !!modosEnReparacion.tcg }],
     ['mazos', { mazos: JSON.stringify(dataMazos) }],
     ['expansiones', { expansiones: JSON.stringify(EXPANSIONES_SUGERIDAS.tcg) }],
@@ -6241,6 +6288,60 @@ function renderTableGO() {
   bindMoveTranslationBlur(tbody);
   rebuildGoSuggestions();
   renderLitePaginationBar('go', tbody, page, totalPages);
+}
+
+// ── ORDENAR POKÉMON POR LIGA (GO) ───────────────────────────────────────────
+let currentOrdenarLiga = 'Liga Super';
+
+function abrirOrdenarLigas() {
+  const tabsEl = document.getElementById('ordenar-liga-tabs');
+  tabsEl.innerHTML = LIGA_LIST.map(l => `
+    <button class="btn ${l === currentOrdenarLiga ? 'btn-primary' : ''}" id="ordenar-liga-tab-${l.replace(/\s+/g,'-')}" onclick="cambiarTabOrdenarLiga('${l}')">${l.replace('Liga ', '')}</button>
+  `).join('');
+  renderOrdenarLigaList();
+  document.getElementById('modal-ordenar-ligas').classList.add('open');
+}
+
+function cambiarTabOrdenarLiga(liga) {
+  currentOrdenarLiga = liga;
+  LIGA_LIST.forEach(l => {
+    const btn = document.getElementById('ordenar-liga-tab-' + l.replace(/\s+/g,'-'));
+    if (btn) btn.classList.toggle('btn-primary', l === liga);
+  });
+  renderOrdenarLigaList();
+}
+
+function renderOrdenarLigaList() {
+  const liga = currentOrdenarLiga;
+  const enLiga = (POKEMON_LISTS.go || []).filter(name => (dataGO[name]?.ligas || []).includes(liga));
+  const ordenados = ordenarNombresPorLiga(enLiga, liga, ligaOrder[liga]);
+  // Guarda el orden ya resuelto (con los recién agregados incluidos al final)
+  // para que mover una fila parta siempre de una base completa y estable.
+  ligaOrder[liga] = ordenados;
+
+  const listEl = document.getElementById('ordenar-liga-list');
+  if (!ordenados.length) {
+    listEl.innerHTML = '<div class="result-empty">Todavía no hay Pokémon en esta liga.</div>';
+    return;
+  }
+  listEl.innerHTML = ordenados.map((name, i) => `
+    <div style="display:flex;align-items:center;gap:8px;background:var(--dark-card);border-radius:8px;padding:6px 10px">
+      <span style="color:var(--muted);font-size:0.78rem;min-width:22px">${i + 1}</span>
+      <span style="flex:1;font-size:0.9rem">${esc(name)}</span>
+      <button type="button" class="btn" style="padding:2px 8px;font-size:0.8rem" onclick="moverPokemonEnLiga(${i}, -1)" ${i === 0 ? 'disabled' : ''}>▲</button>
+      <button type="button" class="btn" style="padding:2px 8px;font-size:0.8rem" onclick="moverPokemonEnLiga(${i}, 1)" ${i === ordenados.length - 1 ? 'disabled' : ''}>▼</button>
+    </div>
+  `).join('');
+}
+
+function moverPokemonEnLiga(idx, dir) {
+  const liga = currentOrdenarLiga;
+  const lista = ligaOrder[liga] || [];
+  const nuevoIdx = idx + dir;
+  if (nuevoIdx < 0 || nuevoIdx >= lista.length) return;
+  [lista[idx], lista[nuevoIdx]] = [lista[nuevoIdx], lista[idx]];
+  ligaOrder[liga] = lista;
+  renderOrdenarLigaList();
 }
 
 // ── TABLA TCG POCKET ────────────────────────────────────────────────────────
@@ -7841,7 +7942,8 @@ function exportData() {
     listTCG: POKEMON_LISTS.tcg,
     champions: dataChampions, go: dataGO, tcg: dataTCG,
     mazos: dataMazos,
-    expansiones: EXPANSIONES_SUGERIDAS.tcg
+    expansiones: EXPANSIONES_SUGERIDAS.tcg,
+    ligaOrderGO: ligaOrder
   };
   document.getElementById('export-text').value = JSON.stringify(exportObj, null, 2);
   document.getElementById('modal-export').classList.add('open');
@@ -7907,6 +8009,9 @@ function applyImportedData(parsed) {
           EXPANSIONES_SUGERIDAS.tcg.push({ name: e.name, color: e.color || '#888888' });
         }
       });
+    }
+    if (parsed.ligaOrderGO && typeof parsed.ligaOrderGO === 'object') {
+      Object.keys(parsed.ligaOrderGO).forEach(l => { if (Array.isArray(parsed.ligaOrderGO[l])) ligaOrder[l] = parsed.ligaOrderGO[l]; });
     }
   } else if (parsed.data) {
     // Formato viejo (solo Champions)
