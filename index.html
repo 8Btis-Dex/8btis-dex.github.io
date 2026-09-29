@@ -2541,6 +2541,35 @@
   .search-disclaimer a { color: var(--yellow); text-decoration: underline; }
   .move-type-row { display: flex; align-items: center; gap: 6px; margin-top: 4px; }
   .translate-moves-toolbar { display: flex; justify-content: flex-end; margin-bottom: 14px; }
+  .champ-formato-switch {
+    display: inline-flex;
+    border: 1px solid var(--dark-card);
+    border-radius: 8px;
+    overflow: hidden;
+  }
+  .champ-formato-btn {
+    padding: 6px 14px;
+    font-size: 0.8rem;
+    font-weight: 700;
+    background: var(--dark-card);
+    color: var(--muted);
+    border: none;
+    cursor: pointer;
+    transition: background 0.15s ease, color 0.15s ease;
+  }
+  .champ-formato-btn.active {
+    background: #0E5FA8;
+    color: var(--white);
+  }
+  .search-row-with-switch {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .search-row-with-switch .search-wrapper {
+    flex: 1;
+    min-width: 0;
+  }
   .datos-bulk-toolbar {
     display: flex; align-items: center; gap: 14px; margin-bottom: 14px; flex-wrap: wrap;
   }
@@ -2687,23 +2716,25 @@
 
       <!-- Buscador -->
       <div class="search-section" id="normal-search-section">
-        <span class="search-label">🔍 Buscar Pokémon</span>
-        <div class="search-wrapper">
-          <input
-            type="text"
-            class="search-input"
-            id="search-input"
-            placeholder="Escribe el nombre del Pokémon..."
-            autocomplete="off"
-            oninput="handleSearch(this.value)"
-            onkeydown="handleKey(event)"
-          />
-          <span class="search-icon" id="search-icon-main">🔍</span>
-          <button class="clear-btn" id="clear-btn" onclick="clearSearch()" style="display:none" title="Limpiar">✕</button>
-          <div class="autocomplete-list" id="autocomplete-list"></div>
-        </div>
-        <div class="search-disclaimer">
-          La traducción de los ataques es posible gracias a <a href="https://www.wikidex.net" target="_blank" rel="noopener">Wikidex.net</a>. Ante cualquier duda o consulta, utilizá el botón de WhatsApp de abajo.
+        <div class="search-row-with-switch">
+          <div class="search-wrapper">
+            <input
+              type="text"
+              class="search-input"
+              id="search-input"
+              placeholder="Escribe el nombre del Pokémon..."
+              autocomplete="off"
+              oninput="handleSearch(this.value)"
+              onkeydown="handleKey(event)"
+            />
+            <span class="search-icon" id="search-icon-main">🔍</span>
+            <button class="clear-btn" id="clear-btn" onclick="clearSearch()" style="display:none" title="Limpiar">✕</button>
+            <div class="autocomplete-list" id="autocomplete-list"></div>
+          </div>
+          <div class="champ-formato-switch" id="champ-consulta-formato-switch" style="display:none">
+            <button type="button" class="champ-formato-btn active" id="champ-consulta-formato-singles" onclick="cambiarFormatoConsultaChampions('singles')">Singles</button>
+            <button type="button" class="champ-formato-btn" id="champ-consulta-formato-doubles" onclick="cambiarFormatoConsultaChampions('doubles')">Doubles</button>
+          </div>
         </div>
       </div>
 
@@ -2775,6 +2806,7 @@
       <span class="datos-title" id="datos-title">🏆 Champions</span>
       <div class="datos-actions">
         <button class="btn btn-yellow" onclick="showAddPokemon()">➕ Agregar Pokémon</button>
+        <button class="btn btn-yellow" onclick="showAddPokemonVarios()">📋 Agregar varios</button>
         <button class="btn" style="background:var(--purple);color:#fff" onclick="openExpansionesModal()">🏷️ Expansiones</button>
         <button class="btn btn-danger" id="btn-borrar-vacios" onclick="borrarVaciosModoActual()">🗑️ Borrar vacíos</button>
         <button class="btn btn-primary" onclick="saveAllData()">💾 Guardar cambios</button>
@@ -2795,6 +2827,12 @@
     <!-- ===== CHAMPIONS ===== -->
     <div class="mode-section active" id="mode-section-champions">
       <div class="translate-moves-toolbar">
+        <button class="btn btn-primary" onclick="championsSugerirVacios()">🪄 Sugerir para los vacíos</button>
+        <div class="champ-formato-switch" role="group" aria-label="Formato">
+          <button type="button" class="champ-formato-btn active" id="champ-datos-formato-singles" onclick="cambiarFormatoDatosChampions('singles')">Singles</button>
+          <button type="button" class="champ-formato-btn" id="champ-datos-formato-doubles" onclick="cambiarFormatoDatosChampions('doubles')">Doubles</button>
+        </div>
+        <span id="champions-sugerir-status" style="font-size:0.78rem;color:var(--muted);align-self:center"></span>
         <label style="display:flex;align-items:center;gap:6px;font-size:0.8rem;margin-left:auto;cursor:pointer;white-space:nowrap">
           <input type="checkbox" id="champions-en-reparacion-check" onchange="toggleModoEnReparacion('champions', this.checked)">
           <img src="data:image/png;base64,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" alt="" width="16" height="16" style="vertical-align:-3px;flex-shrink:0"> Sección en reparación (ocultar en Consulta)
@@ -3140,6 +3178,20 @@
   </div>
 </div>
 
+<!-- MODAL AGREGAR VARIOS POKÉMON DE UNA VEZ -->
+<div class="modal-overlay" id="modal-add-pokemon-varios">
+  <div class="modal">
+    <h3>📋 AGREGAR VARIOS POKÉMON</h3>
+    <p id="add-pokemon-varios-hint">Pegá los nombres separados por coma o uno por línea. Se agregan todos los que todavía no estén en la lista.</p>
+    <textarea id="add-pokemon-varios-text" class="password-input" style="width:100%;min-height:160px;margin-bottom:12px;resize:vertical;font-family:inherit" placeholder="Ej: Mewtwo, Rayquaza, Groudon&#10;Kyogre"></textarea>
+    <div id="add-pokemon-varios-preview" style="font-size:0.78rem;color:var(--muted);margin-bottom:12px"></div>
+    <div class="modal-btns">
+      <button class="btn btn-yellow" onclick="confirmAddPokemonVarios()">✅ Agregar todos</button>
+      <button class="btn" style="background:#444;color:#fff" onclick="closeModal('modal-add-pokemon-varios')">Cancelar</button>
+    </div>
+  </div>
+</div>
+
 <!-- MODAL GESTIONAR CARTAS TCG -->
 <div class="modal-overlay" id="modal-tcg-cards">
   <div class="modal" style="max-width:600px">
@@ -3244,7 +3296,7 @@
 
 <script>
 // ── LISTA BASE DE POKÉMON (usada solo como semilla inicial de migración) ─
-const POKEMON_LIST_BASE = ["Abomasnow","Absol","Aegislash","Aerodactyl","Aggron","Alakazam","Alcremie","Altaria","Ampharos","Annihilape","Appletun","Araquanid","Arbok","Arcanine","Archaludon","Ariados","Armarouge","Aromatisse","Audino","Aurorus","Avalugg","Azuramill","Banette","Barbaracle","Basculegion","Beartic","Beedrill","Bellibolt","Blastoise","Blaziken","Camerupt","Castform","Ceruledge","Chandelure","Charizard","Chesnaught","Chimecho","Clawitzer","Clefable","Cofagrigus","Conkeldurr","Corviknight","Crabominable","Cranidos","Decidueye","Dedenne","Delphox","Diggersby","Ditto","Dragalde","Dragapult","Dragonite","Drampa","Eelektross","Emboar","Emolga","Empoleon","Espathra","Espeon","Excadrill","Falinks","Farigiraf","Feraligatr","Flapple","Flareon","Floette","Florges","Foretress","Froslass","Furfrou","Gallade","Garbodor","Garchomp","Gardevoir","Gargancl","Gengar","Gholdengo","Glaceon","Glalie","Glimmora","Gliscor","Golurk","Goodra","Gourgeist","Greninja","Grimmsnarl","Gyarados","Hawlucha","Heliolisk","Heracross","Hippowdon","Houndoom","Houndstone","Hydrapple","Hydreigon","Incineroar","Infernape","Jolteon","Kangaskhan","Kingambit","Kleavor","Klefki","Kommo-o","Krookodile","Leafeon","Liepard","Lopunny","Lucario","Luxray","Lycanroc","Machampo","Malamar","Mamoswine","Manectric","Maushold","Mawile","Medicham","Meganium","Meowscarada","Meowstic","Metagross","Milotic","Mimikyu","Morpeko","Mr. Rime","Mudsdale","Musharna","Nintetales","Noivern","Oranguru","Orthworm","Overqwil","Palafin","Pangoro","Passimian","Pelipper","Pidgeot","Pikachu","Pinsir","Politoed","Polteageist","Primarina","Pyroar","Quaquaval","Qwilfish","Raichu","Rampardos","Reuniclus","Rhyperior","Roserade","Rotom","Runerigus","Sableye","Salazzle","Samurott","Sandaconda","Sceptile","Scizor","Scolipede","Scovillain","Scrafty","Serperior","Sharpedo","Shieldon/Bastiodon","Simipour","Simisage","Simisear","Sinistcha","Skarmory","Skeledirge","Slowbro","Slowking","Slurpuff","Sneasler","Snorlax","Spiritom","Staraptor","Starmie","Steelix","Stunfisk","Swamper","Sylveon","Talonflame","Tauros","Tinkaton","Torkoal","Torterra","Toucannon","Toxicroak","Trevenant","Tsareena","Txapex","Typhlosion","Tyranitar","Tyrantrum","Umbreon","Vanilluxe","Vaporeon","Venasaur","Victreebel","Vileplume","Vivillon","Volcarona","Watchog","Weavile","Whimsicott","Wyrdeer","Zoroark"];
+const POKEMON_LIST_BASE = ["Abomasnow","Absol","Aegislash","Aerodactyl","Aggron","Alakazam","Alcremie","Altaria","Ampharos","Annihilape","Appletun","Araquanid","Arbok","Arcanine","Archaludon","Ariados","Armarouge","Aromatisse","Audino","Aurorus","Avalugg","Azuramill","Banette","Barbaracle","Basculegion","Beartic","Beedrill","Bellibolt","Blastoise","Blaziken","Camerupt","Castform","Ceruledge","Chandelure","Charizard","Chesnaught","Chimecho","Clawitzer","Clefable","Cofagrigus","Conkeldurr","Corviknight","Crabominable","Cranidos","Decidueye","Dedenne","Delphox","Diggersby","Ditto","Dragalde","Dragapult","Dragonite","Drampa","Eelektross","Emboar","Emolga","Empoleon","Espathra","Espeon","Excadrill","Falinks","Farigiraf","Feraligatr","Flapple","Flareon","Floette","Florges","Foretress","Froslass","Furfrou","Gallade","Garbodor","Garchomp","Gardevoir","Gargancl","Gengar","Gholdengo","Glaceon","Glalie","Glimmora","Gliscor","Golurk","Goodra","Gourgeist","Greninja","Grimmsnarl","Gyarados","Hawlucha","Heliolisk","Heracross","Hippowdon ♂","Hippowdon ♀","Houndoom","Houndstone","Hydrapple","Hydreigon","Incineroar","Infernape","Jolteon","Kangaskhan","Kingambit","Kleavor","Klefki","Kommo-o","Krookodile","Leafeon","Liepard","Lopunny","Lucario","Luxray","Lycanroc","Machampo","Malamar","Mamoswine","Manectric","Maushold","Mawile","Medicham","Meganium","Meowscarada","Meowstic","Metagross","Milotic","Mimikyu","Morpeko","Mr. Rime","Mudsdale","Musharna","Nintetales","Noivern","Oranguru","Orthworm","Overqwil","Palafin","Pangoro","Passimian","Pelipper","Pidgeot","Pikachu","Pinsir","Politoed","Polteageist","Primarina","Pyroar ♂","Pyroar ♀","Quaquaval","Qwilfish","Raichu","Rampardos","Reuniclus","Rhyperior","Roserade","Rotom","Runerigus","Sableye","Salazzle","Samurott","Sandaconda","Sceptile","Scizor","Scolipede","Scovillain","Scrafty","Serperior","Sharpedo","Shieldon/Bastiodon","Simipour","Simisage","Simisear","Sinistcha","Skarmory","Skeledirge","Slowbro","Slowking","Slurpuff","Sneasler","Snorlax","Spiritom","Staraptor","Starmie","Steelix","Stunfisk","Swamper","Sylveon","Talonflame","Tauros","Tinkaton","Torkoal","Torterra","Toucannon","Toxicroak","Trevenant","Tsareena","Txapex","Typhlosion","Tyranitar","Tyrantrum","Umbreon","Vanilluxe","Vaporeon","Venasaur","Victreebel","Vileplume","Vivillon","Volcarona","Watchog","Weavile","Whimsicott","Wyrdeer","Zoroark"];
 
 // Cada modo (Champions / GO / TCG) tiene su propia lista de Pokémon,
 // porque el roster disponible varía de un juego a otro.
@@ -3293,6 +3345,7 @@ function readStorageObj(key) {
   } catch(e) { return {}; }
 }
 function getChampionsData(name) { return readStorageObj('pokemonData')[name] || {}; }
+function getChampionsDataDoubles(name) { return readStorageObj('pokemonDataChampionsDoubles')[name] || {}; }
 function getGOData(name)        { return readStorageObj('pokemonDataGO')[name] || {}; }
 function getTCGData(name)       { return readStorageObj('pokemonDataTCG')[name] || {}; }
 function getAllTCGData()        { return readStorageObj('pokemonDataTCG'); }
@@ -3326,6 +3379,16 @@ const RAREZA_INFO = {
 
 // ── MODOS DE JUEGO ────────────────────────────────────────────────────────
 let currentMode = null; // 'champions' | 'go' | 'tcg'
+// Formato que se está consultando en la vista pública cuando currentMode es
+// 'champions': 'singles' o 'doubles'. Independiente del switch de Datos.
+let champConsultaModo = 'singles';
+function cambiarFormatoConsultaChampions(modo) {
+  champConsultaModo = modo;
+  document.getElementById('champ-consulta-formato-singles').classList.toggle('active', modo === 'singles');
+  document.getElementById('champ-consulta-formato-doubles').classList.toggle('active', modo === 'doubles');
+  const nombreActual = document.getElementById('search-input').value.trim();
+  if (nombreActual) showResult(nombreActual);
+}
 
 const MODE_NAMES = {
   champions: 'Pokémon Champions',
@@ -3566,6 +3629,14 @@ function selectMode(mode) {
     normalSearch.style.display = 'block';
     tcgMazosSection.style.display = 'none';
     resultCard.style.display = 'block';
+  }
+
+  const formatoSwitch = document.getElementById('champ-consulta-formato-switch');
+  if (formatoSwitch) formatoSwitch.style.display = (mode === 'champions') ? 'inline-flex' : 'none';
+  if (mode === 'champions') {
+    champConsultaModo = 'singles';
+    document.getElementById('champ-consulta-formato-singles').classList.add('active');
+    document.getElementById('champ-consulta-formato-doubles').classList.remove('active');
   }
 
   showResult(null);
@@ -4078,7 +4149,7 @@ async function showResult(name) {
 
   let bodyHTML = '';
   if (currentMode === 'champions') {
-    const d = getChampionsData(name);
+    const d = champConsultaModo === 'doubles' ? getChampionsDataDoubles(name) : getChampionsData(name);
     bodyHTML = `
       <div class="result-item">
         <div class="ri-label">Naturaleza</div>
@@ -4391,6 +4462,17 @@ function showToast(msg, isError = false) {
 const ADMIN_EMAIL = "cfedericotoledo@gmail.com";
 let datosUnlocked = false;
 let currentDatosMode = 'champions'; // 'champions' | 'go' | 'tcg'
+// Formato de Champions que se está viendo/editando en el panel Datos:
+// 'singles' usa dataChampions, 'doubles' usa dataChampionsDoubles. Cada
+// Pokémon tiene un set independiente de naturaleza/objeto/ataques por
+// formato, porque las builds recomendadas suelen ser distintas.
+let champDatosModo = 'singles';
+function cambiarFormatoDatosChampions(modo) {
+  champDatosModo = modo;
+  document.getElementById('champ-datos-formato-singles').classList.toggle('active', modo === 'singles');
+  document.getElementById('champ-datos-formato-doubles').classList.toggle('active', modo === 'doubles');
+  renderTableChampions();
+}
 
 // ── MODO LITE (paginación) ───────────────────────────────────────────────
 // Se activa por elección del usuario al ingresar la contraseña, para
@@ -4653,6 +4735,7 @@ function migrarNombresExpansionesTcg() {
 function podarDatosHuerfanos() {
   const pares = [
     [dataChampions, POKEMON_LISTS.champions],
+    [dataChampionsDoubles, POKEMON_LISTS.champions],
     [dataGO, POKEMON_LISTS.go],
     [dataTCG, POKEMON_LISTS.tcg]
   ];
@@ -4673,8 +4756,8 @@ const PROTEGIDOS_VACIOS = {
 };
 
 function pokemonVacioChampions(nombre) {
-  const d = dataChampions[nombre] || EMPTY_CHAMPIONS();
-  return !d.naturaleza && !d.objeto && !d.ataque1 && !d.ataque2 && !d.ataque3 && !d.ataque4;
+  const vacioUnSet = d => !d.naturaleza && !d.objeto && !d.ataque1 && !d.ataque2 && !d.ataque3 && !d.ataque4;
+  return vacioUnSet(dataChampions[nombre] || EMPTY_CHAMPIONS()) && vacioUnSet(dataChampionsDoubles[nombre] || EMPTY_CHAMPIONS());
 }
 
 function pokemonVacioGo(nombre) {
@@ -4704,7 +4787,7 @@ function borrarVaciosModoActual() {
   );
   if (!ok) return;
   const dict = modo === 'champions' ? dataChampions : dataGO;
-  aBorrar.forEach(p => { delete dict[p]; });
+  aBorrar.forEach(p => { delete dict[p]; if (modo === 'champions') delete dataChampionsDoubles[p]; });
   POKEMON_LISTS[modo] = lista.filter(p => !aBorrar.includes(p));
   persistAll();
   renderCurrentTable();
@@ -4732,6 +4815,7 @@ let EXPANSIONES_SUGERIDAS = {
 // ── LISTAS Y DATOS POR MODO (cada modo maneja su propio roster) ─────────
 
 let dataChampions = {};
+let dataChampionsDoubles = {}; // Mismo shape que dataChampions (naturaleza/objeto/ataque1-4/tipo1-4), pero para el formato Dobles. Se guardan por separado porque las builds recomendadas de Singles y Dobles suelen ser distintas.
 let dataGO = {};
 let dataTCG = {};
 let dataMazos = []; // Mazos de TCG Pocket: [{ nombre, cartas: [{ pokemon, idx }] }]
@@ -4761,8 +4845,7 @@ try {
   Object.assign(ligaOrder, JSON.parse(localStorage.getItem('pokemonLigaOrderGO') || '{}'));
 } catch (e) {}
 
-POKEMON_LISTS.champions.forEach(p => { dataChampions[p] = EMPTY_CHAMPIONS(); });
-POKEMON_LISTS.go.forEach(p => { dataGO[p] = EMPTY_GO(); });
+POKEMON_LISTS.champions.forEach(p => { dataChampions[p] = EMPTY_CHAMPIONS(); dataChampionsDoubles[p] = EMPTY_CHAMPIONS(); });
 POKEMON_LISTS.tcg.forEach(p => { dataTCG[p] = EMPTY_TCG(); });
 
 // ── TRADUCCIÓN DE MOVIMIENTOS (inglés → español) ────────────────────────────
@@ -4999,67 +5082,139 @@ function championsComputeSuggestion({ stats, types, movepool }) {
   return resultado;
 }
 
-// ── SUGERENCIAS DESDE POKEBASE.APP (nueva fuente, reemplaza la heurística) ──
-// Pokebase.app no expone API pública ni permite fetch cross-origin (CORS),
-// así que se pasa por un proxy público. Si allorigins.win falla de forma
-// consistente, cambiar POKEBASE_CORS_PROXY por otro (ej. corsproxy.io).
-const POKEBASE_CORS_PROXY = 'https://api.allorigins.win/raw?url=';
+// ── SUGERENCIAS DESDE GAMEWITH.AI (Pokemon Champions Tools) ─────────────────
+// Reemplaza a pokebase.app, que dejó de dar datos correctos. gamewith.ai no
+// expone API pública ni permite fetch cross-origin (CORS), así que se pasa
+// por un proxy público. Si allorigins.win falla de forma consistente,
+// cambiar GAMEWITH_CORS_PROXY por otro (ej. corsproxy.io).
+const GAMEWITH_CORS_PROXY = 'https://api.allorigins.win/raw?url=';
 
-function championsPokebaseSlug(name) {
-  // Mismo slug (minúsculas, con guiones) que ya usa getPokemonSlug() para
-  // PokeAPI; pokebase.app usa el mismo formato en sus URLs.
-  return getPokemonSlug(name);
-}
+// Mapeo nombre interno de la app -> ID numérico de gamewith.ai
+// (gamewith.ai/pokemon-champions/en/pokemon/{ID}). Generado a mano cruzando
+// POKEMON_LIST_BASE contra el listado completo de "Pokemon DB" de
+// gamewith.ai (358 formas, Regulación M-C, relevado el 28/09/2026).
+// Las Megas NO se mapean a propósito: alcanza con la Mega Piedra como
+// objeto para que se entienda que el Pokémon usa esa forma en batalla.
+// Hippowdon y Pyroar sí tienen entradas separadas por género porque son
+// formas distintas de verdad (ver migración de lista más abajo).
+// Cranidos no tiene entrada: no existe como Pokémon jugable en el roster
+// de Champions (solo su forma evolucionada, Rampardos).
+const CHAMPIONS_GAMEWITH_ID = {
+ "Abomasnow": "574", "Absol": "446", "Aegislash": "857", "Aerodactyl": "189",
+ "Aggron": "382", "Alakazam": "88", "Alcremie": "1086", "Altaria": "415",
+ "Ampharos": "238", "Annihilape": "1170", "Appletun": "1056", "Araquanid": "956",
+ "Arbok": "32", "Arcanine": "81", "Archaludon": "1271", "Ariados": "225",
+ "Armarouge": "1172", "Aromatisse": "860", "Audino": "663", "Aurorus": "879",
+ "Avalugg": "902", "Azuramill": "242", "Banette": "439", "Barbaracle": "867",
+ "Basculegion": "1129", "Beartic": "769", "Beedrill": "19", "Bellibolt": "1175",
+ "Blastoise": "12", "Blaziken": "326", "Camerupt": "403", "Castform": "433",
+ "Ceruledge": "1173", "Chandelure": "763", "Charizard": "7", "Chesnaught": "817",
+ "Chimecho": "444", "Clawitzer": "873", "Clefable": "49", "Cofagrigus": "706",
+ "Conkeldurr": "667", "Corviknight": "1037", "Crabominable": "936", "Decidueye": "919",
+ "Dedenne": "883", "Delphox": "821", "Diggersby": "828", "Ditto": "179",
+ "Dragalde": "870", "Dragapult": "1108", "Dragonite": "200", "Drampa": "986",
+ "Eelektross": "757", "Emboar": "628", "Emolga": "738", "Empoleon": "495",
+ "Espathra": "1198", "Espeon": "254", "Excadrill": "661", "Falinks": "1087",
+ "Farigiraf": "1179", "Feraligatr": "216", "Flapple": "1055", "Flareon": "183",
+ "Floette": "842", "Florges": "844", "Foretress": "264", "Froslass": "594",
+ "Furfrou": "849", "Gallade": "590", "Garbodor": "712", "Garchomp": "554",
+ "Gardevoir": "355", "Gargancl": "1169", "Gengar": "130", "Gholdengo": "1247",
+ "Glaceon": "586", "Glalie": "451", "Glimmora": "1213", "Gliscor": "587",
+ "Golurk": "779", "Goodra": "888", "Gourgeist": "897", "Greninja": "825",
+ "Grimmsnarl": "1078", "Gyarados": "176", "Hawlucha": "881", "Heliolisk": "875",
+ "Heracross": "276", "Hippowdon ♀": "564", "Hippowdon ♂": "563", "Houndoom": "295",
+ "Houndstone": "1216", "Hydrapple": "1275", "Hydreigon": "793", "Incineroar": "923",
+ "Infernape": "492", "Jolteon": "182", "Kangaskhan": "157", "Kingambit": "1220",
+ "Kleavor": "1127", "Klefki": "890", "Kommo-o": "991", "Krookodile": "690",
+ "Leafeon": "585", "Liepard": "640", "Lopunny": "536", "Lucario": "559",
+ "Luxray": "506", "Lycanroc": "946", "Machampo": "92", "Malamar": "864",
+ "Mamoswine": "588", "Manectric": "388", "Maushold": "1157", "Mawile": "378",
+ "Medicham": "385", "Meganium": "208", "Meowscarada": "1137", "Meowstic": "851",
+ "Metagross": "467", "Milotic": "432", "Mimikyu": "984", "Morpeko": "1097",
+ "Mr. Rime": "1083", "Mudsdale": "954", "Musharna": "648", "Nintetales": "53",
+ "Noivern": "905", "Oranguru": "969", "Orthworm": "1211", "Overqwil": "1132",
+ "Palafin": "1206", "Pangoro": "848", "Passimian": "970", "Pelipper": "352",
+ "Pidgeot": "23", "Pikachu": "33", "Pinsir": "172", "Politoed": "244",
+ "Polteageist": "1071", "Primarina": "926", "Pyroar ♀": "837", "Pyroar ♂": "836",
+ "Quaquaval": "1143", "Qwilfish": "271", "Raichu": "34", "Rampardos": "510",
+ "Reuniclus": "724", "Rhyperior": "579", "Roserade": "508", "Rotom": "596",
+ "Runerigus": "1084", "Sableye": "376", "Salazzle": "962", "Samurott": "632",
+ "Sandaconda": "1058", "Sceptile": "322", "Scizor": "273", "Scolipede": "678",
+ "Scovillain": "1193", "Scrafty": "701", "Serperior": "625", "Sharpedo": "398",
+ "Shieldon/Bastiodon": "512", "Simipour": "646", "Simisage": "642", "Simisear": "644",
+ "Sinistcha": "1261", "Skarmory": "292", "Skeledirge": "1140", "Slowbro": "111",
+ "Slowking": "257", "Slurpuff": "862", "Sneasler": "1131", "Snorlax": "191",
+ "Spiritom": "551", "Staraptor": "498", "Starmie": "164", "Steelix": "267",
+ "Stunfisk": "773", "Swamper": "330", "Sylveon": "880", "Talonflame": "831",
+ "Tauros": "174", "Tinkaton": "1201", "Torkoal": "405", "Torterra": "489",
+ "Toucannon": "929", "Toxicroak": "568", "Trevenant": "892", "Tsareena": "967",
+ "Txapex": "952", "Typhlosion": "212", "Tyranitar": "315", "Tyrantrum": "877",
+ "Umbreon": "255", "Vanilluxe": "729", "Vaporeon": "181", "Venasaur": "3",
+ "Victreebel": "95", "Vileplume": "61", "Vivillon": "834", "Volcarona": "795",
+ "Watchog": "635", "Weavile": "576", "Whimsicott": "681", "Wyrdeer": "1126",
+ "Zoroark": "715"
+};
 
-async function championsFetchPokebaseDoc(name) {
-  const slug = championsPokebaseSlug(name);
-  const targetUrl = `https://pokebase.app/pokemon-champions/pokemon/${slug}`;
-  const proxied = POKEBASE_CORS_PROXY + encodeURIComponent(targetUrl);
+async function championsFetchGamewithHTML(name) {
+  const id = CHAMPIONS_GAMEWITH_ID[name];
+  if (!id) throw new Error('No hay ID de gamewith.ai mapeado para ' + name);
+  const targetUrl = `https://gamewith.ai/pokemon-champions/en/pokemon/${id}`;
+  const proxied = GAMEWITH_CORS_PROXY + encodeURIComponent(targetUrl);
   const res = await fetch(proxied);
-  if (!res.ok) throw new Error('No se pudo acceder a pokebase.app para ' + name);
+  if (!res.ok) throw new Error('No se pudo acceder a gamewith.ai para ' + name);
   const html = await res.text();
-  if (!html || html.length < 200) throw new Error('Respuesta vacía de pokebase.app para ' + name);
-  return new DOMParser().parseFromString(html, 'text/html');
+  if (!html || html.length < 500) throw new Error('Respuesta vacía de gamewith.ai para ' + name);
+  return html;
 }
 
-// Texto limpio de un <li>, sin importar si trae un ícono adentro o no.
-function pokebaseLiText(li) {
-  if (!li) return '';
-  return li.textContent.replace(/\s+/g, ' ').trim();
-}
-
-// La página de un Pokémon en pokebase.app/pokemon-champions tiene una
-// grilla de 2 columnas: la izquierda trae el Objeto más usado (arriba) y la
-// Naturaleza más usada (en una sub-grilla debajo); la derecha trae los
-// Ataques más usados. Estructura relevada a mano con Jolteon el 07/09/2026;
-// si pokebase.app cambia el layout, esto puede dejar de encontrar el grid.
-function championsParsePokebaseDoc(doc) {
-  const grid = doc.querySelector('div.grid.lg\\:grid-cols-2.gap-3.pt-3');
-  if (!grid) throw new Error('No se encontró el layout esperado en pokebase.app (¿cambió la página?)');
-  const colIzquierda = grid.children[0];
-  const colDerecha = grid.children[1];
-  if (!colIzquierda || !colDerecha) throw new Error('No se encontraron las columnas esperadas en pokebase.app');
-
-  const cajaObjeto = colIzquierda.children[0];
-  const objetoEN = pokebaseLiText(cajaObjeto && cajaObjeto.querySelector('ul > li:nth-child(1)'));
-
-  const subGrid = colIzquierda.children[1];
-  const cajaNaturaleza = subGrid ? subGrid.children[1] : null;
-  const naturalezaEN = pokebaseLiText(cajaNaturaleza && cajaNaturaleza.querySelector('ul > li:nth-child(1)'));
-
-  const cajaAtaques = colDerecha.children[1];
-  const ataquesLis = cajaAtaques ? Array.from(cajaAtaques.querySelectorAll('ul > li')).slice(0, 4) : [];
-  const ataquesEN = ataquesLis.map(pokebaseLiText).filter(Boolean);
-
-  if (!objetoEN && !naturalezaEN && !ataquesEN.length) {
-    throw new Error('No se encontraron datos de Champions para este Pokémon en pokebase.app');
+// Cada build (una tarjeta con Ability/Objeto/4 movimientos/Naturaleza) es un
+// bloque <details id="build-N">...</details> que no anida otro <details>
+// adentro, así que buscar el próximo "</details>" alcanza para delimitarlo.
+// Estructura relevada a mano con Sneasler el 28/09/2026; si gamewith.ai
+// cambia el layout, esto puede dejar de encontrar los bloques.
+function championsExtraerBloquesBuild(zonaHTML) {
+  const bloques = [];
+  let idx = zonaHTML.indexOf('<details id="build-');
+  while (idx !== -1) {
+    const fin = zonaHTML.indexOf('</details>', idx);
+    if (fin === -1) break;
+    bloques.push(zonaHTML.slice(idx, fin));
+    idx = zonaHTML.indexOf('<details id="build-', fin);
   }
-  return { objetoEN, naturalezaEN, ataquesEN };
+  return bloques;
 }
 
-function championsBuildSuggestionFromPokebase({ objetoEN, naturalezaEN, ataquesEN }) {
+// Ability, Objeto y los 4 movimientos de una build comparten exactamente la
+// misma clase CSS y aparecen siempre en ese orden (6 en total); la
+// Naturaleza va aparte, con su propia clase.
+const GAMEWITH_NOMBRE_CLASS_MARKER = 'class="font-medium text-sky-600 underline underline-offset-2 cursor-pointer dark:text-sky-400 break-words">';
+const GAMEWITH_NATURE_MARKER = '<span class="shrink-0 text-muted-foreground">Nature</span><span class="font-medium truncate">';
+
+function championsExtraerDatosDeBuild(bloque) {
+  const textos = [];
+  let cursor = 0;
+  while (textos.length < 6) {
+    const pos = bloque.indexOf(GAMEWITH_NOMBRE_CLASS_MARKER, cursor);
+    if (pos === -1) break;
+    const start = pos + GAMEWITH_NOMBRE_CLASS_MARKER.length;
+    const end = bloque.indexOf('</span>', start);
+    if (end === -1) break;
+    textos.push(bloque.slice(start, end).trim());
+    cursor = end;
+  }
+  if (textos.length < 2) return null; // bloque raro (ni ability ni objeto encontrados): se descarta
+
+  let naturaleza = '';
+  const natPos = bloque.indexOf(GAMEWITH_NATURE_MARKER);
+  if (natPos !== -1) {
+    const start = natPos + GAMEWITH_NATURE_MARKER.length;
+    const end = bloque.indexOf('</span>', start);
+    if (end !== -1) naturaleza = bloque.slice(start, end).trim();
+  }
+
+  const [, objetoEN, ...ataquesEN] = textos; // textos[0] = Ability (la app no la guarda, se descarta)
   const resultado = {
-    naturaleza: translateNatureIfEnglish(naturalezaEN) || naturalezaEN || '',
+    naturaleza: translateNatureIfEnglish(naturaleza) || naturaleza || '',
     objeto: translateItemIfEnglish(objetoEN) || objetoEN || ''
   };
   [1, 2, 3, 4].forEach((i) => {
@@ -5076,15 +5231,62 @@ function championsBuildSuggestionFromPokebase({ objetoEN, naturalezaEN, ataquesE
   return resultado;
 }
 
+// Prioridad: la build marcada "Recommended" si existe; si ninguna lo está,
+// la primera build de esa sección (Singles o Doubles).
+function championsElegirBuildRecomendada(bloques) {
+  if (!bloques.length) return null;
+  const recomendada = bloques.find(b => b.includes('>Recommended</span>'));
+  return championsExtraerDatosDeBuild(recomendada || bloques[0]);
+}
+
+// Une todo: descarga la página UNA sola vez y devuelve, en la misma
+// pasada, la build recomendada de Singles y la de Doubles (si existen).
+// Nota: el bloque de hidratación de React al final de la página repite
+// estos mismos textos escapados dentro de comillas (`\"Singles Builds\"`),
+// pero como esas comillas van escapadas, nunca calzan con el marcador
+// literal `>Singles Builds</div>` que buscamos acá — por eso alcanza con
+// la primera aparición.
+async function championsObtenerSugerenciaGamewith(name) {
+  const html = await championsFetchGamewithHTML(name);
+
+  const singlesMarker = '>Singles Builds</div><details id="build-';
+  const doublesMarker = '>Doubles Builds</div><details id="build-';
+  const finMarker = '>Learnable Moves<';
+
+  const singlesIdx = html.indexOf(singlesMarker);
+  const doublesIdx = html.indexOf(doublesMarker);
+  const finIdx = html.indexOf(finMarker, Math.max(singlesIdx, doublesIdx));
+  const limite = finIdx !== -1 ? finIdx : html.length;
+
+  let singlesZone = '', doublesZone = '';
+  if (singlesIdx !== -1 && doublesIdx !== -1) {
+    singlesZone = html.slice(singlesIdx, doublesIdx);
+    doublesZone = html.slice(doublesIdx, limite);
+  } else if (singlesIdx !== -1) {
+    singlesZone = html.slice(singlesIdx, limite);
+  } else if (doublesIdx !== -1) {
+    doublesZone = html.slice(doublesIdx, limite);
+  }
+
+  const singles = singlesZone ? championsElegirBuildRecomendada(championsExtraerBloquesBuild(singlesZone)) : null;
+  const doubles = doublesZone ? championsElegirBuildRecomendada(championsExtraerBloquesBuild(doublesZone)) : null;
+
+  if (!singles && !doubles) throw new Error('No se encontraron builds de Champions para ' + name + ' en gamewith.ai');
+  return { singles, doubles };
+}
+
+function championsEsVacio(d) {
+  return !d.naturaleza && !d.objeto && !d.ataque1 && !d.ataque2 && !d.ataque3 && !d.ataque4;
+}
+
 async function championsSugerirUno(name) {
   try {
-    const doc = await championsFetchPokebaseDoc(name);
-    const datos = championsParsePokebaseDoc(doc);
-    const sugerido = championsBuildSuggestionFromPokebase(datos);
-    dataChampions[name] = { ...EMPTY_CHAMPIONS(), ...dataChampions[name], ...sugerido };
+    const { singles, doubles } = await championsObtenerSugerenciaGamewith(name);
+    if (singles) dataChampions[name] = { ...EMPTY_CHAMPIONS(), ...dataChampions[name], ...singles };
+    if (doubles) dataChampionsDoubles[name] = { ...EMPTY_CHAMPIONS(), ...dataChampionsDoubles[name], ...doubles };
     persistAll();
     renderTableChampions();
-    showToast('🪄 Sugerencia aplicada a ' + name + ' (fuente: pokebase.app)');
+    showToast('🪄 Sugerencia aplicada a ' + name + ' (Singles y Doubles, fuente: gamewith.ai)');
   } catch (e) {
     console.error(e);
     showToast('❌ No se pudo generar una sugerencia para ' + name, true);
@@ -5096,24 +5298,25 @@ async function championsSugerirVacios() {
   if (championsSugerirEnCurso) return;
   championsSugerirEnCurso = true;
   const status = document.getElementById('champions-sugerir-status');
-  const pendientes = Object.keys(dataChampions).filter(name => {
-    if (!POKEMON_LISTS.champions.includes(name)) return false; // descarta huérfanos
-    const d = dataChampions[name];
-    return !d.ataque1 && !d.ataque2 && !d.ataque3 && !d.ataque4 && !d.naturaleza;
+  const pendientes = POKEMON_LISTS.champions.filter(name => {
+    const faltaSingles = championsEsVacio(dataChampions[name] || EMPTY_CHAMPIONS());
+    const faltaDoubles = championsEsVacio(dataChampionsDoubles[name] || EMPTY_CHAMPIONS());
+    return faltaSingles || faltaDoubles;
   });
   if (!pendientes.length) {
     if (status) status.textContent = 'No hay filas vacías para completar.';
     championsSugerirEnCurso = false;
     return;
   }
-  let hechos = 0;
+  let hechos = 0, completados = 0;
   for (const name of pendientes) {
-    if (status) status.textContent = `Sugiriendo... ${hechos + 1}/${pendientes.length} (${name}) — pokebase.app`;
+    if (status) status.textContent = `Sugiriendo... ${hechos + 1}/${pendientes.length} (${name}) — gamewith.ai`;
     try {
-      const doc = await championsFetchPokebaseDoc(name);
-      const datos = championsParsePokebaseDoc(doc);
-      const sugerido = championsBuildSuggestionFromPokebase(datos);
-      dataChampions[name] = { ...EMPTY_CHAMPIONS(), ...dataChampions[name], ...sugerido };
+      const { singles, doubles } = await championsObtenerSugerenciaGamewith(name);
+      const faltaSingles = championsEsVacio(dataChampions[name] || EMPTY_CHAMPIONS());
+      const faltaDoubles = championsEsVacio(dataChampionsDoubles[name] || EMPTY_CHAMPIONS());
+      if (faltaSingles && singles) { dataChampions[name] = { ...EMPTY_CHAMPIONS(), ...dataChampions[name], ...singles }; completados++; }
+      if (faltaDoubles && doubles) { dataChampionsDoubles[name] = { ...EMPTY_CHAMPIONS(), ...dataChampionsDoubles[name], ...doubles }; completados++; }
     } catch (e) {
       console.log('Sin sugerencia para', name, e);
     }
@@ -5121,7 +5324,7 @@ async function championsSugerirVacios() {
   }
   persistAll();
   renderTableChampions();
-  if (status) status.textContent = `Listo: se completaron ${hechos} Pokémon (fuente: pokebase.app).`;
+  if (status) status.textContent = `Listo: se completaron ${completados} sets en ${hechos} Pokémon revisados (fuente: gamewith.ai).`;
   championsSugerirEnCurso = false;
 }
 
@@ -5407,7 +5610,7 @@ function bindMoveTranslationBlur(tbody) {
   tbody.querySelectorAll('.move-name-input').forEach(input => {
     input.addEventListener('blur', () => {
       const p = input.dataset.pokemon, f = input.dataset.field, game = input.dataset.game;
-      const store = game === 'champions' ? dataChampions : dataGO;
+      const store = game === 'champions' ? (champDatosModo === 'doubles' ? dataChampionsDoubles : dataChampions) : dataGO;
       if (!store[p]) store[p] = game === 'champions' ? EMPTY_CHAMPIONS() : EMPTY_GO();
 
       const translated = translateMoveIfEnglish(input.value);
@@ -5572,8 +5775,9 @@ function bindNatureItemTranslationBlur(tbody) {
       if (translated) {
         input.value = translated;
         const p = input.dataset.pokemon, f = input.dataset.field;
-        if (!dataChampions[p]) dataChampions[p] = EMPTY_CHAMPIONS();
-        dataChampions[p][f] = translated;
+        const store = champDatosModo === 'doubles' ? dataChampionsDoubles : dataChampions;
+        if (!store[p]) store[p] = EMPTY_CHAMPIONS();
+        store[p][f] = translated;
         persistAll();
       }
       if (input.classList.contains('item-input')) updateItemTooltip(input);
@@ -5610,6 +5814,16 @@ function loadFromStorage() {
         // a la lista (antes esto hacía que un Pokémon borrado reapareciera).
         if (!POKEMON_LISTS.champions.includes(k)) return;
         dataChampions[k] = { ...dataChampions[k], ...parsed[k] };
+      });
+    }
+    const savedChampionsDoubles = localStorage.getItem('pokemonDataChampionsDoubles');
+    dataChampionsDoubles = {};
+    POKEMON_LISTS.champions.forEach(p => { dataChampionsDoubles[p] = EMPTY_CHAMPIONS(); });
+    if (savedChampionsDoubles) {
+      const parsed = JSON.parse(savedChampionsDoubles);
+      Object.keys(parsed).forEach(k => {
+        if (!POKEMON_LISTS.champions.includes(k)) return;
+        dataChampionsDoubles[k] = { ...dataChampionsDoubles[k], ...parsed[k] };
       });
     }
 
@@ -5706,11 +5920,42 @@ function migrarLigaUnicaAMultiple() {
 }
 loadFromStorage();
 
+// ── MIGRACIÓN ÚNICA: Hippowdon y Pyroar separados por género ────────────
+// En Pokémon Champions estos dos tienen formas visualmente distintas según
+// el género, así que pasan de una sola entrada en la lista de Champions a
+// dos ("♂" y "♀"), heredando el dato que ya hubiera cargado la entrada sin
+// género. Corre una sola vez (marca en localStorage) para no reintentarlo.
+function migrarGeneroHippowdonPyroar() {
+  const FLAG = 'migracionGeneroHippowdonPyroarV1';
+  if (localStorage.getItem(FLAG)) return;
+  const pares = [
+    ['Hippowdon', 'Hippowdon ♂', 'Hippowdon ♀'],
+    ['Pyroar', 'Pyroar ♂', 'Pyroar ♀']
+  ];
+  let cambiado = false;
+  pares.forEach(([base, macho, hembra]) => {
+    const idx = POKEMON_LISTS.champions.indexOf(base);
+    if (idx === -1) return;
+    POKEMON_LISTS.champions.splice(idx, 1, macho, hembra);
+    dataChampions[macho] = { ...EMPTY_CHAMPIONS(), ...dataChampions[base] };
+    dataChampions[hembra] = { ...EMPTY_CHAMPIONS(), ...dataChampions[base] };
+    dataChampionsDoubles[macho] = { ...EMPTY_CHAMPIONS(), ...dataChampionsDoubles[base] };
+    dataChampionsDoubles[hembra] = { ...EMPTY_CHAMPIONS(), ...dataChampionsDoubles[base] };
+    delete dataChampions[base];
+    delete dataChampionsDoubles[base];
+    cambiado = true;
+  });
+  localStorage.setItem(FLAG, '1');
+  if (cambiado) persistAll();
+}
+migrarGeneroHippowdonPyroar();
+
 function persistLocalOnly() {
   localStorage.setItem('pokemonList_champions', JSON.stringify(POKEMON_LISTS.champions));
   localStorage.setItem('pokemonList_go', JSON.stringify(POKEMON_LISTS.go));
   localStorage.setItem('pokemonList_tcg', JSON.stringify(POKEMON_LISTS.tcg));
   localStorage.setItem('pokemonData', JSON.stringify(dataChampions));
+  localStorage.setItem('pokemonDataChampionsDoubles', JSON.stringify(dataChampionsDoubles));
   localStorage.setItem('pokemonDataGO', JSON.stringify(dataGO));
   localStorage.setItem('pokemonDataTCG', JSON.stringify(dataTCG));
   localStorage.setItem('pokemonDataMazos', JSON.stringify(dataMazos));
@@ -5764,6 +6009,8 @@ function applyGameDoc(game, doc) {
   if (game === 'champions') {
     if (Array.isArray(list)) POKEMON_LISTS.champions = list;
     if (data) dataChampions = data;
+    const dataDoubles = parseSnapField(doc.championsDoubles);
+    if (dataDoubles) dataChampionsDoubles = dataDoubles;
   } else if (game === 'go') {
     if (Array.isArray(list)) POKEMON_LISTS.go = list;
     if (data) dataGO = data;
@@ -5819,7 +6066,7 @@ function pushToFirestore() {
   // nativo de Firestore, para evitar el límite de "demasiadas entradas de
   // índice" que genera un mapa con una clave por cada Pokémon.
   const writes = [
-    ['champions', { list: JSON.stringify(POKEMON_LISTS.champions), champions: JSON.stringify(dataChampions), enReparacion: !!modosEnReparacion.champions }],
+    ['champions', { list: JSON.stringify(POKEMON_LISTS.champions), champions: JSON.stringify(dataChampions), championsDoubles: JSON.stringify(dataChampionsDoubles), enReparacion: !!modosEnReparacion.champions }],
     ['go', { list: JSON.stringify(POKEMON_LISTS.go), go: JSON.stringify(dataGO), enReparacion: !!modosEnReparacion.go, ligaOrder: JSON.stringify(ligaOrder) }],
     ['tcg', { list: JSON.stringify(POKEMON_LISTS.tcg), tcg: JSON.stringify(dataTCG), enReparacion: !!modosEnReparacion.tcg }],
     ['mazos', { mazos: JSON.stringify(dataMazos) }],
@@ -6116,11 +6363,12 @@ function renderCurrentTable() {
 function renderTableChampions() {
   const soloCompletosCheck = document.getElementById('champions-en-reparacion-check');
   if (soloCompletosCheck) soloCompletosCheck.checked = getModoEnReparacion('champions');
+  const champStore = champDatosModo === 'doubles' ? dataChampionsDoubles : dataChampions;
   const tbody = document.getElementById('table-body-champions');
   const { list, page, totalPages, offsetStart } = getVisibleList('champions');
   tbody.innerHTML = list.map((name, i) => {
     i = i + offsetStart;
-    const d = dataChampions[name] || EMPTY_CHAMPIONS();
+    const d = champStore[name] || EMPTY_CHAMPIONS();
     return `<tr data-name="${esc(name).toLowerCase()}">
       <td style="text-align:center"><input type="checkbox" class="row-select-cb" value="${esc(name)}" onchange="updateBulkDeleteUI()"></td>
       <td style="color:var(--muted);font-size:0.8rem">${i+1}</td>
@@ -6168,15 +6416,15 @@ function renderTableChampions() {
   tbody.querySelectorAll('.editable-cell:not(.name-cell)').forEach(input => {
     input.addEventListener('input', () => {
       const p = input.dataset.pokemon, f = input.dataset.field;
-      if (!dataChampions[p]) dataChampions[p] = EMPTY_CHAMPIONS();
-      dataChampions[p][f] = input.value;
+      if (!champStore[p]) champStore[p] = EMPTY_CHAMPIONS();
+      champStore[p][f] = input.value;
     });
   });
   tbody.querySelectorAll('.move-type-select').forEach(select => {
     select.addEventListener('change', () => {
       const p = select.dataset.pokemon, f = select.dataset.field;
-      if (!dataChampions[p]) dataChampions[p] = EMPTY_CHAMPIONS();
-      dataChampions[p][f] = select.value;
+      if (!champStore[p]) champStore[p] = EMPTY_CHAMPIONS();
+      champStore[p][f] = select.value;
       const wrap = select.nextElementSibling;
       if (wrap) wrap.innerHTML = typeIconHTML(select.value);
     });
@@ -7684,10 +7932,12 @@ function rebuildGoSuggestions() {
 
 function rebuildChampionsSuggestions() {
   const naturalezaValues = [], objetoValues = [], ataqueValues = [...MOVES_ES_ENGLISH_NAMES];
-  Object.values(dataChampions).forEach(d => {
-    if (d.naturaleza) naturalezaValues.push(d.naturaleza);
-    if (d.objeto) objetoValues.push(d.objeto);
-    [d.ataque1, d.ataque2, d.ataque3, d.ataque4].forEach(a => { if (a) ataqueValues.push(a); });
+  [dataChampions, dataChampionsDoubles].forEach(store => {
+    Object.values(store).forEach(d => {
+      if (d.naturaleza) naturalezaValues.push(d.naturaleza);
+      if (d.objeto) objetoValues.push(d.objeto);
+      [d.ataque1, d.ataque2, d.ataque3, d.ataque4].forEach(a => { if (a) ataqueValues.push(a); });
+    });
   });
   rebuildSuggestDatalist('suggest-champions-naturaleza', naturalezaValues);
   rebuildSuggestDatalist('suggest-champions-objeto', objetoValues);
@@ -7845,6 +8095,10 @@ function renamePokemonEntry(oldName, newNameRaw) {
 
   data[newName] = data[oldName] || emptyByMode[mode]();
   delete data[oldName];
+  if (mode === 'champions') {
+    dataChampionsDoubles[newName] = dataChampionsDoubles[oldName] || EMPTY_CHAMPIONS();
+    delete dataChampionsDoubles[oldName];
+  }
 
   // Los mazos referencian Pokémon de TCG Pocket
   if (mode === 'tcg') {
@@ -7940,7 +8194,7 @@ function exportData() {
     listChampions: POKEMON_LISTS.champions,
     listGO: POKEMON_LISTS.go,
     listTCG: POKEMON_LISTS.tcg,
-    champions: dataChampions, go: dataGO, tcg: dataTCG,
+    champions: dataChampions, championsDoubles: dataChampionsDoubles, go: dataGO, tcg: dataTCG,
     mazos: dataMazos,
     expansiones: EXPANSIONES_SUGERIDAS.tcg,
     ligaOrderGO: ligaOrder
@@ -7994,6 +8248,7 @@ function applyImportedData(parsed) {
     else if (legacyList.length) POKEMON_LISTS.tcg = [...new Set([...POKEMON_LISTS.tcg, ...legacyList])];
 
     if (parsed.champions) Object.keys(parsed.champions).forEach(k => { dataChampions[k] = { ...EMPTY_CHAMPIONS(), ...dataChampions[k], ...parsed.champions[k] }; if (!POKEMON_LISTS.champions.includes(k)) POKEMON_LISTS.champions.push(k); });
+    if (parsed.championsDoubles) Object.keys(parsed.championsDoubles).forEach(k => { dataChampionsDoubles[k] = { ...EMPTY_CHAMPIONS(), ...dataChampionsDoubles[k], ...parsed.championsDoubles[k] }; if (!POKEMON_LISTS.champions.includes(k)) POKEMON_LISTS.champions.push(k); });
     if (parsed.go) Object.keys(parsed.go).forEach(k => { dataGO[k] = { ...EMPTY_GO(), ...dataGO[k], ...parsed.go[k] }; if (!POKEMON_LISTS.go.includes(k)) POKEMON_LISTS.go.push(k); });
     if (parsed.tcg) Object.keys(parsed.tcg).forEach(k => { dataTCG[k] = { ...EMPTY_TCG(), ...dataTCG[k], ...parsed.tcg[k] }; if (!POKEMON_LISTS.tcg.includes(k)) POKEMON_LISTS.tcg.push(k); });
     if (Array.isArray(parsed.mazos)) {
@@ -8109,7 +8364,7 @@ function confirmBulkDelete() {
 // Aplica la eliminación de un Pokémon sobre los datos en memoria (sin persistir ni avisar);
 // la reutilizan tanto el borrado individual como el borrado masivo.
 function deletePokemonEntry(name, mode) {
-  if (mode === 'champions') delete dataChampions[name];
+  if (mode === 'champions') { delete dataChampions[name]; delete dataChampionsDoubles[name]; }
   else if (mode === 'go') delete dataGO[name];
   else if (mode === 'tcg') {
     delete dataTCG[name];
@@ -8235,7 +8490,7 @@ function confirmAddPokemon() {
   const list = POKEMON_LISTS[mode];
   if (list.includes(formatted)) { showToast(`⚠️ Ese Pokémon ya existe en ${MODE_TITLES[mode] || mode}`, true); return; }
 
-  if (mode === 'champions') dataChampions[formatted] = EMPTY_CHAMPIONS();
+  if (mode === 'champions') { dataChampions[formatted] = EMPTY_CHAMPIONS(); dataChampionsDoubles[formatted] = EMPTY_CHAMPIONS(); }
   else if (mode === 'go') dataGO[formatted] = EMPTY_GO();
   else if (mode === 'tcg') dataTCG[formatted] = EMPTY_TCG();
 
@@ -8249,6 +8504,69 @@ function confirmAddPokemon() {
   renderCurrentTable();
   closeModal('modal-add-pokemon');
   showToast(`✅ ${formatted} agregado a ${MODE_TITLES[mode] || mode}`);
+}
+
+// ── AGREGAR VARIOS POKÉMON DE UNA SOLA VEZ ──────────────────────────────
+// Alternativa al modal de agregar uno por uno: se pega una lista (separada
+// por coma y/o por línea) y se suman todos los que todavía no estén en la
+// lista del modo actual. No permite elegir "Nombre a mostrar" para cada
+// uno — quien necesite eso para un Pokémon puntual puede editarlo después
+// con el botón 🈂️ de su fila.
+function parsearNombresVarios(texto) {
+  return texto
+    .split(/[\n,]+/)
+    .map(s => s.trim())
+    .filter(Boolean)
+    .map(s => s.charAt(0).toUpperCase() + s.slice(1));
+}
+
+function showAddPokemonVarios() {
+  const textarea = document.getElementById('add-pokemon-varios-text');
+  textarea.value = '';
+  document.getElementById('add-pokemon-varios-preview').textContent = '';
+  const hint = document.getElementById('add-pokemon-varios-hint');
+  if (hint) {
+    hint.textContent = `Pegá los nombres separados por coma o uno por línea. Se agregan todos los que todavía no estén en ${MODE_TITLES[currentDatosMode] || currentDatosMode}.`;
+  }
+  textarea.oninput = () => {
+    const nombres = parsearNombresVarios(textarea.value);
+    const preview = document.getElementById('add-pokemon-varios-preview');
+    if (!nombres.length) { preview.textContent = ''; return; }
+    const list = POKEMON_LISTS[currentDatosMode] || [];
+    const nuevos = [...new Set(nombres)].filter(n => !list.includes(n));
+    const yaExisten = nombres.length - nuevos.length;
+    preview.textContent = `${nuevos.length} para agregar` + (yaExisten ? `, ${yaExisten} ya existen (se ignoran)` : '');
+  };
+  document.getElementById('modal-add-pokemon-varios').classList.add('open');
+  setTimeout(() => textarea.focus(), 100);
+}
+
+function confirmAddPokemonVarios() {
+  const texto = document.getElementById('add-pokemon-varios-text').value;
+  const nombres = parsearNombresVarios(texto);
+  if (!nombres.length) { showToast('❌ Pegá al menos un nombre', true); return; }
+
+  const mode = currentDatosMode; // 'champions' | 'go' | 'tcg'
+  if (!POKEMON_LISTS[mode]) { showToast('❌ Elige primero un modo (Champions, GO o TCG)', true); return; }
+  const list = POKEMON_LISTS[mode];
+  const nuevos = [...new Set(nombres)].filter(n => !list.includes(n));
+
+  if (!nuevos.length) { showToast('⚠️ Todos esos Pokémon ya estaban en la lista', true); return; }
+
+  nuevos.forEach(formatted => {
+    if (mode === 'champions') { dataChampions[formatted] = EMPTY_CHAMPIONS(); dataChampionsDoubles[formatted] = EMPTY_CHAMPIONS(); }
+    else if (mode === 'go') dataGO[formatted] = EMPTY_GO();
+    else if (mode === 'tcg') dataTCG[formatted] = EMPTY_TCG();
+    list.push(formatted);
+  });
+  list.sort((a, b) => a.localeCompare(b, 'es', { sensitivity: 'base' }));
+
+  persistAll();
+  document.getElementById('datos-search').value = '';
+  renderCurrentTable();
+  closeModal('modal-add-pokemon-varios');
+  const omitidos = nombres.length - nuevos.length;
+  showToast(`✅ ${nuevos.length} agregados a ${MODE_TITLES[mode] || mode}` + (omitidos ? ` (${omitidos} ya existían y se ignoraron)` : ''));
 }
 
 // Cerrar modal al hacer clic fuera
