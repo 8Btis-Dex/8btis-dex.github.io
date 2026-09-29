@@ -5085,9 +5085,16 @@ function championsComputeSuggestion({ stats, types, movepool }) {
 // ── SUGERENCIAS DESDE GAMEWITH.AI (Pokemon Champions Tools) ─────────────────
 // Reemplaza a pokebase.app, que dejó de dar datos correctos. gamewith.ai no
 // expone API pública ni permite fetch cross-origin (CORS), así que se pasa
-// por un proxy público. Si allorigins.win falla de forma consistente,
-// cambiar GAMEWITH_CORS_PROXY por otro (ej. corsproxy.io).
-const GAMEWITH_CORS_PROXY = 'https://api.allorigins.win/raw?url=';
+// por proxies públicos. El primero (allorigins.win) falla de forma
+// intermitente si se lo golpea seguido (CORS momentáneo, 408 por timeout);
+// por eso se reintenta un par de veces y, si sigue sin responder, se pasa
+// al segundo (corsproxy.io) antes de darse por vencido. Para agregar otro
+// proxy de respaldo, sumarlo a este array (en el mismo formato: termina en
+// "url=" para poder pegarle la URL codificada al final).
+const GAMEWITH_CORS_PROXIES = [
+  'https://api.allorigins.win/raw?url=',
+  'https://corsproxy.io/?url='
+];
 
 // Mapeo nombre interno de la app -> ID numérico de gamewith.ai
 // (gamewith.ai/pokemon-champions/en/pokemon/{ID}). Generado a mano cruzando
@@ -5152,19 +5159,55 @@ const CHAMPIONS_GAMEWITH_ID = {
  "Umbreon": "255", "Vanilluxe": "729", "Vaporeon": "181", "Venasaur": "3",
  "Victreebel": "95", "Vileplume": "61", "Vivillon": "834", "Volcarona": "795",
  "Watchog": "635", "Weavile": "576", "Whimsicott": "681", "Wyrdeer": "1126",
- "Zoroark": "715"
+ "Zoroark": "715",
+ // Alias con la ortografía correcta (por si en la lista real, a diferencia
+ // de la semilla POKEMON_LIST_BASE con esos errores de tipeo, el Pokémon
+ // quedó cargado con el nombre bien escrito):
+ "Machamp": "92", "Venusaur": "3", "Ninetales": "53",
+ "Garganacl": "1169",
+ "Spiritomb": "551", "Swampert": "330", "Toxapex": "952",
+ "Azumarill": "242", "Dragalge": "870",
+ // Variantes regionales (Alolan/Galarian/Hisuian/Paldean) que Fede agregó a
+ // mano a la lista, además de la especie base:
+ "Arcanine Hisui": "82", "Hisuian Arcanine": "82",
+ "Ninetales Alola": "54", "Alolan Ninetales": "54",
+ "Persian": "73", "Persian Alolan": "74", "Alolan Persian": "74",
+ "Raichu Alola": "35", "Alolan Raichu": "35",
+ "Slowbro Galar": "113", "Galarian Slowbro": "113",
+ "Typhlosion Hisui": "213", "Hisuian Typhlosion": "213",
+ "Tauros Paldean": "1184", "Paldean Tauros": "1184",
+ "Tauros Paldean Aqua": "1185", "Paldean Tauros Aqua": "1185",
+ "Tauros Paldean Blaze": "1186", "Paldean Tauros Blaze": "1186"
 };
 
+function esperar(ms) { return new Promise(resolve => setTimeout(resolve, ms)); }
+
+// El proxy gratuito (allorigins.win) suele fallar de forma intermitente
+// cuando se lo golpea con muchos pedidos seguidos (bloqueo CORS momentáneo,
+// 408 por timeout, etc.) — casi siempre es transitorio, así que se
+// reintenta un par de veces (con una pequeña pausa) antes de pasar al
+// proxy de respaldo, en vez de rendirse en el primer error.
 async function championsFetchGamewithHTML(name) {
   const id = CHAMPIONS_GAMEWITH_ID[name];
   if (!id) throw new Error('No hay ID de gamewith.ai mapeado para ' + name);
   const targetUrl = `https://gamewith.ai/pokemon-champions/en/pokemon/${id}`;
-  const proxied = GAMEWITH_CORS_PROXY + encodeURIComponent(targetUrl);
-  const res = await fetch(proxied);
-  if (!res.ok) throw new Error('No se pudo acceder a gamewith.ai para ' + name);
-  const html = await res.text();
-  if (!html || html.length < 500) throw new Error('Respuesta vacía de gamewith.ai para ' + name);
-  return html;
+  let ultimoError = null;
+  for (const proxy of GAMEWITH_CORS_PROXIES) {
+    for (let intento = 0; intento < 2; intento++) {
+      try {
+        const proxied = proxy + encodeURIComponent(targetUrl);
+        const res = await fetch(proxied);
+        if (!res.ok) throw new Error('respuesta ' + res.status);
+        const html = await res.text();
+        if (!html || html.length < 500) throw new Error('respuesta vacía');
+        return html;
+      } catch (e) {
+        ultimoError = e;
+        await esperar(500 + intento * 500);
+      }
+    }
+  }
+  throw new Error('No se pudo acceder a gamewith.ai para ' + name + (ultimoError ? ' (' + ultimoError.message + ')' : ''));
 }
 
 // Cada build (una tarjeta con Ability/Objeto/4 movimientos/Naturaleza) es un
@@ -5321,6 +5364,7 @@ async function championsSugerirVacios() {
       console.log('Sin sugerencia para', name, e);
     }
     hechos++;
+    await esperar(300); // pausa breve para no saturar el proxy con pedidos seguidos
   }
   persistAll();
   renderTableChampions();
