@@ -5082,19 +5082,17 @@ function championsComputeSuggestion({ stats, types, movepool }) {
   return resultado;
 }
 
-// ── SUGERENCIAS DESDE GAMEWITH.AI (Pokemon Champions Tools) ─────────────────
-// Reemplaza a pokebase.app, que dejó de dar datos correctos. gamewith.ai no
-// expone API pública ni permite fetch cross-origin (CORS), así que se pasa
-// por proxies públicos. El primero (allorigins.win) falla de forma
-// intermitente si se lo golpea seguido (CORS momentáneo, 408 por timeout);
-// por eso se reintenta un par de veces y, si sigue sin responder, se pasa
-// al segundo (corsproxy.io) antes de darse por vencido. Para agregar otro
-// proxy de respaldo, sumarlo a este array (en el mismo formato: termina en
-// "url=" para poder pegarle la URL codificada al final).
-const GAMEWITH_CORS_PROXIES = [
-  'https://api.allorigins.win/raw?url=',
-  'https://corsproxy.io/?url='
-];
+// ── SUGERENCIAS DESDE GAMEWITH.AI, vía r.jina.ai (Pokemon Champions Tools) ──
+// Reemplaza a pokebase.app, que dejó de dar datos correctos. Los proxies
+// CORS genéricos (allorigins.win, corsproxy.io) dejaron de responder por
+// completo (probados directamente en el navegador, sin JS de por medio, y
+// tampoco cargan), así que en su lugar se usa r.jina.ai (Jina AI Reader):
+// un servicio público gratuito que devuelve cualquier página ya convertida
+// a texto/markdown limpio con un fetch directo (sin necesitar proxy CORS
+// aparte). La sección de "Builds" (naturaleza/objeto/movimientos) queda
+// intacta en ese texto, solo que en un formato de texto en vez de HTML —
+// por eso el parseo de más abajo trabaja sobre texto, no sobre HTML.
+const GAMEWITH_READER_BASE = 'https://r.jina.ai/';
 
 // Mapeo nombre interno de la app -> ID numérico de gamewith.ai
 // (gamewith.ai/pokemon-champions/en/pokemon/{ID}). Generado a mano cruzando
@@ -5182,80 +5180,68 @@ const CHAMPIONS_GAMEWITH_ID = {
 
 function esperar(ms) { return new Promise(resolve => setTimeout(resolve, ms)); }
 
-// El proxy gratuito (allorigins.win) suele fallar de forma intermitente
-// cuando se lo golpea con muchos pedidos seguidos (bloqueo CORS momentáneo,
-// 408 por timeout, etc.) — casi siempre es transitorio, así que se
-// reintenta un par de veces (con una pequeña pausa) antes de pasar al
-// proxy de respaldo, en vez de rendirse en el primer error.
-async function championsFetchGamewithHTML(name) {
+// r.jina.ai puede tardar un poco más que un proxy común (tiene que bajar y
+// convertir la página), y a veces falla de forma pasajera — por eso se
+// reintenta un par de veces antes de darse por vencido.
+async function championsFetchGamewithTexto(name) {
   const id = CHAMPIONS_GAMEWITH_ID[name];
   if (!id) throw new Error('No hay ID de gamewith.ai mapeado para ' + name);
   const targetUrl = `https://gamewith.ai/pokemon-champions/en/pokemon/${id}`;
   let ultimoError = null;
-  for (const proxy of GAMEWITH_CORS_PROXIES) {
-    for (let intento = 0; intento < 2; intento++) {
-      try {
-        const proxied = proxy + encodeURIComponent(targetUrl);
-        const res = await fetch(proxied);
-        if (!res.ok) throw new Error('respuesta ' + res.status);
-        const html = await res.text();
-        if (!html || html.length < 500) throw new Error('respuesta vacía');
-        return html;
-      } catch (e) {
-        ultimoError = e;
-        await esperar(500 + intento * 500);
-      }
+  for (let intento = 0; intento < 2; intento++) {
+    try {
+      const res = await fetch(GAMEWITH_READER_BASE + targetUrl);
+      if (!res.ok) throw new Error('respuesta ' + res.status);
+      const texto = await res.text();
+      if (!texto || texto.length < 200) throw new Error('respuesta vacía');
+      return texto;
+    } catch (e) {
+      ultimoError = e;
+      await esperar(500 + intento * 500);
     }
   }
   throw new Error('No se pudo acceder a gamewith.ai para ' + name + (ultimoError ? ' (' + ultimoError.message + ')' : ''));
 }
 
-// Cada build (una tarjeta con Ability/Objeto/4 movimientos/Naturaleza) es un
-// bloque <details id="build-N">...</details> que no anida otro <details>
-// adentro, así que buscar el próximo "</details>" alcanza para delimitarlo.
-// Estructura relevada a mano con Sneasler el 28/09/2026; si gamewith.ai
-// cambia el layout, esto puede dejar de encontrar los bloques.
-function championsExtraerBloquesBuild(zonaHTML) {
+// Cada tarjeta de build empieza con dos íconos (Pokémon + objeto) pegados
+// uno al lado del otro sin texto en el medio — patrón de markdown que solo
+// aparece en el encabezado de cada build, nunca en el texto descriptivo
+// (ahí las imágenes van una por vez, siempre con texto alrededor).
+// Estructura relevada a mano con Sneasler el 29/09/2026; si gamewith.ai (o
+// la forma en que r.jina.ai la convierte a texto) cambia, esto puede dejar
+// de encontrar las tarjetas.
+const GAMEWITH_BUILD_START_RE = /!\[Image \d+: [^\]]+\]\([^)]+\)!\[Image \d+: [^\]]+\]\([^)]+\)/g;
+
+function championsDividirBuildsTexto(zonaTexto) {
+  const starts = [];
+  let m;
+  GAMEWITH_BUILD_START_RE.lastIndex = 0;
+  while ((m = GAMEWITH_BUILD_START_RE.exec(zonaTexto))) starts.push(m.index);
   const bloques = [];
-  let idx = zonaHTML.indexOf('<details id="build-');
-  while (idx !== -1) {
-    const fin = zonaHTML.indexOf('</details>', idx);
-    if (fin === -1) break;
-    bloques.push(zonaHTML.slice(idx, fin));
-    idx = zonaHTML.indexOf('<details id="build-', fin);
+  for (let i = 0; i < starts.length; i++) {
+    const inicio = starts[i];
+    const fin = i + 1 < starts.length ? starts[i + 1] : zonaTexto.length;
+    const recomendada = zonaTexto.slice(Math.max(0, inicio - 11), inicio) === 'Recommended';
+    bloques.push({ texto: zonaTexto.slice(inicio, fin), recomendada });
   }
   return bloques;
 }
 
-// Ability, Objeto y los 4 movimientos de una build comparten exactamente la
-// misma clase CSS y aparecen siempre en ese orden (6 en total); la
-// Naturaleza va aparte, con su propia clase.
-const GAMEWITH_NOMBRE_CLASS_MARKER = 'class="font-medium text-sky-600 underline underline-offset-2 cursor-pointer dark:text-sky-400 break-words">';
-const GAMEWITH_NATURE_MARKER = '<span class="shrink-0 text-muted-foreground">Nature</span><span class="font-medium truncate">';
+// Dentro de una tarjeta, "Ability X" → objeto (ícono+nombre pegados) →
+// los 4 movimientos en viñetas "*   Nombre" siempre aparecen en ese orden,
+// uno seguido del otro (con una sola línea en blanco entre cada bloque).
+const GAMEWITH_ABILITY_ITEM_MOVES_RE = /Ability [^\n]+\n\n!\[Image \d+: [^\]]+\]\([^)]+\)([^\n]+)\n\n((?:\*   [^\n]+\n)+)/;
 
-function championsExtraerDatosDeBuild(bloque) {
-  const textos = [];
-  let cursor = 0;
-  while (textos.length < 6) {
-    const pos = bloque.indexOf(GAMEWITH_NOMBRE_CLASS_MARKER, cursor);
-    if (pos === -1) break;
-    const start = pos + GAMEWITH_NOMBRE_CLASS_MARKER.length;
-    const end = bloque.indexOf('</span>', start);
-    if (end === -1) break;
-    textos.push(bloque.slice(start, end).trim());
-    cursor = end;
-  }
-  if (textos.length < 2) return null; // bloque raro (ni ability ni objeto encontrados): se descarta
+function championsExtraerDatosDeBuildTexto(bloqueTexto) {
+  const m = GAMEWITH_ABILITY_ITEM_MOVES_RE.exec(bloqueTexto);
+  if (!m) return null;
+  const objetoEN = m[1].trim();
+  const ataquesEN = m[2].split('\n').map(l => l.replace(/^\*\s+/, '').trim()).filter(Boolean);
 
   let naturaleza = '';
-  const natPos = bloque.indexOf(GAMEWITH_NATURE_MARKER);
-  if (natPos !== -1) {
-    const start = natPos + GAMEWITH_NATURE_MARKER.length;
-    const end = bloque.indexOf('</span>', start);
-    if (end !== -1) naturaleza = bloque.slice(start, end).trim();
-  }
+  const natMatch = /^Nature ([^\n]+)$/m.exec(bloqueTexto);
+  if (natMatch) naturaleza = natMatch[1].trim();
 
-  const [, objetoEN, ...ataquesEN] = textos; // textos[0] = Ability (la app no la guarda, se descarta)
   const resultado = {
     naturaleza: translateNatureIfEnglish(naturaleza) || naturaleza || '',
     objeto: translateItemIfEnglish(objetoEN) || objetoEN || ''
@@ -5276,43 +5262,37 @@ function championsExtraerDatosDeBuild(bloque) {
 
 // Prioridad: la build marcada "Recommended" si existe; si ninguna lo está,
 // la primera build de esa sección (Singles o Doubles).
-function championsElegirBuildRecomendada(bloques) {
+function championsElegirBuildRecomendadaTexto(bloques) {
   if (!bloques.length) return null;
-  const recomendada = bloques.find(b => b.includes('>Recommended</span>'));
-  return championsExtraerDatosDeBuild(recomendada || bloques[0]);
+  const recomendada = bloques.find(b => b.recomendada);
+  return championsExtraerDatosDeBuildTexto((recomendada || bloques[0]).texto);
 }
 
-// Une todo: descarga la página UNA sola vez y devuelve, en la misma
-// pasada, la build recomendada de Singles y la de Doubles (si existen).
-// Nota: el bloque de hidratación de React al final de la página repite
-// estos mismos textos escapados dentro de comillas (`\"Singles Builds\"`),
-// pero como esas comillas van escapadas, nunca calzan con el marcador
-// literal `>Singles Builds</div>` que buscamos acá — por eso alcanza con
-// la primera aparición.
+// Une todo: descarga la página (vía r.jina.ai) UNA sola vez y devuelve, en
+// la misma pasada, la build recomendada de Singles y la de Doubles (si
+// existen). Si un Pokémon no tiene ninguna build documentada en
+// gamewith.ai (pasa con especies poco usadas), simplemente no hay nada
+// para sugerir y se informa como tal más arriba, en quien llama a esto.
 async function championsObtenerSugerenciaGamewith(name) {
-  const html = await championsFetchGamewithHTML(name);
+  const texto = await championsFetchGamewithTexto(name);
 
-  const singlesMarker = '>Singles Builds</div><details id="build-';
-  const doublesMarker = '>Doubles Builds</div><details id="build-';
-  const finMarker = '>Learnable Moves<';
-
-  const singlesIdx = html.indexOf(singlesMarker);
-  const doublesIdx = html.indexOf(doublesMarker);
-  const finIdx = html.indexOf(finMarker, Math.max(singlesIdx, doublesIdx));
-  const limite = finIdx !== -1 ? finIdx : html.length;
+  const singlesIdx = texto.indexOf('Singles Builds');
+  const doublesIdx = texto.indexOf('Doubles Builds');
+  const finIdx = texto.indexOf('Learnable Moves', Math.max(singlesIdx, doublesIdx));
+  const limite = finIdx !== -1 ? finIdx : texto.length;
 
   let singlesZone = '', doublesZone = '';
   if (singlesIdx !== -1 && doublesIdx !== -1) {
-    singlesZone = html.slice(singlesIdx, doublesIdx);
-    doublesZone = html.slice(doublesIdx, limite);
+    singlesZone = texto.slice(singlesIdx, doublesIdx);
+    doublesZone = texto.slice(doublesIdx, limite);
   } else if (singlesIdx !== -1) {
-    singlesZone = html.slice(singlesIdx, limite);
+    singlesZone = texto.slice(singlesIdx, limite);
   } else if (doublesIdx !== -1) {
-    doublesZone = html.slice(doublesIdx, limite);
+    doublesZone = texto.slice(doublesIdx, limite);
   }
 
-  const singles = singlesZone ? championsElegirBuildRecomendada(championsExtraerBloquesBuild(singlesZone)) : null;
-  const doubles = doublesZone ? championsElegirBuildRecomendada(championsExtraerBloquesBuild(doublesZone)) : null;
+  const singles = singlesZone ? championsElegirBuildRecomendadaTexto(championsDividirBuildsTexto(singlesZone)) : null;
+  const doubles = doublesZone ? championsElegirBuildRecomendadaTexto(championsDividirBuildsTexto(doublesZone)) : null;
 
   if (!singles && !doubles) throw new Error('No se encontraron builds de Champions para ' + name + ' en gamewith.ai');
   return { singles, doubles };
