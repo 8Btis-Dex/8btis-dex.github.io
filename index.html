@@ -6596,38 +6596,150 @@ function translateItemIfEnglish(value) {
 // wikidex.net (nombres en español) con Serebii (nombres en inglés). Las
 // imágenes se piden directo al repositorio de sprites de PokeAPI.
 let ITEM_SPRITE_SLUG_LOOKUP = {};
+// Mapeo generado con los datos oficiales de PokeAPI (item-slugs-es.json): nombre
+// en español (España y Latinoamérica) -> archivo. Se usa donde el anterior no llega
+// o cuando el archivo del anterior no existe. Está guardado con y sin acentos.
+let ITEM_SLUGS_PX = {};
 // Diccionario cargado desde items-desc-es.json (datos de wikidex.net).
 let ITEM_DESC_LOOKUP_LOWER = {};
 
 async function loadItemSpriteSlugs() {
-  try {
-    const res = await fetch('item-sprite-slugs.json');
-    if (!res.ok) return;
-    const data = await res.json();
-    Object.keys(data).forEach(k => {
-      if (k.startsWith('_')) return;
-      ITEM_SPRITE_SLUG_LOOKUP[k.trim().toLowerCase()] = data[k];
-    });
-    if (typeof renderTableChampions === 'function' && document.getElementById('table-body-champions')) {
-      renderTableChampions();
+  const cargar = async (archivo, destino, conSinAcentos) => {
+    try {
+      const res = await fetch(archivo);
+      if (!res.ok) return;
+      const data = await res.json();
+      Object.keys(data).forEach(k => {
+        if (k.startsWith('_')) return;
+        destino[k.trim().toLowerCase()] = data[k];
+        if (conSinAcentos) {
+          const nk = itemNormName(k);
+          if (!destino[nk]) destino[nk] = data[k];
+        }
+      });
+    } catch (e) {
+      console.log('No se pudo cargar ' + archivo, e);
     }
-  } catch (e) {
-    console.log('No se pudo cargar item-sprite-slugs.json', e);
+  };
+  await cargar('item-sprite-slugs.json', ITEM_SPRITE_SLUG_LOOKUP, false);
+  await cargar('item-slugs-es.json', ITEM_SLUGS_PX, true);
+  if (typeof renderTableChampions === 'function' && document.getElementById('table-body-champions')) {
+    renderTableChampions();
   }
 }
 loadItemSpriteSlugs();
 
+const ITEM_SPRITE_BASE = 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/';
+
+// ── Respaldo para objetos que no están en item-sprite-slugs.json ──
+// 1) Megapiedras: se reconocen por el nombre en español («Charizardita X»,
+//    «Venusaurita»…, también «Megapiedra de Charizard X») o en inglés
+//    («Charizardite X») y se pasan al nombre de archivo de PokeAPI.
+// 2) Objetos de la tabla de traducción de la app (ITEM_NAME_ES): se usa el
+//    nombre en inglés como nombre de archivo.
+const MEGA_STONES = [
+  ['venusaur', 'venusaurite'], ['charizard', 'charizardite'], ['blastoise', 'blastoisinite'],
+  ['beedrill', 'beedrillite'], ['pidgeot', 'pidgeotite'], ['alakazam', 'alakazite'],
+  ['slowbro', 'slowbronite'], ['gengar', 'gengarite'], ['kangaskhan', 'kangaskhanite'],
+  ['pinsir', 'pinsirite'], ['gyarados', 'gyaradosite'], ['aerodactyl', 'aerodactylite'],
+  ['mewtwo', 'mewtwonite'], ['ampharos', 'ampharosite'], ['steelix', 'steelixite'],
+  ['scizor', 'scizorite'], ['heracross', 'heracronite'], ['houndoom', 'houndoominite'],
+  ['tyranitar', 'tyranitarite'], ['sceptile', 'sceptilite'], ['blaziken', 'blazikenite'],
+  ['swampert', 'swampertite'], ['gardevoir', 'gardevoirite'], ['sableye', 'sablenite'],
+  ['mawile', 'mawilite'], ['aggron', 'aggronite'], ['medicham', 'medichamite'],
+  ['manectric', 'manectite'], ['sharpedo', 'sharpedonite'], ['camerupt', 'cameruptite'],
+  ['altaria', 'altarianite'], ['banette', 'banettite'], ['absol', 'absolite'],
+  ['glalie', 'glalitite'], ['salamence', 'salamencite'], ['metagross', 'metagrossite'],
+  ['latias', 'latiasite'], ['latios', 'latiosite'], ['lopunny', 'lopunnite'],
+  ['garchomp', 'garchompite'], ['lucario', 'lucarionite'], ['abomasnow', 'abomasite'],
+  ['gallade', 'galladite'], ['audino', 'audinite'], ['diancie', 'diancite']
+];
+const MEGA_STONES_XY = { charizardite: true, mewtwonite: true }; // las que tienen versión X e Y
+const MEGA_STONE_SLUGS = new Set();
+MEGA_STONES.forEach(([, st]) => {
+  if (MEGA_STONES_XY[st]) { MEGA_STONE_SLUGS.add(st + '-x'); MEGA_STONE_SLUGS.add(st + '-y'); }
+  else MEGA_STONE_SLUGS.add(st);
+});
+
+function itemNormName(s) {
+  return String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/\s+/g, ' ').trim();
+}
+
+function megaStoneSlug(itemName) {
+  let n = itemNormName(itemName);
+  if (!n) return null;
+  // Escrito en inglés o ya como nombre de archivo («charizardite x», «mewtwonite-y»).
+  const directo = n.replace(/ /g, '-');
+  if (MEGA_STONE_SLUGS.has(directo)) return directo;
+
+  let xy = '';
+  const mxy = /\s+([xy])$/.exec(n);
+  if (mxy) { xy = mxy[1]; n = n.slice(0, mxy.index); }
+
+  let base;
+  const mp = /^(?:mega ?piedra|piedra mega)(?: de)?\s+(.+)$/.exec(n);
+  if (mp) base = mp[1].replace(/\s+/g, '');
+  else {
+    const compacto = n.replace(/\s+/g, '');
+    if (!/ita$/.test(compacto)) return null;
+    base = compacto.slice(0, -3);
+  }
+  if (base.length < 4) return null;
+
+  // La especie cuyo nombre más se parece (admite una letra de diferencia, como
+  // «Blastoisita» / Blastoise o «Abomasita» / Abomasnow).
+  let mejor = null, mejorLen = 0;
+  for (const par of MEGA_STONES) {
+    const sp = par[0];
+    let l = 0;
+    while (l < base.length && l < sp.length && base[l] === sp[l]) l++;
+    if (l > mejorLen) { mejorLen = l; mejor = par; }
+  }
+  if (!mejor || mejorLen < 4) return null;
+  const minLen = Math.min(base.length, mejor[0].length);
+  if (mejorLen < minLen - 1) return null;
+  const stone = mejor[1];
+  if (MEGA_STONES_XY[stone]) return stone + '-' + (xy || 'x');
+  return stone;
+}
+
+function itemSlugFallback(itemName) {
+  // 1) Mapeo oficial de PokeAPI (con o sin acentos).
+  const px = ITEM_SLUGS_PX[String(itemName || '').trim().toLowerCase()] || ITEM_SLUGS_PX[itemNormName(itemName)];
+  if (px) return px;
+  // 2) Megapiedras reconocidas por el nombre.
+  const mega = megaStoneSlug(itemName);
+  if (mega) return mega;
+  // Objetos de la tabla de traducción: nombre en español -> nombre en inglés.
+  const n = itemNormName(itemName);
+  for (const en of Object.keys(ITEM_NAME_ES)) {
+    if (itemNormName(en) === n || itemNormName(ITEM_NAME_ES[en]) === n) return en.replace(/\s+/g, '-');
+  }
+  return null;
+}
+
 function getItemSpriteUrl(itemName) {
   if (!itemName) return null;
-  const slug = ITEM_SPRITE_SLUG_LOOKUP[itemName.trim().toLowerCase()];
+  const slug = ITEM_SPRITE_SLUG_LOOKUP[itemName.trim().toLowerCase()] || itemSlugFallback(itemName);
   if (!slug) return null;
-  return `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/${slug}.png`;
+  return ITEM_SPRITE_BASE + slug + '.png';
 }
 
 function itemIconHTML(itemName) {
   const url = getItemSpriteUrl(itemName);
   if (!url) return '<span class="item-icon item-icon-empty"></span>';
-  return `<img src="${url}" class="item-icon" alt="" onerror="this.style.display='none'">`;
+  return `<img src="${url}" class="item-icon" alt="" data-item="${esc(itemName)}" onerror="itemIconFail(this)">`;
+}
+
+// Si el archivo del mapeo no existe en PokeAPI, se prueba una vez con el respaldo.
+function itemIconFail(img) {
+  if (!img.dataset.retried) {
+    img.dataset.retried = '1';
+    const alt = itemSlugFallback(img.dataset.item || '');
+    const url = alt ? ITEM_SPRITE_BASE + alt + '.png' : '';
+    if (url && img.src !== url) { img.src = url; return; }
+  }
+  img.style.display = 'none';
 }
 
 // Se engancha en el "blur" de Naturaleza/Objeto en la tabla de Champions.
