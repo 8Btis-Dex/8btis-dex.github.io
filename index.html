@@ -620,6 +620,21 @@
   .tgo-badge { position: absolute; top: -2px; right: -2px; width: 22px; height: auto; }
   .tgo-pname { font-weight: 800; font-size: 0.95rem; }
   .tgo-ptag { font-size: 0.74rem; color: var(--muted); margin-top: 2px; }
+  .tgo-toggles { display: flex; gap: 8px; flex-wrap: wrap; }
+  .tgo-dmax-toggle.on { background: rgba(229,57,53,0.18); border-color: #e53935; color: #ff8a80; }
+  .tgo-dmax-toggle.off-disabled { opacity: 0.45; cursor: not-allowed; }
+  .tgo-preview.dmax, .tgo-card.dmax { border-color: rgba(229,57,53,0.65); box-shadow: 0 0 14px rgba(229,57,53,0.2); }
+  .tgo-preview.shiny.dmax, .tgo-card.shiny.dmax { border-color: rgba(252,190,29,0.6); box-shadow: 0 0 14px rgba(252,190,29,0.18), 0 0 10px rgba(229,57,53,0.2); }
+  .tgo-forma-badge {
+    position: absolute;
+    top: -4px;
+    left: -4px;
+    width: 30px;
+    height: 30px;
+    object-fit: contain;
+    filter: drop-shadow(0 1px 2px rgba(0,0,0,0.6));
+  }
+  .tgo-tag.dmax { background: rgba(229,57,53,0.2); color: #ff8a80; }
   .tgo-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px; }
   .tgo-card {
     position: relative;
@@ -3303,11 +3318,6 @@
       </label>
     </div>
 
-    <div class="datos-header" style="margin-top:-4px">
-      <span id="visit-counter" style="font-size:0.78rem;color:var(--muted)">👁️ Visitas totales: <strong id="visit-counter-value">–</strong></span>
-      <button class="btn" style="font-size:0.7rem;padding:4px 10px" onclick="showMode('usuarios')" title="Ver qué usuarios entraron y cuándo">👥 ¿Quién entró?</button>
-      <button class="btn" style="font-size:0.7rem;padding:4px 10px" onclick="reiniciarContadorVisitas()" title="Vuelve el contador de visitas a 0">🔄 Reiniciar contador</button>
-    </div>
     <div class="datos-header">
       <span class="datos-title" id="datos-title">🏆 Champions</span>
       <div class="datos-actions">
@@ -3624,11 +3634,16 @@
           <div class="tgo-ac" id="tgo-ac" style="display:none"></div>
         </div>
         <div class="tgo-dex-status" id="tgo-dex-status"></div>
-        <button type="button" class="tgo-shiny-toggle" id="tgo-shiny-btn" onclick="tgoToggleShiny()">
-          <img id="tgo-shiny-btn-icon" alt=""><span id="tgo-shiny-btn-text">Variocolor (shiny): No</span>
-        </button>
+        <div class="tgo-toggles">
+          <button type="button" class="tgo-shiny-toggle" id="tgo-shiny-btn" onclick="tgoToggleShiny()">
+            <img id="tgo-shiny-btn-icon" alt=""><span id="tgo-shiny-btn-text">Variocolor (shiny): No</span>
+          </button>
+          <button type="button" class="tgo-shiny-toggle tgo-dmax-toggle" id="tgo-dmax-btn" onclick="tgoToggleDmax()">
+            <span>🔴</span><span id="tgo-dmax-btn-text">Dinamax: No</span>
+          </button>
+        </div>
         <div class="tgo-preview" id="tgo-preview" style="display:none">
-          <div class="tgo-sprite"><img class="sp" id="tgo-preview-img" alt=""><img class="tgo-badge" id="tgo-preview-badge" alt="Variocolor" style="display:none"></div>
+          <div class="tgo-sprite"><img class="sp" id="tgo-preview-img" alt=""><img class="tgo-badge" id="tgo-preview-badge" alt="Variocolor" style="display:none"><img class="tgo-forma-badge" id="tgo-preview-forma" alt="" style="display:none"></div>
           <div style="flex:1;min-width:0">
             <div class="tgo-pname" id="tgo-preview-name"></div>
             <div class="tgo-ptag" id="tgo-preview-tag"></div>
@@ -3648,6 +3663,9 @@
           <button class="active" data-tgof="todos" onclick="tgoFiltrar('todos', this)">Todos</button>
           <button data-tgof="shiny" onclick="tgoFiltrar('shiny', this)">✨ Variocolor</button>
           <button data-tgof="normal" onclick="tgoFiltrar('normal', this)">Normales</button>
+          <button data-tgof="mega" onclick="tgoFiltrar('mega', this)">Mega</button>
+          <button data-tgof="dmax" onclick="tgoFiltrar('dmax', this)">🔴 Dinamax</button>
+          <button data-tgof="gmax" onclick="tgoFiltrar('gmax', this)">Gigamax</button>
           <input class="trueque-input" id="tgo-search" type="text" placeholder="Buscar Pokémon o usuario..." oninput="tgoRender()">
         </div>
         <div id="tgo-binder" class="tgo-grid"></div>
@@ -7094,66 +7112,6 @@ function initFirebaseSync() {
 }
 initFirebaseSync();
 
-// ── CONTADOR DE VISITAS ──────────────────────────────────────────────────
-// Usa el mismo Firestore que ya sincroniza los datos. Cuenta como máximo UNA
-// vez por dispositivo/navegador (marca 'visitCounted' en localStorage, no en
-// sessionStorage, para que sobreviva a cerrar el navegador y volver a
-// entrar — así una misma persona no suma varias visitas) y NUNCA cuenta a
-// este dispositivo si ya se desbloqueó la sección de Datos alguna vez (marca
-// 'siteOwner' en localStorage), para que el dueño del sitio no infle sus
-// propias visitas. El número solo se muestra dentro de la sección de Datos
-// (con contraseña).
-// Ojo: esto es "una vez por navegador/dispositivo", no "una vez por persona"
-// en sentido estricto — si la misma persona borra los datos del navegador,
-// usa modo incógnito, u otro dispositivo, vuelve a contar. No hay forma de
-// identificar personas de verdad sin pedirles que inicien sesión.
-function isSiteOwner() {
-  try { return localStorage.getItem('siteOwner') === 'true'; } catch (e) { return false; }
-}
-
-function refreshVisitCounterDisplay() {
-  const el = document.getElementById('visit-counter-value');
-  if (el && window._visitCounterLastValue !== undefined) {
-    el.textContent = window._visitCounterLastValue.toLocaleString('es');
-  }
-}
-
-function initVisitCounter() {
-  try {
-    if (!window._fbDb) { setTimeout(initVisitCounter, 500); return; }
-    const counterRef = window._fbDb.collection('appdata').doc('visitCounter');
-
-    if (!isSiteOwner() && localStorage.getItem('visitCounted') !== 'true') {
-      counterRef.set({ count: firebase.firestore.FieldValue.increment(1) }, { merge: true })
-        .then(() => { localStorage.setItem('visitCounted', 'true'); })
-        .catch(err => console.log('No se pudo incrementar el contador de visitas', err));
-    }
-
-    counterRef.onSnapshot((doc) => {
-      window._visitCounterLastValue = (doc.exists && doc.data().count) ? doc.data().count : 0;
-      refreshVisitCounterDisplay();
-    }, err => console.log('No se pudo leer el contador de visitas', err));
-  } catch (e) {
-    console.log('Visit counter init failed', e);
-  }
-}
-initVisitCounter();
-
-// Vuelve el contador de visitas a 0 en Firestore (solo disponible dentro de
-// la sección de Datos, con contraseña). onSnapshot ya está escuchando el
-// documento, así que el número en pantalla se actualiza solo apenas se
-// confirma el reinicio, sin necesidad de recargar la página.
-function reiniciarContadorVisitas() {
-  if (!window._fbDb) { showToast('⚠️ Todavía no se conectó a la nube, esperá un momento y volvé a intentar.', true); return; }
-  if (!confirm('¿Reiniciar el contador de visitas a 0? Esta acción no se puede deshacer.')) return;
-  window._fbDb.collection('appdata').doc('visitCounter').set({ count: 0 }, { merge: true })
-    .then(() => showToast('🔄 Contador de visitas reiniciado a 0'))
-    .catch(err => {
-      console.log('No se pudo reiniciar el contador de visitas', err);
-      showToast('⚠️ No se pudo reiniciar el contador. Revisa tu conexión y volvé a intentar.', true);
-    });
-}
-
 // ── CONTRASEÑA ────────────────────────────────────────────────────────────
 // Antes comparaba contra una contraseña fija escrita en este archivo (visible
 // para cualquiera que abriera el código). Ahora delega en Firebase
@@ -7169,9 +7127,6 @@ function checkAdminPassword() {
   window._fbAuth.signInWithEmailAndPassword(ADMIN_EMAIL, input)
     .then(() => {
       datosUnlocked = true;
-      // Este dispositivo queda marcado como "dueño" para siempre: sus futuras
-      // visitas no se suman al contador público de visitas.
-      try { localStorage.setItem('siteOwner', 'true'); } catch (e) {}
       document.getElementById('admin-pass-input').value = '';
       document.getElementById('admin-pass-input').classList.remove('wrong');
       const tabBtn = document.querySelector('.tab-btn.datos');
@@ -7196,7 +7151,6 @@ function chooseDatosVersion(lite) {
   renderCurrentTable();
   showTab('datos');
   showToast(LITE_MODE ? '⚡ Datos cargado en modo Lite' : '🔓 Acceso a Datos habilitado');
-  refreshVisitCounterDisplay();
 }
 
 async function lockDatos() {
@@ -10477,8 +10431,8 @@ function trueqeNormWa(v) { return (v || '').replace(/\D/g, ''); }
 // expansión y logo de la expansión) consultando la misma API que ya usa el
 // resto de la app. Se guarda en localStorage para no volver a descargarlo
 // cada vez que se abre la sección de trueques.
-const TRUEQUE_CARD_INDEX_CACHE_KEY = 'trueque_card_index_v4';
-try { localStorage.removeItem('trueque_card_index_v3'); } catch (e) { /* caché viejo */ }
+const TRUEQUE_CARD_INDEX_CACHE_KEY = 'trueque_card_index_v5';
+try { localStorage.removeItem('trueque_card_index_v3'); localStorage.removeItem('trueque_card_index_v4'); } catch (e) { /* cachés viejos */ }
 const TRUEQUE_CARD_INDEX_MAX_AGE = 1000 * 60 * 60 * 24 * 3; // 3 días
 let TRUEQUE_CARD_INDEX = null; // null = todavía no cargado
 let trueqeCardIndexLoading = null; // Promise en curso, para no duplicar pedidos
@@ -10490,32 +10444,120 @@ function trueqeNormalizeSearch(s) {
     .trim();
 }
 
+// ── PocketDecks: fuente de imágenes de las expansiones más nuevas ──
+// TCGdex todavía no tiene (o no tiene las imágenes de) los últimos sets, y la
+// fuente de respaldo de cartas no sirve imágenes. PocketDecks sí llega hasta la
+// última expansión con una imagen por carta (es la misma que usa la búsqueda
+// de cartas en Datos), así que se usa para completar lo que falte.
+let TRUEQUE_PD_MAP = null; // "codigoSet|número" -> URL de imagen
+
+function trueqeSetKey(code) {
+  let k = String(code || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+  if (k === 'promoa') k = 'pa';
+  if (k === 'promob') k = 'pb';
+  return k;
+}
+
+function trueqeSetIconUrl(setId) {
+  const k = trueqeSetKey(setId);
+  return k ? setCodeAIconoUrl(k) : '';
+}
+
+// Arma el mapa de imágenes y devuelve las cartas de Pokémon agrupadas por set.
+function trueqeBuildPdMap(pd) {
+  const map = new Map();
+  const groups = new Map();
+  (pd || []).forEach(c => {
+    if (!c || !c.image_png || !c.name) return;
+    const m = /^(.*?)[-_](\d+)[^\d]*$/.exec(String(c.id || ''));
+    const code = c.set_code || (m ? m[1] : '');
+    const num = m ? parseInt(m[2], 10) : NaN;
+    const key = trueqeSetKey(code);
+    if (!key || isNaN(num)) return;
+    map.set(key + '|' + num, c.image_png);
+    // Solo cartas de Pokémon (las de Entrenador no tienen ataques ni se intercambian).
+    if (attacksObjetoAArray(c.attacks).length > 0) {
+      if (!groups.has(key)) groups.set(key, { code, name: c.set_name, cards: [] });
+      groups.get(key).cards.push({ name: c.name, image: c.image_png, num });
+    }
+  });
+  TRUEQUE_PD_MAP = map;
+  return groups;
+}
+
+async function trueqeEnsurePdMap() {
+  if (TRUEQUE_PD_MAP) return;
+  try { trueqeBuildPdMap(await cargarCartasPocketDecks()); } catch (e) { /* sin PocketDecks se sigue con las otras fuentes */ }
+}
+
+function trueqePdImage(setId, localId) {
+  if (!TRUEQUE_PD_MAP) return '';
+  const n = parseInt(localId, 10);
+  return isNaN(n) ? '' : (TRUEQUE_PD_MAP.get(trueqeSetKey(setId) + '|' + n) || '');
+}
+
 async function trueqeBuildCardIndex() {
   const index = [];
   let complete = true; // pasa a false si alguna expansión no se pudo cargar
+
+  let groups = new Map();
+  try { groups = trueqeBuildPdMap(await cargarCartasPocketDecks()); } catch (e) { /* PocketDecks no disponible */ }
+
   const sets = await fetchTcgPocketSetsFromApi();
-  if (!sets.length) complete = false;
+  if (!sets.length && !groups.size) complete = false;
+  const usados = new Set();   // sets (por código) que ya aportaron cartas
+  const nombres = new Set();  // nombres de expansión ya presentes
+
   for (const s of sets) {
     let cards = [];
     for (let intento = 0; intento < 2 && !cards.length; intento++) {
       try { cards = await fetchTcgPocketSetCards(s.id); } catch (e) { cards = []; }
       if (!cards.length && intento === 0) await esperar(400);
     }
-    if (!cards.length) { complete = false; continue; }
     const setNameEs = TCGDEX_SET_NAME_ES[s.id] || TCGDEX_SET_NAME_ES[s.name] || s.name;
+    let aportadas = 0;
     cards.forEach(card => {
-      if (!card || !card.name || !card.imageUrl) return;
+      if (!card || !card.name) return;
       if (card.category && card.category !== 'Pokemon') return;
+      // Si la imagen viene de la fuente de respaldo (que no sirve imágenes) o
+      // falta, se usa la de PocketDecks.
+      let image = card.imageUrl || '';
+      if (!image || /pokemon-tcg-pocket-database/.test(image)) {
+        image = trueqePdImage(s.id, card.localId) || image;
+      }
+      if (!image) return;
       index.push({
         name: card.name,
-        image: card.imageUrl,
+        image,
         setId: s.id,
         setName: setNameEs,
-        setLogo: s.logo ? `${s.logo}.png` : '',
+        setLogo: s.logo ? `${s.logo}.png` : trueqeSetIconUrl(s.id),
         localId: card.localId || ''
       });
+      aportadas++;
     });
+    if (aportadas) { usados.add(trueqeSetKey(s.id)); nombres.add(setNameEs); }
+    else complete = false;
   }
+
+  // Expansiones que solo conoce PocketDecks (las más nuevas): se agregan completas.
+  groups.forEach((g, key) => {
+    if (usados.has(key)) return;
+    const setNameEs = traducirExpansionTcgApi(g.name) || g.name || g.code;
+    if (nombres.has(setNameEs)) return;
+    nombres.add(setNameEs);
+    g.cards.sort((a, b) => a.num - b.num).forEach(c => {
+      index.push({
+        name: c.name,
+        image: c.image,
+        setId: g.code,
+        setName: setNameEs,
+        setLogo: trueqeSetIconUrl(g.code),
+        localId: String(c.num)
+      });
+    });
+  });
+
   return { index, complete };
 }
 
@@ -10576,15 +10618,21 @@ function trueqeImageCandidates(c) {
   const out = [];
   const add = u => { if (u && !out.includes(u)) out.push(u); };
   const img = c.image || '';
+  const pd = trueqePdImage(c.setId, c.localId);
+  // La dirección de la fuente de respaldo de cartas no sirve imágenes: va al final.
+  const dudosa = /pokemon-tcg-pocket-database/.test(img);
+  if (dudosa) add(pd);
   if (/\/high\.webp$/.test(img)) { add(img.replace('/high.webp', '/low.webp')); add(img); }
-  else add(img);
+  else if (!dudosa) add(img);
+  add(pd);
   if (c.setId && c.localId !== undefined && c.localId !== '') {
     const id = String(c.localId);
     const pad = /^\d+$/.test(id) ? id.padStart(3, '0') : id;
-    add(`https://cdn.jsdelivr.net/gh/flibustier/pokemon-tcg-pocket-database@main/dist/cards-by-set/${c.setId}/${id}.webp`);
     add(`https://assets.tcgdex.net/en/tcgp/${c.setId}/${pad}/low.webp`);
     add(`https://assets.tcgdex.net/en/tcgp/${c.setId}/${pad}/high.webp`);
+    add(`https://cdn.jsdelivr.net/gh/flibustier/pokemon-tcg-pocket-database@main/dist/cards-by-set/${c.setId}/${id}.webp`);
   }
+  if (dudosa) add(img);
   return out;
 }
 
@@ -10607,13 +10655,25 @@ function trueqeImgFail(img) {
   img.replaceWith(ph);
 }
 
-// Logo de la expansión; si no tiene (o no carga) se muestra su código (A1, B4…).
+// Logo de la expansión: el de TCGdex; si falta o no carga, el icono del sobre
+// (el mismo que usa Datos); y si tampoco, se muestra su código (A1, B4…).
 function trueqeSetBadgeHtml(logo, setId) {
   const code = trueqeEsc(setId || '');
-  if (logo) return `<img src="${trueqeEsc(logo)}" alt="" data-code="${code}" onerror="trueqeLogoFail(this)">`;
+  const icono = trueqeSetIconUrl(setId);
+  const principal = logo || icono;
+  if (principal) {
+    const alt = (logo && icono && icono !== logo) ? icono : '';
+    return `<img src="${trueqeEsc(principal)}" alt="" data-code="${code}" data-alt="${trueqeEsc(alt)}" onerror="trueqeLogoFail(this)">`;
+  }
   return code ? `<span class="exp-code">${code}</span>` : '';
 }
 function trueqeLogoFail(img) {
+  if (img.dataset.alt) {
+    const a = img.dataset.alt;
+    img.dataset.alt = '';
+    img.src = a;
+    return;
+  }
   const code = img.dataset.code;
   if (code) {
     const sp = document.createElement('span');
@@ -10629,9 +10689,11 @@ function trueqeLogoFail(img) {
 async function trueqeRefrescarIndice() {
   try { localStorage.removeItem(TRUEQUE_CARD_INDEX_CACHE_KEY); } catch (e) {}
   TRUEQUE_CARD_INDEX = null;
+  TRUEQUE_PD_MAP = null;
   trueqePickersReady = false;
   trueqeResetForm();
   showToast('🔄 Actualizando cartas y expansiones…');
+  try { await cargarCartasPocketDecks(true); } catch (e) { /* si falla, se sigue con lo que haya */ }
   await trueqeInitPickers();
   showToast('✅ Cartas actualizadas');
 }
@@ -10650,6 +10712,8 @@ async function trueqeInitPickers() {
   sides.forEach(side => trueqeExpSetLabel(side, 'Cargando expansiones…'));
   try {
     const index = await trueqeGetCardIndex();
+    // El mapa de imágenes de PocketDecks tiene que estar listo antes de dibujar miniaturas (máx. 8 s).
+    await Promise.race([trueqeEnsurePdMap(), new Promise(r => setTimeout(r, 8000))]);
     const sets = [];
     const seen = new Set();
     index.forEach(c => {
@@ -11046,12 +11110,17 @@ function truequesVolver() { truequesGame = null; truequesEnter(false); }
 
 // ── INTERCAMBIOS: POKÉMON GO (solo "busco", normal o variocolor) ──────────
 const TGO_SHINY_ICON = 'data:image/png;base64,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';
+// Símbolos de las formas: Dinamax = contorno rosa, Gigamax = relleno rosa.
+const TGO_DMAX_ICON = 'data:image/png;base64,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';
+const TGO_GMAX_ICON = 'data:image/png;base64,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';
 const TGO_COL = 'trueques_go';
 const TGO_CACHE = new Map(); // slug -> Promise con los datos de PokeAPI
 
 let tgoCards = [];
 let tgoFilter = 'todos';
 let tgoShiny = false;
+let tgoDinamax = false;
+let tgoQueryDmax = false;      // el usuario escribió «dinamax» en el buscador
 let tgoSelected = null;        // nombre tal cual está en la lista de la Consulta
 let tgoSelectedLabel = '';     // nombre en español que se muestra
 let tgoSelectedSlug = '';      // nombre exacto en PokeAPI (para el sprite)
@@ -11066,6 +11135,15 @@ function tgoEsc(s) {
 function tgoNorm(s) {
   return String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
 }
+function tgoEsGmaxCard(c) { return /-gmax$/.test(c.slug || '') || /gigamax/i.test(c.pokemon || ''); }
+
+// Símbolo de la esquina del sprite: Gigamax o Dinamax (si no es ninguna, nada).
+function tgoFormaBadgeHtml(c) {
+  if (tgoEsGmaxCard(c)) return `<img class="tgo-forma-badge" src="${TGO_GMAX_ICON}" alt="Gigamax" title="Gigamax">`;
+  if (c.dinamax) return `<img class="tgo-forma-badge" src="${TGO_DMAX_ICON}" alt="Dinamax" title="Dinamax">`;
+  return '';
+}
+
 function tgoUser() {
   const s = window.appSession;
   return (s && s.tipo === 'user') ? { id: s.id, usuario: s.usuario, whatsapp: s.whatsapp } : null;
@@ -11086,7 +11164,8 @@ function tgoFetchPokeData(slug) {
 // Intercambios usa todos los Pokémon de la base de datos de internet (más las
 // formas de Alola, Galar, Hisui y Paldea) y suma además lo que tengas en Datos.
 // Se descarga una sola vez y se guarda 30 días en el navegador.
-const TGO_DEX_KEY = 'tgo_dex_v1';
+const TGO_DEX_KEY = 'tgo_dex_v2';
+try { localStorage.removeItem('tgo_dex_v1'); } catch (e) { /* caché viejo */ }
 const TGO_DEX_MAX_AGE = 1000 * 60 * 60 * 24 * 30;
 let TGO_DEX = null;            // [{ n: nombre, s: slug de PokeAPI, i: orden }]
 let TGO_DEX_PROMISE = null;
@@ -11133,18 +11212,43 @@ function tgoLoadDex() {
     const slugById = {};
     po.results.forEach(x => { const id = idOf(x.url); if (id && id < 10000) slugById[id] = x.name; });
     const idBySpecies = {};
+    const idBySlug = {};
+    const nameBySlug = {};
     const out = [];
     sp.results.forEach(x => {
       const id = idOf(x.url);
       if (!id) return;
       idBySpecies[x.name] = id;
       // El sprite se pide con el nombre de la forma por defecto (ej. "deoxys-normal").
-      out.push({ n: tgoFormatName(x.name), s: slugById[id] || x.name, i: id });
+      const sl = slugById[id] || x.name;
+      idBySlug[sl] = id;
+      nameBySlug[sl] = nameBySlug[x.name] = tgoFormatName(x.name);
+      out.push({ n: tgoFormatName(x.name), s: sl, i: id });
     });
+    // Encuentra la especie de una forma aunque su base no sea la forma por defecto
+    // (ej. "urshifu-rapid-strike" -> Urshifu).
+    const baseInfo = b => {
+      const id = idBySlug[b] || idBySpecies[b];
+      if (id) return { id, name: nameBySlug[b] || tgoFormatName(b) };
+      const partes = b.split('-');
+      while (partes.length > 1) {
+        partes.pop();
+        const sp = partes.join('-');
+        if (idBySpecies[sp]) return { id: idBySpecies[sp], name: tgoFormatName(b) };
+      }
+      return null;
+    };
     po.results.forEach(x => {
       if (idOf(x.url) < 10000) return;
-      const m = /^(.+)-(alola|galar|hisui|paldea)$/.exec(x.name);
-      if (m && idBySpecies[m[1]]) out.push({ n: `${tgoFormatName(m[1])} de ${REGION[m[2]]}`, s: x.name, i: idBySpecies[m[1]] + 0.5 });
+      let m = /^(.+)-(alola|galar|hisui|paldea)$/.exec(x.name);
+      if (m && idBySpecies[m[1]]) { out.push({ n: `${tgoFormatName(m[1])} de ${REGION[m[2]]}`, s: x.name, i: idBySpecies[m[1]] + 0.5 }); return; }
+      // Megaevoluciones (Charizard X/Y, Rayquaza...) y Gigamax.
+      m = /^(.+)-mega(?:-([xyz]))?$/.exec(x.name);
+      let b = m && baseInfo(m[1]);
+      if (b) { out.push({ n: `Mega ${b.name}${m[2] ? ' ' + m[2].toUpperCase() : ''}`, s: x.name, i: b.id + 0.6 }); return; }
+      m = /^(.+)-gmax$/.exec(x.name);
+      b = m && baseInfo(m[1]);
+      if (b) out.push({ n: `${b.name} Gigamax`, s: x.name, i: b.id + 0.7 });
     });
     out.sort((a, b) => a.i - b.i);
     if (out.length < 500) throw new Error('lista incompleta');
@@ -11168,18 +11272,46 @@ function tgoPokeList() {
   return out;
 }
 
+// Nombre que usa Pokémon Showdown para las Mega y Gigamax (ej. charizard-mega-x -> charizard-megax).
+function tgoShowdownNames(slug) {
+  const m = /^(.+?)-(mega(?:-([xy]))?|gmax)$/.exec(slug);
+  if (!m) return [];
+  const partes = m[1].split('-');
+  const especie = partes[0];
+  const resto = partes.slice(1).join('');
+  const suf = m[2] === 'gmax' ? 'gmax' : 'mega' + (m[3] || '');
+  const out = [`${resto ? especie + '-' + resto : especie}-${suf}`];
+  if (resto) out.push(`${especie}-${suf}`);
+  return out;
+}
+
 async function tgoSpriteCandidates(name, shiny, slugExacto) {
   const limpio = (name || '').replace(/\s*\boscuro\b\s*/gi, ' ').trim() || name;
   const slug = slugExacto || TGO_SLUG_OF.get(name) || getSpriteSlug(limpio);
   const out = [];
-  const d = await tgoFetchPokeData(slug);
-  if (d && d.sprites) {
+  const delDato = d => {
+    if (!d || !d.sprites) return;
     const o = d.sprites.other || {};
     if (shiny) out.push(o.home && o.home.front_shiny, o['official-artwork'] && o['official-artwork'].front_shiny, d.sprites.front_shiny);
     else out.push(o.home && o.home.front_default, o['official-artwork'] && o['official-artwork'].front_default, d.sprites.front_default);
+  };
+  delDato(await tgoFetchPokeData(slug));
+
+  const forma = /^(.+?)-(mega(?:-[xy])?|gmax)$/.exec(slug); // Mega o Gigamax
+  const dbDir = shiny ? 'shiny' : 'normal';
+  out.push(`https://img.pokemondb.net/sprites/home/${dbDir}/${slug}.png`);
+  if (forma) {
+    // Otras fuentes con nombres propios para estas formas.
+    if (forma[2] === 'gmax') out.push(`https://img.pokemondb.net/sprites/home/${dbDir}/${forma[1]}-gigantamax.png`);
+    tgoShowdownNames(slug).forEach(n => {
+      out.push(`https://play.pokemonshowdown.com/sprites/${shiny ? 'dex-shiny' : 'dex'}/${n}.png`);
+      out.push(`https://play.pokemonshowdown.com/sprites/${shiny ? 'ani-shiny' : 'ani'}/${n}.gif`);
+    });
+    // Último recurso: la forma base, para que nunca quede un hueco vacío.
+    delDato(await tgoFetchPokeData(forma[1]));
+  } else {
+    out.push(shiny ? `https://play.pokemonshowdown.com/sprites/gen5-shiny/${slug}.png` : `https://play.pokemonshowdown.com/sprites/gen5/${slug}.png`);
   }
-  out.push(shiny ? `https://img.pokemondb.net/sprites/home/shiny/${slug}.png` : `https://img.pokemondb.net/sprites/home/normal/${slug}.png`);
-  out.push(shiny ? `https://play.pokemonshowdown.com/sprites/gen5-shiny/${slug}.png` : `https://play.pokemonshowdown.com/sprites/gen5/${slug}.png`);
   return out.filter(Boolean);
 }
 
@@ -11202,13 +11334,18 @@ function tgoRenderAc() {
   const box = document.getElementById('tgo-ac');
   if (!input || !box) return;
   if (tgoSelected && input.value !== tgoSelectedLabel) tgoClearSelected(true);
-  const q = tgoNorm(input.value);
+  // «dinamax» no es parte del nombre: se quita de la búsqueda y activa el botón al elegir.
+  const dmaxRe = /\b(dinamax|dynamax)\b/i;
+  tgoQueryDmax = dmaxRe.test(input.value);
+  const q = tgoNorm(input.value.replace(dmaxRe, ' ').replace(/gigantamax|gmax/gi, 'gigamax')).replace(/\s+/g, ' ').trim();
   if (!q) { box.style.display = 'none'; box.innerHTML = ''; return; }
+  const palabras = q.split(' ');
   const empiezan = [], contienen = [];
   for (const x of tgoPokeList()) {
     const nEn = tgoNorm(x.n), nEs = tgoNorm(traducirNombrePokemon(x.n));
     if (nEn.startsWith(q) || nEs.startsWith(q)) empiezan.push(x);
-    else if (nEn.includes(q) || nEs.includes(q)) contienen.push(x);
+    // Las palabras pueden ir en cualquier orden: «charizard mega» también encuentra «Mega Charizard X».
+    else if (palabras.every(w => nEn.includes(w) || nEs.includes(w))) contienen.push(x);
     if (empiezan.length >= 12) break;
   }
   const matches = empiezan.concat(contienen).slice(0, 12);
@@ -11241,6 +11378,9 @@ function tgoSelectPoke(i) {
   tgoSelected = x.n;
   tgoSelectedSlug = x.s;
   tgoSelectedLabel = traducirNombrePokemon(x.n);
+  if (tgoEsGmax()) tgoDinamax = false;
+  else if (tgoQueryDmax) tgoDinamax = true;
+  tgoUpdateDmaxBtn();
   document.getElementById('tgo-poke-input').value = tgoSelectedLabel;
   document.getElementById('tgo-ac').style.display = 'none';
   tgoRenderPreview();
@@ -11251,9 +11391,14 @@ function tgoRenderPreview() {
   if (!tgoSelected) { prev.style.display = 'none'; return; }
   prev.style.display = 'flex';
   prev.classList.toggle('shiny', tgoShiny);
+  prev.classList.toggle('dmax', tgoDinamax);
   document.getElementById('tgo-preview-name').textContent = tgoSelectedLabel;
-  document.getElementById('tgo-preview-tag').textContent = tgoShiny ? '✨ Lo buscas variocolor (shiny)' : 'Lo buscas en su forma normal';
+  const extras = [tgoEsGmax() ? 'Gigamax' : '', tgoShiny ? '✨ variocolor (shiny)' : '', tgoDinamax ? '🔴 Dinamax' : ''].filter(Boolean);
+  document.getElementById('tgo-preview-tag').textContent = extras.length ? 'Lo buscas ' + extras.join(' · ') : 'Lo buscas en su forma normal';
   document.getElementById('tgo-preview-badge').style.display = tgoShiny ? 'block' : 'none';
+  const fb = document.getElementById('tgo-preview-forma');
+  const icono = tgoEsGmax() ? TGO_GMAX_ICON : (tgoDinamax ? TGO_DMAX_ICON : '');
+  if (icono) { fb.src = icono; fb.style.display = 'block'; } else { fb.style.display = 'none'; }
   tgoSelectedImg = '';
   tgoLoadSprite(document.getElementById('tgo-preview-img'), tgoSelected, tgoShiny, url => { tgoSelectedImg = url; }, tgoSelectedSlug);
 }
@@ -11262,6 +11407,23 @@ function tgoToggleShiny() {
   tgoShiny = !tgoShiny;
   tgoUpdateShinyBtn();
   if (tgoSelected) tgoRenderPreview();
+}
+
+function tgoEsGmax() { return /-gmax$/.test(tgoSelectedSlug || ''); }
+
+function tgoToggleDmax() {
+  if (tgoEsGmax()) { showToast('Los Gigamax ya son una forma de Dinamax', true); return; }
+  tgoDinamax = !tgoDinamax;
+  tgoUpdateDmaxBtn();
+  if (tgoSelected) tgoRenderPreview();
+}
+
+function tgoUpdateDmaxBtn() {
+  const btn = document.getElementById('tgo-dmax-btn');
+  if (!btn) return;
+  btn.classList.toggle('on', tgoDinamax);
+  btn.classList.toggle('off-disabled', tgoEsGmax());
+  document.getElementById('tgo-dmax-btn-text').textContent = 'Dinamax: ' + (tgoDinamax ? 'Sí' : 'No');
 }
 
 function tgoUpdateShinyBtn() {
@@ -11283,7 +11445,9 @@ function tgoClearSelected(keepText) {
 function tgoResetForm() {
   tgoClearSelected();
   tgoShiny = false;
+  tgoDinamax = false;
   tgoUpdateShinyBtn();
+  tgoUpdateDmaxBtn();
   const n = document.getElementById('tgo-notes');
   if (n) n.value = '';
 }
@@ -11300,6 +11464,7 @@ async function tgoPublicar() {
       slug: tgoSelectedSlug || '',
       nombreEs: tgoSelectedLabel,
       shiny: !!tgoShiny,
+      dinamax: !!tgoDinamax,
       imagen: tgoSelectedImg || '',
       notas,
       userId: u.id,
@@ -11340,15 +11505,16 @@ function tgoFiltrar(f, btn) {
 
 function tgoCardHtml(c, showDelete, esAdmin) {
   const nombre = c.nombreEs || c.pokemon;
-  const texto = 'Hola ' + c.userNombre + ', vi que buscas ' + nombre + (c.shiny ? ' variocolor (shiny)' : '') + ' en el tablón de intercambios de Pokémon GO.';
+  const texto = 'Hola ' + c.userNombre + ', vi que buscas ' + nombre + (c.shiny ? ' variocolor (shiny)' : '') + (c.dinamax ? ' Dinamax' : '') + ' en el tablón de intercambios de Pokémon GO.';
   const waLink = 'https://wa.me/' + c.userWhatsapp + '?text=' + encodeURIComponent(texto);
-  return `<div class="tgo-card${c.shiny ? ' shiny' : ''}">
+  return `<div class="tgo-card${c.shiny ? ' shiny' : ''}${c.dinamax ? ' dmax' : ''}">
     <div class="tgo-sprite">
       <img class="sp" data-name="${tgoEsc(c.pokemon)}" data-slug="${tgoEsc(c.slug || '')}" data-shiny="${c.shiny ? 1 : 0}"${c.imagen ? ` src="${tgoEsc(c.imagen)}"` : ''} alt="" onerror="tgoImgFail(this)">
       ${c.shiny ? `<img class="tgo-badge" src="${TGO_SHINY_ICON}" alt="Variocolor" title="Variocolor (shiny)">` : ''}
+      ${tgoFormaBadgeHtml(c)}
     </div>
     <div class="tgo-name">${tgoEsc(nombre)}</div>
-    <span class="tgo-tag${c.shiny ? ' shiny' : ''}">${c.shiny ? 'Busca variocolor' : 'Busca'}</span>
+    <span class="tgo-tag${c.shiny ? ' shiny' : ''}">${c.shiny ? 'Busca variocolor' : 'Busca'}</span>${c.dinamax ? ' <span class="tgo-tag dmax">Dinamax</span>' : ''}
     ${c.notas ? `<div class="notes">${tgoEsc(c.notas)}</div>` : ''}
     <div class="owner">👤 ${tgoEsc(c.userNombre)}</div>
     <a class="wa" href="${waLink}" target="_blank" rel="noopener">Escribir por WhatsApp</a>
@@ -11374,6 +11540,9 @@ function tgoRender() {
   let list = tgoCards;
   if (tgoFilter === 'shiny') list = list.filter(c => c.shiny);
   else if (tgoFilter === 'normal') list = list.filter(c => !c.shiny);
+  else if (tgoFilter === 'mega') list = list.filter(c => /^mega /i.test(c.pokemon || '') || /-mega(-[xyz])?$/.test(c.slug || ''));
+  else if (tgoFilter === 'dmax') list = list.filter(c => c.dinamax);
+  else if (tgoFilter === 'gmax') list = list.filter(c => /gigamax/i.test(c.pokemon || '') || /-gmax$/.test(c.slug || ''));
   if (term) list = list.filter(c => tgoNorm(c.pokemon).includes(term) || tgoNorm(c.nombreEs).includes(term) || tgoNorm(c.userNombre).includes(term));
   document.getElementById('tgo-count').textContent = tgoCards.length;
   const binder = document.getElementById('tgo-binder');
@@ -11447,6 +11616,7 @@ function tgoLoad() {
   document.getElementById('tgo-preview-badge').src = TGO_SHINY_ICON;
   if (puede) document.getElementById('tgo-whoami-name').textContent = u.usuario;
   tgoUpdateShinyBtn();
+  tgoUpdateDmaxBtn();
   if (window.appSession && window.appSession.tipo === 'admin') tgoSetAdmin(true);
   tgoFetch();
   tgoCargarLista();
