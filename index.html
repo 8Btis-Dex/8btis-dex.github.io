@@ -2921,6 +2921,7 @@
   .usuario-row button.del:hover { background: rgba(229,115,115,0.3); color: #fff; }
   .usuarios-add { display: grid; gap: 8px; margin-bottom: 14px; text-align: left; }
   .usuarios-add .gate-input { margin-bottom: 0; }
+  .u-label { display: block; font-size: 0.72rem; font-weight: 800; color: var(--muted); margin-bottom: 3px; text-align: left; }
 </style>
 </head>
 <body>
@@ -3648,9 +3649,18 @@
     <p>Estas personas pueden entrar a la página. El usuario y el teléfono no se pueden repetir. Entregales su usuario y contraseña; el teléfono se usa para el WhatsApp de los intercambios.</p>
     <div class="usuarios-list" id="usuarios-list"></div>
     <div class="usuarios-add">
-      <input class="gate-input" id="usuario-new-name" type="text" placeholder="Usuario (3-20 caracteres: letras, números . _ -)" maxlength="20" autocomplete="off" autocapitalize="none">
-      <input class="gate-input" id="usuario-new-tel" type="tel" placeholder="Teléfono (con código de país, sin espacios)" autocomplete="off">
-      <input class="gate-input" id="usuario-new-pass" type="text" placeholder="Contraseña (mínimo 4 caracteres)" autocomplete="off">
+      <div>
+        <label class="u-label" for="usuario-new-name">1. Usuario (3-20 caracteres: letras, números . _ -)</label>
+        <input class="gate-input" id="usuario-new-name" type="text" placeholder="Ej. juan23" maxlength="20" autocomplete="off" autocapitalize="none">
+      </div>
+      <div>
+        <label class="u-label" for="usuario-new-tel">2. Teléfono / WhatsApp</label>
+        <input class="gate-input" id="usuario-new-tel" type="tel" placeholder="Ej. 5491130136403 o 11 3013-6403" autocomplete="off">
+      </div>
+      <div>
+        <label class="u-label" for="usuario-new-pass">3. Contraseña (mínimo 4 caracteres)</label>
+        <input class="gate-input" id="usuario-new-pass" type="text" placeholder="Ej. clave1234" autocomplete="off">
+      </div>
       <button class="btn btn-primary" onclick="crearUsuario()">➕ Crear usuario</button>
     </div>
     <div class="modal-btns">
@@ -9965,14 +9975,56 @@ function renderUsuarios() {
 
 function usuarioTelValido(t) { return t.length >= 8 && t.length <= 15; }
 
+// Deja solo los dígitos, aunque el número venga con +, espacios, guiones,
+// paréntesis o caracteres invisibles (típico al copiarlo desde WhatsApp o
+// los contactos). También convierte dígitos de otros alfabetos a 0-9.
+function usuarioNormTel(v) {
+  const d = String(v || '')
+    .normalize('NFKC')
+    .replace(/[\u0660-\u0669]/g, c => String(c.charCodeAt(0) - 0x0660))
+    .replace(/[\u06F0-\u06F9]/g, c => String(c.charCodeAt(0) - 0x06F0))
+    .replace(/\D/g, '');
+  return usuarioArgentinaWhatsapp(d);
+}
+
+// Celulares de Argentina: WhatsApp los necesita como 54 9 + código de área +
+// número, sin el 0 ni el 15. Acepta +54..., 549..., 11 xxxx-xxxx, 15 xxxx-xxxx
+// y 011 15 xxxx-xxxx (los dos últimos se toman como Buenos Aires, código 11).
+// Cualquier otro número se deja tal cual.
+function usuarioArgentinaWhatsapp(d) {
+  if (d.startsWith('00')) d = d.slice(2);
+  let m;
+  if (d.startsWith('54')) {
+    m = d.slice(2);
+    if (m.startsWith('0')) m = m.slice(1);
+    if (m.startsWith('9') && (m.length === 11 || m.length === 13)) m = m.slice(1);
+  } else {
+    m = d.startsWith('0') ? d.slice(1) : d;
+    if (m.length === 12 && m.startsWith('1115')) m = '11' + m.slice(4);
+    else if (!(m.length === 10 && /^(11|15)/.test(m))) return d;
+  }
+  if (m.length === 10 && m.startsWith('15')) m = '11' + m.slice(2);
+  if (m.length === 12) {
+    for (const n of [2, 3, 4]) {
+      if (m.slice(n, n + 2) === '15') { m = m.slice(0, n) + m.slice(n + 2); break; }
+    }
+  }
+  return m.length === 10 ? '549' + m : d;
+}
+
+function usuarioMsgTelInvalido(tel) {
+  return '⚠️ Teléfono no válido: se detectaron ' + tel.length + ' dígitos' + (tel ? ' (' + tel + ')' : '') +
+    '. Debe tener entre 8 y 15, con código de país y sin 0 ni 15 delante.';
+}
+
 async function crearUsuario() {
   if (!window._fbDb) { showToast('⚠️ Sin conexión con la nube.', true); return; }
   const usuario = document.getElementById('usuario-new-name').value.trim();
   const usuarioNorm = gateNormUser(usuario);
-  const tel = (document.getElementById('usuario-new-tel').value || '').replace(/\D/g, '');
+  const tel = usuarioNormTel(document.getElementById('usuario-new-tel').value);
   const pass = document.getElementById('usuario-new-pass').value;
   if (!USUARIO_RE.test(usuarioNorm)) { showToast('⚠️ Usuario no válido: 3-20 caracteres (letras, números, punto, guion o guion bajo, sin espacios).', true); return; }
-  if (!usuarioTelValido(tel)) { showToast('⚠️ Teléfono no válido: escríbelo con código de país y sin espacios.', true); return; }
+  if (!usuarioTelValido(tel)) { showToast(usuarioMsgTelInvalido(tel), true); return; }
   if (pass.length < 4) { showToast('⚠️ La contraseña debe tener al menos 4 caracteres.', true); return; }
   try {
     const col = window._fbDb.collection(APP_USERS_COL);
@@ -9991,7 +10043,7 @@ async function crearUsuario() {
     document.getElementById('usuario-new-name').value = '';
     document.getElementById('usuario-new-tel').value = '';
     document.getElementById('usuario-new-pass').value = '';
-    showToast('✅ Usuario creado');
+    showToast('✅ Usuario creado (WhatsApp: ' + tel + ')');
     await cargarUsuarios();
   } catch (e) {
     console.error(e);
@@ -10021,12 +10073,12 @@ async function cambiarTelefonoUsuario(id) {
   if (!u) return;
   const entrada = prompt('Nuevo teléfono para ' + u.usuario + ' (con código de país, sin espacios):', u.whatsapp);
   if (entrada == null) return;
-  const tel = entrada.replace(/\D/g, '');
-  if (!usuarioTelValido(tel)) { showToast('⚠️ Teléfono no válido.', true); return; }
+  const tel = usuarioNormTel(entrada);
+  if (!usuarioTelValido(tel)) { showToast(usuarioMsgTelInvalido(tel), true); return; }
   if (usuariosCache.some(x => x.id !== id && x.whatsapp === tel)) { showToast('⚠️ Ese teléfono ya está asignado a otro usuario.', true); return; }
   try {
     await window._fbDb.collection(APP_USERS_COL).doc(id).update({ whatsapp: tel });
-    showToast('📞 Teléfono actualizado');
+    showToast('📞 Teléfono actualizado (WhatsApp: ' + tel + ')');
     await cargarUsuarios();
   } catch (e) {
     console.error(e);
