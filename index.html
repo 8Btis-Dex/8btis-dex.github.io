@@ -13,6 +13,7 @@
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
 <link rel="apple-touch-icon" href="icon-192.png">
 <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+<script>document.documentElement.classList.add('gate-locked');</script>
 <style>
   :root {
     --red: #9C1B24;
@@ -227,7 +228,7 @@
   .trueque-filters .trueque-input { flex: 2; min-width: 160px; margin-bottom: 0; }
   .trueque-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(160px,1fr));
+    grid-template-columns: repeat(auto-fill, minmax(260px,1fr));
     gap: 12px;
   }
   .trueque-sleeve {
@@ -355,6 +356,212 @@
     cursor: pointer;
   }
   .trueque-delete-btn:hover { background: rgba(229,115,115,0.28); }
+  /* Publicar intercambio: busco / ofrezco con desplegable de miniaturas */
+  .trueque-side {
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 10px;
+    padding: 12px;
+    margin-bottom: 12px;
+  }
+  .trueque-side-title { font-weight: 800; font-size: 0.88rem; margin-bottom: 8px; }
+  .trueque-side.busca .trueque-side-title { color: #d3a6ec; }
+  .trueque-side.ofrece .trueque-side-title { color: #8ce08f; }
+  .trueque-chosen { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 10px; }
+  .trueque-chosen-empty { font-size: 0.75rem; color: var(--muted); }
+  .trueque-chip {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--dark-card);
+    border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 8px;
+    padding: 5px 6px;
+    max-width: 100%;
+  }
+  .trueque-chip img.thumb {
+    width: 30px;
+    height: 42px;
+    object-fit: cover;
+    border-radius: 3px;
+    flex-shrink: 0;
+    background: rgba(255,255,255,0.05);
+  }
+  .trueque-chip .chip-name { font-weight: 700; font-size: 0.74rem; }
+  .trueque-chip .chip-set { font-size: 0.62rem; color: var(--muted); display: flex; align-items: center; gap: 4px; }
+  .trueque-chip .chip-set img { width: 12px; height: 12px; object-fit: contain; }
+  .trueque-chip button {
+    background: none;
+    border: none;
+    color: #ff8a80;
+    font-size: 0.95rem;
+    cursor: pointer;
+    padding: 2px 5px;
+  }
+  /* Desplegable propio de expansiones: fondo blanco, letras negras, hover violeta */
+  .trueque-exp { position: relative; margin-bottom: 6px; }
+  .trueque-exp-btn {
+    width: 100%;
+    text-align: left;
+    font-family: 'Nunito', sans-serif;
+    font-size: 0.9rem;
+    padding: 10px 12px;
+    border-radius: 8px;
+    border: 1px solid rgba(255,255,255,0.15);
+    background: rgba(255,255,255,0.06);
+    color: var(--text);
+    cursor: pointer;
+  }
+  .trueque-exp-list {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    z-index: 50;
+    margin-top: 4px;
+    background: #ffffff;
+    border-radius: 10px;
+    max-height: 260px;
+    overflow-y: auto;
+    box-shadow: 0 8px 20px rgba(0,0,0,0.45);
+  }
+  .trueque-exp-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 12px;
+    font-family: 'Nunito', sans-serif;
+    font-size: 0.88rem;
+    font-weight: 600;
+    color: #000000;
+    cursor: pointer;
+  }
+  .trueque-exp-item img { width: 18px; height: 18px; object-fit: contain; flex-shrink: 0; }
+  .trueque-exp-item.sel { font-weight: 800; }
+  .trueque-exp-item:hover { background: var(--purple); color: #ffffff; }
+  .trueque-dd-toggle {
+    width: 100%;
+    text-align: left;
+    font-family: 'Nunito', sans-serif;
+    font-size: 0.85rem;
+    font-weight: 700;
+    padding: 10px 12px;
+    border-radius: 8px;
+    border: 1px solid rgba(255,255,255,0.15);
+    background: rgba(255,255,255,0.06);
+    color: var(--text);
+    cursor: pointer;
+  }
+  .trueque-dd-panel {
+    margin-top: 6px;
+    background: var(--dark-card);
+    border: 1px solid rgba(255,255,255,0.15);
+    border-radius: 10px;
+    padding: 10px;
+    box-shadow: 0 8px 20px rgba(0,0,0,0.35);
+  }
+  .trueque-dd-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(74px, 1fr));
+    gap: 8px;
+    max-height: 320px;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  .trueque-dd-item {
+    position: relative;
+    text-align: center;
+    cursor: pointer;
+    border: 2px solid transparent;
+    border-radius: 8px;
+    padding: 3px;
+  }
+  .trueque-dd-item:hover { background: rgba(255,255,255,0.08); }
+  .trueque-dd-item img {
+    width: 100%;
+    aspect-ratio: 5 / 7;
+    object-fit: cover;
+    border-radius: 5px;
+    background: rgba(255,255,255,0.05);
+    display: block;
+  }
+  .trueque-dd-item .dd-name { font-size: 0.6rem; line-height: 1.1; color: var(--muted); margin-top: 3px; }
+  .trueque-dd-item.sel { border-color: var(--green); background: rgba(76,175,80,0.15); }
+  .trueque-dd-item.sel::after {
+    content: '✓';
+    position: absolute;
+    top: 5px;
+    right: 5px;
+    background: var(--green);
+    color: white;
+    font-size: 0.65rem;
+    font-weight: 800;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .exp-code {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 22px;
+    height: 16px;
+    padding: 0 4px;
+    border-radius: 4px;
+    background: #2c3e50;
+    color: #ffffff;
+    font-size: 0.58rem;
+    font-weight: 800;
+    flex-shrink: 0;
+  }
+  .trueque-noimg {
+    width: 100%;
+    aspect-ratio: 5 / 7;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    border: 1px dashed rgba(255,255,255,0.25);
+    border-radius: 5px;
+    font-size: 0.55rem;
+    color: var(--muted);
+    background: rgba(255,255,255,0.04);
+  }
+  .trueque-chip .trueque-noimg { width: 30px; height: 42px; aspect-ratio: auto; font-size: 0.45rem; flex-shrink: 0; }
+  .trueque-refresh-btn {
+    background: none;
+    border: 1px solid rgba(255,255,255,0.25);
+    color: var(--text);
+    font-size: 0.7rem;
+    padding: 3px 8px;
+    border-radius: 6px;
+    cursor: pointer;
+    margin-left: 8px;
+  }
+  .trueque-refresh-btn:hover { background: var(--purple); color: #fff; }
+  /* Tarjeta de intercambio publicada */
+  .trade-block { margin-bottom: 8px; }
+  .trade-label {
+    display: inline-block;
+    font-size: 0.64rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    padding: 2px 7px;
+    border-radius: 5px;
+    margin-bottom: 6px;
+  }
+  .trade-block.busca .trade-label { background: rgba(155,89,182,0.25); color: #d3a6ec; }
+  .trade-block.ofrece .trade-label { background: rgba(76,175,80,0.25); color: #8ce08f; }
+  .trade-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(62px, 1fr)); gap: 6px; }
+  .trade-mini { text-align: center; }
+  .trade-mini img { width: 100%; border-radius: 5px; display: block; background: rgba(255,255,255,0.05); }
+  .trade-mini .tm-name { font-size: 0.62rem; font-weight: 700; line-height: 1.1; margin-top: 2px; }
+  .trade-mini .tm-set { font-size: 0.55rem; color: var(--muted); line-height: 1.1; }
+  .trade-arrow { text-align: center; color: var(--muted); font-size: 1rem; margin: 2px 0 6px; }
+  .trade-none { font-size: 0.72rem; color: var(--muted); }
   /* Sugerencia de mazo nuevo */
   .sugerir-mazo-section-title {
     font-size: 0.8rem;
@@ -2593,9 +2800,152 @@
   .liga-icon svg { width: 100%; height: 100%; display: block; }
   .liga-icon-empty { width: 30px; height: 30px; display: inline-block; }
   .ri-value .liga-icon { width: 26px; height: 26px; vertical-align: middle; margin-right: 6px; }
+
+  /* LOGIN DE ENTRADA */
+  html.gate-locked body > *:not(#app-gate) { visibility: hidden !important; }
+  html.gate-locked body { overflow: hidden; }
+  html:not(.gate-locked) #app-gate { display: none; }
+  #app-gate {
+    position: fixed;
+    inset: 0;
+    z-index: 100000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    background: var(--black);
+    background-image:
+      radial-gradient(ellipse at 20% 50%, rgba(30,144,255,0.12) 0%, transparent 60%),
+      radial-gradient(ellipse at 80% 20%, rgba(227,53,13,0.12) 0%, transparent 60%);
+  }
+  .gate-box {
+    width: 100%;
+    max-width: 380px;
+    background: var(--dark-card);
+    border: 1px solid rgba(255,215,0,0.3);
+    border-radius: 14px;
+    padding: 28px 24px;
+    text-align: center;
+  }
+  .gate-title {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 0.8rem;
+    color: var(--yellow);
+    line-height: 1.6;
+    margin-bottom: 8px;
+  }
+  .gate-sub { font-size: 0.85rem; color: var(--muted); margin-bottom: 18px; }
+  .gate-input {
+    width: 100%;
+    font-family: 'Nunito', sans-serif;
+    font-size: 0.95rem;
+    padding: 11px 12px;
+    border-radius: 8px;
+    border: 1px solid rgba(255,255,255,0.15);
+    background: rgba(255,255,255,0.06);
+    color: var(--text);
+    margin-bottom: 10px;
+  }
+  .gate-input::placeholder { color: var(--muted); }
+  .gate-error { display: none; color: #ff8a80; font-size: 0.8rem; margin-bottom: 10px; }
+  .gate-admin-link {
+    display: inline-block;
+    margin-top: 14px;
+    background: none;
+    border: none;
+    color: var(--muted);
+    font-size: 0.75rem;
+    text-decoration: underline;
+    cursor: pointer;
+  }
+  #gate-admin-box { display: none; margin-top: 10px; }
+  .admin-access { display: flex; align-items: center; gap: 8px; }
+  #session-pill {
+    display: none;
+    align-items: center;
+    gap: 6px;
+    background: rgba(255,255,255,0.1);
+    border: 1px solid rgba(255,255,255,0.2);
+    border-radius: 999px;
+    padding: 2px 4px 2px 10px;
+    font-size: 0.72rem;
+    color: #fff;
+    white-space: nowrap;
+  }
+  #session-pill button {
+    background: rgba(255,255,255,0.15);
+    border: none;
+    color: #fff;
+    font-size: 0.68rem;
+    font-weight: 700;
+    padding: 3px 8px;
+    border-radius: 999px;
+    cursor: pointer;
+  }
+  #session-pill button:hover { background: var(--purple); }
+  /* Usuarios (Datos) */
+  .usuarios-list {
+    max-height: 280px;
+    overflow-y: auto;
+    text-align: left;
+    margin-bottom: 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .usuario-row {
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 10px;
+    padding: 8px 10px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+  .usuario-row .u-info { flex: 1; min-width: 130px; }
+  .usuario-row .u-name { font-weight: 800; font-size: 0.88rem; color: var(--text); }
+  .usuario-row .u-tel { font-size: 0.74rem; color: var(--muted); }
+  .usuario-row button {
+    font-size: 0.7rem;
+    font-weight: 700;
+    padding: 5px 8px;
+    border-radius: 7px;
+    border: 1px solid rgba(255,255,255,0.2);
+    background: rgba(255,255,255,0.08);
+    color: var(--text);
+    cursor: pointer;
+  }
+  .usuario-row button:hover { background: var(--purple); color: #fff; }
+  .usuario-row button.del { border-color: rgba(229,115,115,0.5); color: #ff8a80; }
+  .usuario-row button.del:hover { background: rgba(229,115,115,0.3); color: #fff; }
+  .usuarios-add { display: grid; gap: 8px; margin-bottom: 14px; text-align: left; }
+  .usuarios-add .gate-input { margin-bottom: 0; }
 </style>
 </head>
 <body>
+
+<!-- LOGIN DE ENTRADA -->
+<div id="app-gate">
+  <div class="gate-box">
+    <div class="gate-title">8-Bits Pokedex</div>
+    <div id="gate-loading" class="gate-sub">Comprobando sesión…</div>
+    <div id="gate-forms" style="display:none">
+      <div class="gate-sub">Inicia sesión para entrar</div>
+      <div id="gate-error" class="gate-error"></div>
+      <form onsubmit="gateLogin(event); return false;">
+        <input class="gate-input" id="gate-user" type="text" placeholder="Usuario" autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false">
+        <input class="gate-input" id="gate-pass" type="password" placeholder="Contraseña" autocomplete="current-password">
+        <button type="submit" id="gate-submit" class="btn btn-primary" style="width:100%">Entrar</button>
+      </form>
+      <button type="button" class="gate-admin-link" onclick="gateToggleAdmin()">Acceso administrador</button>
+      <div id="gate-admin-box">
+        <input class="gate-input" id="gate-admin-pass" type="password" placeholder="Contraseña de administrador" autocomplete="off" onkeydown="if(event.key==='Enter') gateAdminLogin()">
+        <button type="button" class="btn" style="width:100%;background:var(--purple);color:#fff" onclick="gateAdminLogin()">Entrar como administrador</button>
+      </div>
+    </div>
+  </div>
+</div>
 
 <!-- HEADER -->
 <header>
@@ -2619,6 +2969,7 @@
     <button class="tab-btn datos" id="tab-datos" onclick="showTab('datos')" style="display:none">🔧 Datos</button>
   </div>
   <div class="admin-access" id="admin-access">
+    <div id="session-pill"><span id="session-pill-name"></span><button type="button" onclick="appLogout()">Salir</button></div>
     <input
       type="password"
       id="admin-pass-input"
@@ -2808,6 +3159,7 @@
         <button class="btn btn-yellow" onclick="showAddPokemon()">➕ Agregar Pokémon</button>
         <button class="btn btn-yellow" onclick="showAddPokemonVarios()">📋 Agregar varios</button>
         <button class="btn" style="background:var(--purple);color:#fff" onclick="openExpansionesModal()">🏷️ Expansiones</button>
+        <button class="btn" style="background:var(--purple);color:#fff" onclick="openUsuariosModal()">👥 Usuarios</button>
         <button class="btn btn-danger" id="btn-borrar-vacios" onclick="borrarVaciosModoActual()">🗑️ Borrar vacíos</button>
         <button class="btn btn-primary" onclick="saveAllData()">💾 Guardar cambios</button>
         <button class="btn btn-danger" onclick="lockDatos()">🔒 Bloquear</button>
@@ -3006,43 +3358,46 @@
     </div>
 
     <div id="trueques-content-wrap">
-    <div class="trueque-card" id="trueque-auth-card">
-      <h3>🔁 Entrar al tablón de intercambios</h3>
-      <p style="font-size:0.82rem;color:var(--muted);margin-bottom:12px">Escribe tu nombre y tu WhatsApp. Si ya te registraste antes, con los mismos datos vuelves a entrar.</p>
-      <div id="trueque-auth-error" style="display:none;color:#e57373;font-size:0.8rem;margin-bottom:8px"></div>
-      <input class="trueque-input" id="trueque-name-input" type="text" placeholder="Tu nombre">
-      <input class="trueque-input" id="trueque-wa-input" type="text" placeholder="Tu WhatsApp (con código de país, sin espacios)">
-      <button class="btn btn-primary" onclick="trueqeEntrar()">Entrar</button>
-    </div>
-
     <div id="trueque-app" style="display:none">
 
-      <div class="trueque-card">
+      <div class="trueque-card" id="trueque-admin-note" style="display:none">
+        <p style="font-size:0.82rem;color:var(--muted)">Estás usando la página como administrador: puedes ver el tablón y borrar publicaciones con «Admin». Para publicar intercambios hay que entrar con un usuario creado en Datos → Usuarios.</p>
+      </div>
+
+      <div class="trueque-card" id="trueque-publish-card">
         <div class="trueque-whoami">
           👤 <span id="trueque-whoami-name"></span>
-          <button onclick="trueqeSalir()">salir</button>
         </div>
-        <h3>➕ Publicar carta</h3>
-        <div class="trueque-row">
-          <select class="trueque-select" id="trueque-card-type">
-            <option value="tengo">Tengo</option>
-            <option value="busco">Busco</option>
-          </select>
-          <div class="trueque-card-field">
-            <input class="trueque-input" id="trueque-card-name" type="text" placeholder="Ej. Charizard ex" autocomplete="off"
-              oninput="trueqeOnCardNameInput()" onfocus="trueqeOnCardNameInput()" onblur="trueqeHideAutocompleteDelayed()">
-            <div class="trueque-autocomplete" id="trueque-autocomplete" style="display:none"></div>
+        <h3>➕ Publicar intercambio <button type="button" class="trueque-refresh-btn" onclick="trueqeRefrescarIndice()" title="Vuelve a descargar las cartas y expansiones">↻ Actualizar cartas</button></h3>
+        <div class="trueque-side busca">
+          <div class="trueque-side-title">🔍 Qué busco</div>
+          <div class="trueque-chosen" id="trueque-chosen-busca"></div>
+          <div class="trueque-exp" id="trueque-expwrap-busca">
+            <input type="hidden" id="trueque-exp-busca" value="">
+            <button type="button" class="trueque-exp-btn" id="trueque-exp-btn-busca" onclick="trueqeExpToggle('busca')">Cargando expansiones…</button>
+            <div class="trueque-exp-list" id="trueque-exp-list-busca" style="display:none"></div>
+          </div>
+          <button type="button" class="trueque-dd-toggle" id="trueque-dd-toggle-busca" onclick="trueqePickerToggle('busca')">▾ Ver cartas de la expansión</button>
+          <div class="trueque-dd-panel" id="trueque-dd-panel-busca" style="display:none">
+            <input class="trueque-input" id="trueque-dd-search-busca" type="text" placeholder="Filtrar por nombre..." autocomplete="off" oninput="trueqePickerRender('busca')">
+            <div class="trueque-dd-grid" id="trueque-dd-grid-busca"></div>
           </div>
         </div>
-        <div class="trueque-selected-preview" id="trueque-selected-preview">
-          <img class="thumb" id="trueque-selected-thumb" src="" alt="">
-          <div class="sp-info">
-            <div class="sp-name" id="trueque-selected-name"></div>
-            <div class="sp-set" id="trueque-selected-set"></div>
+        <div class="trueque-side ofrece">
+          <div class="trueque-side-title">🎁 Qué ofrezco a cambio</div>
+          <div class="trueque-chosen" id="trueque-chosen-ofrece"></div>
+          <div class="trueque-exp" id="trueque-expwrap-ofrece">
+            <input type="hidden" id="trueque-exp-ofrece" value="">
+            <button type="button" class="trueque-exp-btn" id="trueque-exp-btn-ofrece" onclick="trueqeExpToggle('ofrece')">Cargando expansiones…</button>
+            <div class="trueque-exp-list" id="trueque-exp-list-ofrece" style="display:none"></div>
           </div>
-          <button onclick="trueqeClearSelectedCard()">Quitar</button>
+          <button type="button" class="trueque-dd-toggle" id="trueque-dd-toggle-ofrece" onclick="trueqePickerToggle('ofrece')">▾ Ver cartas de la expansión</button>
+          <div class="trueque-dd-panel" id="trueque-dd-panel-ofrece" style="display:none">
+            <input class="trueque-input" id="trueque-dd-search-ofrece" type="text" placeholder="Filtrar por nombre..." autocomplete="off" oninput="trueqePickerRender('ofrece')">
+            <div class="trueque-dd-grid" id="trueque-dd-grid-ofrece"></div>
+          </div>
         </div>
-        <input class="trueque-input" id="trueque-card-notes" type="text" placeholder="Notas (opcional, ej. set B4, brillante)">
+        <input class="trueque-input" id="trueque-card-notes" type="text" placeholder="Notas (opcional)">
         <button class="btn btn-primary" onclick="trueqeAgregarCarta()">Publicar</button>
       </div>
 
@@ -3053,14 +3408,14 @@
         </h3>
         <div class="trueque-filters">
           <button class="active" data-tf="todos" onclick="trueqeFiltrar('todos', this)">Todos</button>
-          <button data-tf="tengo" onclick="trueqeFiltrar('tengo', this)">Tengo</button>
-          <button data-tf="busco" onclick="trueqeFiltrar('busco', this)">Busco</button>
-          <input class="trueque-input" id="trueque-search" type="text" placeholder="Buscar carta..." oninput="trueqeRenderBinder()">
+          <button data-tf="busca" onclick="trueqeFiltrar('busca', this)">🔍 Buscan</button>
+          <button data-tf="ofrece" onclick="trueqeFiltrar('ofrece', this)">🎁 Ofrecen</button>
+          <input class="trueque-input" id="trueque-search" type="text" placeholder="Buscar carta o usuario..." oninput="trueqeRenderBinder()">
         </div>
         <div id="trueque-binder" class="trueque-grid"></div>
       </div>
 
-      <div class="trueque-card">
+      <div class="trueque-card" id="trueque-mine-card">
         <h3>🗂️ Mis publicaciones</h3>
         <div id="trueque-mine" class="trueque-grid"></div>
       </div>
@@ -3286,6 +3641,24 @@
   </div>
 </div>
 
+<!-- MODAL USUARIOS DE LA APP -->
+<div class="modal-overlay" id="modal-usuarios">
+  <div class="modal" style="max-width:560px">
+    <h3>👥 USUARIOS DE LA APP</h3>
+    <p>Estas personas pueden entrar a la página. El usuario y el teléfono no se pueden repetir. Entregales su usuario y contraseña; el teléfono se usa para el WhatsApp de los intercambios.</p>
+    <div class="usuarios-list" id="usuarios-list"></div>
+    <div class="usuarios-add">
+      <input class="gate-input" id="usuario-new-name" type="text" placeholder="Usuario (3-20 caracteres: letras, números . _ -)" maxlength="20" autocomplete="off" autocapitalize="none">
+      <input class="gate-input" id="usuario-new-tel" type="tel" placeholder="Teléfono (con código de país, sin espacios)" autocomplete="off">
+      <input class="gate-input" id="usuario-new-pass" type="text" placeholder="Contraseña (mínimo 4 caracteres)" autocomplete="off">
+      <button class="btn btn-primary" onclick="crearUsuario()">➕ Crear usuario</button>
+    </div>
+    <div class="modal-btns">
+      <button class="btn btn-yellow" onclick="closeModal('modal-usuarios')">Cerrar</button>
+    </div>
+  </div>
+</div>
+
 <!-- TOAST -->
 <div class="toast" id="toast"></div>
 
@@ -3293,6 +3666,195 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+
+<script>
+// ── LOGIN DE ENTRADA A LA PÁGINA ───────────────────────────────────────────
+// Los usuarios los crea el administrador desde Datos → Usuarios y se guardan
+// en la colección 'app_usuarios' de Firestore. La contraseña NO se guarda en
+// claro: se guarda un hash PBKDF2-SHA256 con sal propia de cada usuario.
+// Nota: es una barrera del lado del navegador (la página es estática), sirve
+// para controlar quién entra, no para proteger secretos.
+window.appSession = null;
+const APP_SESSION_KEY = 'app_session';
+const APP_USERS_COL = 'app_usuarios';
+
+function gateNormUser(v) {
+  return (v || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
+}
+function gateHex(buf) {
+  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
+}
+function gateNewSalt() {
+  const a = new Uint8Array(16);
+  crypto.getRandomValues(a);
+  return gateHex(a);
+}
+async function gateHashPassword(pass, salt) {
+  if (!(window.crypto && crypto.subtle)) throw new Error('crypto');
+  const enc = new TextEncoder();
+  const key = await crypto.subtle.importKey('raw', enc.encode(pass), 'PBKDF2', false, ['deriveBits']);
+  const bits = await crypto.subtle.deriveBits(
+    { name: 'PBKDF2', salt: enc.encode(salt), iterations: 100000, hash: 'SHA-256' }, key, 256);
+  return gateHex(bits);
+}
+
+function gateError(msg) {
+  const e = document.getElementById('gate-error');
+  e.textContent = msg || '';
+  e.style.display = msg ? 'block' : 'none';
+}
+function gateShow(which, msg) {
+  document.getElementById('gate-loading').style.display = which === 'loading' ? 'block' : 'none';
+  document.getElementById('gate-forms').style.display = which === 'forms' ? 'block' : 'none';
+  gateError(msg || '');
+}
+function gateToggleAdmin() {
+  const box = document.getElementById('gate-admin-box');
+  box.style.display = box.style.display === 'block' ? 'none' : 'block';
+  if (box.style.display === 'block') document.getElementById('gate-admin-pass').focus();
+}
+
+function gateOpen(session) {
+  window.appSession = session;
+  ['gate-user', 'gate-pass', 'gate-admin-pass'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+  document.documentElement.classList.remove('gate-locked');
+  const pill = document.getElementById('session-pill');
+  if (pill) {
+    document.getElementById('session-pill-name').textContent = session.tipo === 'admin' ? '👑 Administrador' : '👤 ' + session.usuario;
+    pill.style.display = 'flex';
+  }
+}
+
+async function appLogout() {
+  try { localStorage.removeItem(APP_SESSION_KEY); } catch (e) {}
+  try { if (window._fbAuth && window._fbAuth.currentUser) await window._fbAuth.signOut(); } catch (e) {}
+  location.reload();
+}
+
+function gateWaitForFirebase(ms) {
+  return new Promise(res => {
+    const t0 = Date.now();
+    (function chk() {
+      if (window._fbDb && window._fbAuth) return res(true);
+      if (Date.now() - t0 > ms) return res(false);
+      setTimeout(chk, 100);
+    })();
+  });
+}
+
+async function gateInit() {
+  gateShow('loading');
+  const ready = await gateWaitForFirebase(8000);
+  let saved = null;
+  try { saved = JSON.parse(localStorage.getItem(APP_SESSION_KEY) || 'null'); } catch (e) {}
+  const savedOk = saved && saved.tipo === 'user' && saved.id && saved.usuario;
+
+  if (!ready) {
+    if (savedOk) { gateOpen(saved); return; } // sin conexión: se mantiene la sesión
+    gateShow('forms', 'No se pudo conectar. Revisa tu internet y recarga la página.');
+    return;
+  }
+
+  // 1) Sesión de usuario guardada: se vuelve a comprobar contra Firestore para
+  //    que un usuario borrado o con la contraseña cambiada quede fuera.
+  let aviso = '';
+  if (savedOk) {
+    try {
+      const doc = await window._fbDb.collection(APP_USERS_COL).doc(saved.id).get();
+      if (doc.exists) {
+        const d = doc.data();
+        if (d.hash && d.hash.slice(0, 16) === saved.hv) {
+          gateOpen({ tipo: 'user', id: doc.id, usuario: d.usuario, whatsapp: d.whatsapp, hv: saved.hv });
+          return;
+        }
+      }
+      try { localStorage.removeItem(APP_SESSION_KEY); } catch (e) {}
+      aviso = 'Tu sesión ya no es válida. Vuelve a iniciar sesión.';
+    } catch (e) {
+      gateOpen(saved); // error de red: se mantiene la sesión
+      return;
+    }
+  }
+
+  // 2) Administrador con sesión de Firebase abierta
+  const adminUser = await new Promise(res => {
+    const un = window._fbAuth.onAuthStateChanged(u => { un(); res(u); });
+  });
+  if (adminUser && adminUser.email === ADMIN_EMAIL) { gateOpen({ tipo: 'admin' }); return; }
+
+  if (!aviso && location.protocol === 'file:') {
+    aviso = 'Estás abriendo la página como archivo (file://): el acceso de administrador no funciona así. Ábrela desde http://localhost.';
+  }
+  gateShow('forms', aviso);
+}
+
+async function gateLogin(ev) {
+  if (ev) ev.preventDefault();
+  const usuario = gateNormUser(document.getElementById('gate-user').value);
+  const pass = document.getElementById('gate-pass').value;
+  gateError('');
+  if (!usuario || !pass) { gateError('Escribe tu usuario y tu contraseña.'); return; }
+  if (!window._fbDb) { gateError('Todavía no se conectó. Espera un momento e inténtalo de nuevo.'); return; }
+  const btn = document.getElementById('gate-submit');
+  btn.disabled = true;
+  try {
+    const snap = await window._fbDb.collection(APP_USERS_COL).where('usuarioNorm', '==', usuario).limit(1).get();
+    let ok = false, d = null, id = null;
+    if (!snap.empty) {
+      id = snap.docs[0].id;
+      d = snap.docs[0].data();
+      ok = (await gateHashPassword(pass, d.salt)) === d.hash;
+    }
+    if (!ok) {
+      gateError('Usuario o contraseña incorrectos.');
+      document.getElementById('gate-pass').value = '';
+      return;
+    }
+    const session = { tipo: 'user', id, usuario: d.usuario, whatsapp: d.whatsapp, hv: d.hash.slice(0, 16) };
+    try { localStorage.setItem(APP_SESSION_KEY, JSON.stringify(session)); } catch (e) {}
+    gateOpen(session);
+  } catch (e) {
+    console.error(e);
+    if (e && e.message === 'crypto') gateError('Este navegador no permite verificar contraseñas (hace falta abrir la página con HTTPS).');
+    else if (e && e.code === 'permission-denied') gateError('No se pudo comprobar el acceso: faltan permisos en las reglas de Firestore para "app_usuarios".');
+    else gateError('No se pudo conectar' + (e && e.code ? ' (' + e.code + ')' : '') + '. Revisa tu internet.');
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+async function gateAdminLogin() {
+  const pass = document.getElementById('gate-admin-pass').value;
+  if (!pass) return;
+  if (!window._fbAuth) { gateError('Todavía no se conectó. Espera un momento e inténtalo de nuevo.'); return; }
+  try {
+    await window._fbAuth.signInWithEmailAndPassword(ADMIN_EMAIL, pass);
+    gateOpen({ tipo: 'admin' });
+  } catch (e) {
+    console.error('Login de administrador:', e);
+    document.getElementById('gate-admin-pass').value = '';
+    const c = (e && e.code) || '';
+    const credenciales = ['auth/invalid-credential', 'auth/invalid-login-credentials', 'auth/wrong-password', 'auth/user-not-found', 'auth/invalid-email'];
+    let msg;
+    if (location.protocol === 'file:' || c === 'auth/operation-not-supported-in-this-environment') {
+      msg = 'Firebase no permite iniciar sesión con la página abierta como archivo (file://). Ábrela desde http://localhost o desde la web publicada.';
+    } else if (c === 'auth/unauthorized-domain') {
+      msg = 'Este dominio no está autorizado en Firebase (Authentication → Settings → Authorized domains).';
+    } else if (c === 'auth/network-request-failed') {
+      msg = 'Sin conexión con Firebase. Revisa tu internet o si algún bloqueador/red corporativa lo impide.';
+    } else if (c === 'auth/too-many-requests') {
+      msg = 'Demasiados intentos. Espera unos minutos.';
+    } else if (!c || credenciales.includes(c)) {
+      msg = 'Contraseña de administrador incorrecta.';
+    } else {
+      msg = 'No se pudo iniciar sesión (' + c + ').';
+    }
+    gateError(msg);
+  }
+}
+
+gateInit();
+</script>
 
 <script>
 // ── LISTA BASE DE POKÉMON (usada solo como semilla inicial de migración) ─
@@ -9358,12 +9920,140 @@ function renderTorneoBracket() {
   }).join('');
 }
 
+// ── USUARIOS DE LA APP (Datos → Usuarios) ──────────────────────────────────
+let usuariosCache = [];
+const USUARIO_RE = /^[a-z0-9._-]{3,20}$/;
+
+function usuarioEsc(s) {
+  return (s || '').replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+}
+
+async function openUsuariosModal() {
+  document.getElementById('modal-usuarios').classList.add('open');
+  await cargarUsuarios();
+}
+
+async function cargarUsuarios() {
+  const el = document.getElementById('usuarios-list');
+  if (!window._fbDb) { el.innerHTML = '<div class="trueque-autocomplete-empty">Sin conexión con la nube.</div>'; return; }
+  el.innerHTML = '<div class="trueque-autocomplete-empty">Cargando…</div>';
+  try {
+    const snap = await window._fbDb.collection(APP_USERS_COL).get();
+    usuariosCache = snap.docs.map(d => ({ id: d.id, ...d.data() }))
+      .sort((a, b) => (a.usuarioNorm || '').localeCompare(b.usuarioNorm || ''));
+    renderUsuarios();
+  } catch (e) {
+    console.error(e);
+    el.innerHTML = '<div class="trueque-autocomplete-empty">No se pudo cargar la lista. Revisa las reglas de Firestore para "app_usuarios".</div>';
+  }
+}
+
+function renderUsuarios() {
+  const el = document.getElementById('usuarios-list');
+  el.innerHTML = usuariosCache.length ? usuariosCache.map(u => `
+    <div class="usuario-row">
+      <div class="u-info">
+        <div class="u-name">👤 ${usuarioEsc(u.usuario)}</div>
+        <div class="u-tel">📞 ${usuarioEsc(u.whatsapp)}</div>
+      </div>
+      <button type="button" onclick="cambiarPasswordUsuario('${u.id}')">🔑 Contraseña</button>
+      <button type="button" onclick="cambiarTelefonoUsuario('${u.id}')">📞 Teléfono</button>
+      <button type="button" class="del" onclick="eliminarUsuario('${u.id}')">🗑️</button>
+    </div>
+  `).join('') : '<div class="trueque-autocomplete-empty">Todavía no hay usuarios. Crea el primero abajo.</div>';
+}
+
+function usuarioTelValido(t) { return t.length >= 8 && t.length <= 15; }
+
+async function crearUsuario() {
+  if (!window._fbDb) { showToast('⚠️ Sin conexión con la nube.', true); return; }
+  const usuario = document.getElementById('usuario-new-name').value.trim();
+  const usuarioNorm = gateNormUser(usuario);
+  const tel = (document.getElementById('usuario-new-tel').value || '').replace(/\D/g, '');
+  const pass = document.getElementById('usuario-new-pass').value;
+  if (!USUARIO_RE.test(usuarioNorm)) { showToast('⚠️ Usuario no válido: 3-20 caracteres (letras, números, punto, guion o guion bajo, sin espacios).', true); return; }
+  if (!usuarioTelValido(tel)) { showToast('⚠️ Teléfono no válido: escríbelo con código de país y sin espacios.', true); return; }
+  if (pass.length < 4) { showToast('⚠️ La contraseña debe tener al menos 4 caracteres.', true); return; }
+  try {
+    const col = window._fbDb.collection(APP_USERS_COL);
+    const [dupUser, dupTel] = await Promise.all([
+      col.where('usuarioNorm', '==', usuarioNorm).limit(1).get(),
+      col.where('whatsapp', '==', tel).limit(1).get()
+    ]);
+    if (!dupUser.empty) { showToast('⚠️ Ese nombre de usuario ya existe.', true); return; }
+    if (!dupTel.empty) { showToast('⚠️ Ese teléfono ya está asignado a otro usuario.', true); return; }
+    const salt = gateNewSalt();
+    const hash = await gateHashPassword(pass, salt);
+    await col.add({
+      usuario, usuarioNorm, whatsapp: tel, salt, hash,
+      creado: firebase.firestore.FieldValue.serverTimestamp()
+    });
+    document.getElementById('usuario-new-name').value = '';
+    document.getElementById('usuario-new-tel').value = '';
+    document.getElementById('usuario-new-pass').value = '';
+    showToast('✅ Usuario creado');
+    await cargarUsuarios();
+  } catch (e) {
+    console.error(e);
+    showToast('❌ No se pudo crear el usuario. Revisa las reglas de Firestore para "app_usuarios".', true);
+  }
+}
+
+async function cambiarPasswordUsuario(id) {
+  const u = usuariosCache.find(x => x.id === id);
+  if (!u) return;
+  const pass = prompt('Nueva contraseña para ' + u.usuario + ' (mínimo 4 caracteres):');
+  if (pass == null) return;
+  if (pass.length < 4) { showToast('⚠️ La contraseña debe tener al menos 4 caracteres.', true); return; }
+  try {
+    const salt = gateNewSalt();
+    const hash = await gateHashPassword(pass, salt);
+    await window._fbDb.collection(APP_USERS_COL).doc(id).update({ salt, hash });
+    showToast('🔑 Contraseña actualizada (se le pedirá volver a entrar)');
+  } catch (e) {
+    console.error(e);
+    showToast('❌ No se pudo cambiar la contraseña.', true);
+  }
+}
+
+async function cambiarTelefonoUsuario(id) {
+  const u = usuariosCache.find(x => x.id === id);
+  if (!u) return;
+  const entrada = prompt('Nuevo teléfono para ' + u.usuario + ' (con código de país, sin espacios):', u.whatsapp);
+  if (entrada == null) return;
+  const tel = entrada.replace(/\D/g, '');
+  if (!usuarioTelValido(tel)) { showToast('⚠️ Teléfono no válido.', true); return; }
+  if (usuariosCache.some(x => x.id !== id && x.whatsapp === tel)) { showToast('⚠️ Ese teléfono ya está asignado a otro usuario.', true); return; }
+  try {
+    await window._fbDb.collection(APP_USERS_COL).doc(id).update({ whatsapp: tel });
+    showToast('📞 Teléfono actualizado');
+    await cargarUsuarios();
+  } catch (e) {
+    console.error(e);
+    showToast('❌ No se pudo actualizar el teléfono.', true);
+  }
+}
+
+async function eliminarUsuario(id) {
+  const u = usuariosCache.find(x => x.id === id);
+  if (!u) return;
+  if (!confirm('¿Eliminar al usuario "' + u.usuario + '"? Ya no podrá entrar a la página.')) return;
+  try {
+    await window._fbDb.collection(APP_USERS_COL).doc(id).delete();
+    showToast('🗑️ Usuario eliminado');
+    await cargarUsuarios();
+  } catch (e) {
+    console.error(e);
+    showToast('❌ No se pudo eliminar el usuario.', true);
+  }
+}
+
 // ── TRUEQUES ─────────────────────────────────────────────────────────────
 // Usa el mismo proyecto de Firebase ya configurado arriba (firebaseConfig),
 // pero con sus propias colecciones ('trueques_usuarios' y 'trueques_cartas'),
 // totalmente independientes del resto de la app.
 
-let trueqeUser = JSON.parse(localStorage.getItem('trueque_user') || 'null');
+let trueqeUser = null; // se toma de la sesión de la app (ver loadTrueques)
 let trueqeCards = [];
 let trueqeFilter = 'todos';
 
@@ -9378,11 +10068,11 @@ function trueqeNormWa(v) { return (v || '').replace(/\D/g, ''); }
 // expansión y logo de la expansión) consultando la misma API que ya usa el
 // resto de la app. Se guarda en localStorage para no volver a descargarlo
 // cada vez que se abre la sección de trueques.
-const TRUEQUE_CARD_INDEX_CACHE_KEY = 'trueque_card_index_v3';
+const TRUEQUE_CARD_INDEX_CACHE_KEY = 'trueque_card_index_v4';
+try { localStorage.removeItem('trueque_card_index_v3'); } catch (e) { /* caché viejo */ }
 const TRUEQUE_CARD_INDEX_MAX_AGE = 1000 * 60 * 60 * 24 * 3; // 3 días
 let TRUEQUE_CARD_INDEX = null; // null = todavía no cargado
 let trueqeCardIndexLoading = null; // Promise en curso, para no duplicar pedidos
-let trueqeSelectedCard = null; // carta elegida desde el autocompletado
 
 function trueqeNormalizeSearch(s) {
   return (s || '')
@@ -9393,27 +10083,31 @@ function trueqeNormalizeSearch(s) {
 
 async function trueqeBuildCardIndex() {
   const index = [];
+  let complete = true; // pasa a false si alguna expansión no se pudo cargar
   const sets = await fetchTcgPocketSetsFromApi();
+  if (!sets.length) complete = false;
   for (const s of sets) {
-    try {
-      const cards = await fetchTcgPocketSetCards(s.id);
-      const setNameEs = TCGDEX_SET_NAME_ES[s.id] || TCGDEX_SET_NAME_ES[s.name] || s.name;
-      cards.forEach(card => {
-        if (!card || !card.name || !card.imageUrl) return;
-        if (card.category && card.category !== 'Pokemon') return;
-        index.push({
-          name: card.name,
-          image: card.imageUrl,
-          setName: setNameEs,
-          setLogo: s.logo ? `${s.logo}.png` : '',
-          localId: card.localId || ''
-        });
-      });
-    } catch (e) {
-      // si falla una expansión particular, seguimos con las demás
+    let cards = [];
+    for (let intento = 0; intento < 2 && !cards.length; intento++) {
+      try { cards = await fetchTcgPocketSetCards(s.id); } catch (e) { cards = []; }
+      if (!cards.length && intento === 0) await esperar(400);
     }
+    if (!cards.length) { complete = false; continue; }
+    const setNameEs = TCGDEX_SET_NAME_ES[s.id] || TCGDEX_SET_NAME_ES[s.name] || s.name;
+    cards.forEach(card => {
+      if (!card || !card.name || !card.imageUrl) return;
+      if (card.category && card.category !== 'Pokemon') return;
+      index.push({
+        name: card.name,
+        image: card.imageUrl,
+        setId: s.id,
+        setName: setNameEs,
+        setLogo: s.logo ? `${s.logo}.png` : '',
+        localId: card.localId || ''
+      });
+    });
   }
-  return index;
+  return { index, complete };
 }
 
 async function trueqeGetCardIndex() {
@@ -9423,18 +10117,23 @@ async function trueqeGetCardIndex() {
   // Intenta usar el caché guardado si todavía es reciente.
   try {
     const cached = JSON.parse(localStorage.getItem(TRUEQUE_CARD_INDEX_CACHE_KEY) || 'null');
-    if (cached && Array.isArray(cached.data) && (Date.now() - cached.ts) < TRUEQUE_CARD_INDEX_MAX_AGE) {
+    if (cached && Array.isArray(cached.data) && cached.data.length && (Date.now() - cached.ts) < TRUEQUE_CARD_INDEX_MAX_AGE) {
       TRUEQUE_CARD_INDEX = cached.data;
       return TRUEQUE_CARD_INDEX;
     }
   } catch (e) { /* caché corrupto, se ignora */ }
 
   trueqeCardIndexLoading = trueqeBuildCardIndex()
-    .then(index => {
+    .then(({ index, complete }) => {
       TRUEQUE_CARD_INDEX = index;
-      try {
-        localStorage.setItem(TRUEQUE_CARD_INDEX_CACHE_KEY, JSON.stringify({ ts: Date.now(), data: index }));
-      } catch (e) { /* si no entra en localStorage, no pasa nada grave */ }
+      if (index.length) {
+        // Si alguna expansión falló, el caché dura solo 10 minutos (en vez de
+        // 3 días) para que se vuelva a intentar pronto y no quede incompleto.
+        const ts = complete ? Date.now() : Date.now() - TRUEQUE_CARD_INDEX_MAX_AGE + 10 * 60 * 1000;
+        try {
+          localStorage.setItem(TRUEQUE_CARD_INDEX_CACHE_KEY, JSON.stringify({ ts, data: index }));
+        } catch (e) { /* si no entra en localStorage, no pasa nada grave */ }
+      }
       return index;
     })
     .catch(e => {
@@ -9447,162 +10146,329 @@ async function trueqeGetCardIndex() {
   return trueqeCardIndexLoading;
 }
 
-async function trueqeOnCardNameInput() {
-  const input = document.getElementById('trueque-card-name');
-  const box = document.getElementById('trueque-autocomplete');
-  const q = trueqeNormalizeSearch(input.value);
+// ── SELECTOR DE CARTAS: EXPANSIÓN + DESPLEGABLE DE MINIATURAS ──────────────
+// Cada lado de la publicación ("busca" y "ofrece") tiene su propia lista de
+// cartas elegidas. Se elige la expansión y se abre un desplegable con las
+// miniaturas de sus cartas; tocar una miniatura la añade o la quita.
+const TRUEQUE_MAX_POR_LADO = 12;
+const trueqeSel = { busca: [], ofrece: [] };
+const trueqePickerView = { busca: [], ofrece: [] };
+let trueqePickersReady = false;
+let trueqePickersLoading = false;
 
-  if (trueqeSelectedCard && input.value !== trueqeSelectedCard.name) {
-    trueqeClearSelectedCard(); // si edita el texto, se invalida la selección previa
+function trueqeCardKey(c) { return c.setName + '|' + (c.localId || '') + '|' + c.name; }
+
+// Las miniaturas usan la versión liviana de la imagen (TCGdex: low.webp).
+function trueqeThumb(url) { return (url || '').replace('/high.webp', '/low.webp'); }
+
+// Lista de direcciones posibles para la imagen de una carta, en orden de
+// preferencia. Si una falla, se prueba la siguiente (ver trueqeImgFail).
+function trueqeImageCandidates(c) {
+  const out = [];
+  const add = u => { if (u && !out.includes(u)) out.push(u); };
+  const img = c.image || '';
+  if (/\/high\.webp$/.test(img)) { add(img.replace('/high.webp', '/low.webp')); add(img); }
+  else add(img);
+  if (c.setId && c.localId !== undefined && c.localId !== '') {
+    const id = String(c.localId);
+    const pad = /^\d+$/.test(id) ? id.padStart(3, '0') : id;
+    add(`https://cdn.jsdelivr.net/gh/flibustier/pokemon-tcg-pocket-database@main/dist/cards-by-set/${c.setId}/${id}.webp`);
+    add(`https://assets.tcgdex.net/en/tcgp/${c.setId}/${pad}/low.webp`);
+    add(`https://assets.tcgdex.net/en/tcgp/${c.setId}/${pad}/high.webp`);
   }
+  return out;
+}
 
-  if (!q) { box.style.display = 'none'; box.innerHTML = ''; return; }
+function trueqeImgHtml(c, lazy, cls) {
+  const cands = trueqeImageCandidates(c);
+  if (!cands.length) return `<div class="trueque-noimg ${cls || ''}">Sin imagen</div>`;
+  return `<img ${lazy ? 'loading="lazy" ' : ''}${cls ? `class="${cls}" ` : ''}src="${trueqeEsc(cands[0])}" alt="" data-alt="${trueqeEsc(cands.slice(1).join('|'))}" onerror="trueqeImgFail(this)">`;
+}
 
-  box.style.display = 'block';
-  box.innerHTML = '<div class="trueque-autocomplete-loading">Buscando cartas...</div>';
-
-  const index = await trueqeGetCardIndex();
-  // Puede que el texto haya cambiado mientras cargaba el índice.
-  if (trueqeNormalizeSearch(document.getElementById('trueque-card-name').value) !== q) return;
-
-  const seen = new Set();
-  const matches = [];
-  for (const c of index) {
-    const norm = trueqeNormalizeSearch(c.name);
-    if (!norm.includes(q)) continue;
-    const key = c.name + '|' + c.setName;
-    if (seen.has(key)) continue;
-    seen.add(key);
-    matches.push(c);
-    if (matches.length >= 12) break;
-  }
-
-  if (!matches.length) {
-    box.innerHTML = '<div class="trueque-autocomplete-empty">No se encontraron cartas con ese nombre.</div>';
+function trueqeImgFail(img) {
+  const rest = (img.dataset.alt || '').split('|').filter(Boolean);
+  if (rest.length) {
+    img.dataset.alt = rest.slice(1).join('|');
+    img.src = rest[0];
     return;
   }
+  const ph = document.createElement('div');
+  ph.className = 'trueque-noimg ' + (img.className || '');
+  ph.textContent = 'Sin imagen';
+  img.replaceWith(ph);
+}
 
-  box.innerHTML = matches.map((c, i) => `
-    <div class="trueque-autocomplete-item" onmousedown="trueqeSelectCard(${i})">
-      <img class="thumb" src="${trueqeEsc(c.image)}" alt="" onerror="this.style.visibility='hidden'">
-      <div>
-        <div class="ac-name">${trueqeEsc(c.name)}</div>
-        <div class="ac-set">${c.setLogo ? `<img src="${trueqeEsc(c.setLogo)}" onerror="this.style.display='none'">` : ''}${trueqeEsc(c.setName)}</div>
-      </div>
+// Logo de la expansión; si no tiene (o no carga) se muestra su código (A1, B4…).
+function trueqeSetBadgeHtml(logo, setId) {
+  const code = trueqeEsc(setId || '');
+  if (logo) return `<img src="${trueqeEsc(logo)}" alt="" data-code="${code}" onerror="trueqeLogoFail(this)">`;
+  return code ? `<span class="exp-code">${code}</span>` : '';
+}
+function trueqeLogoFail(img) {
+  const code = img.dataset.code;
+  if (code) {
+    const sp = document.createElement('span');
+    sp.className = 'exp-code';
+    sp.textContent = code;
+    img.replaceWith(sp);
+  } else {
+    img.style.display = 'none';
+  }
+}
+
+// Borra el caché de cartas y vuelve a descargar todo desde cero.
+async function trueqeRefrescarIndice() {
+  try { localStorage.removeItem(TRUEQUE_CARD_INDEX_CACHE_KEY); } catch (e) {}
+  TRUEQUE_CARD_INDEX = null;
+  trueqePickersReady = false;
+  trueqeResetForm();
+  showToast('🔄 Actualizando cartas y expansiones…');
+  await trueqeInitPickers();
+  showToast('✅ Cartas actualizadas');
+}
+
+let trueqeSets = []; // [{ name, logo }]
+
+function trueqeExpSetLabel(side, texto) {
+  const btn = document.getElementById('trueque-exp-btn-' + side);
+  if (btn) btn.textContent = texto;
+}
+
+async function trueqeInitPickers() {
+  if (trueqePickersReady || trueqePickersLoading) return;
+  trueqePickersLoading = true;
+  const sides = ['busca', 'ofrece'];
+  sides.forEach(side => trueqeExpSetLabel(side, 'Cargando expansiones…'));
+  try {
+    const index = await trueqeGetCardIndex();
+    const sets = [];
+    const seen = new Set();
+    index.forEach(c => {
+      if (!seen.has(c.setName)) { seen.add(c.setName); sets.push({ name: c.setName, logo: c.setLogo || '', setId: c.setId || '' }); }
+    });
+    sets.reverse(); // las más nuevas primero
+    if (!sets.length) {
+      TRUEQUE_CARD_INDEX = null; // permite reintentar la próxima vez
+      sides.forEach(side => trueqeExpSetLabel(side, 'No se pudieron cargar las expansiones (vuelve a abrir la sección)'));
+      return;
+    }
+    trueqeSets = sets;
+    sides.forEach(side => {
+      trueqeExpSetLabel(side, document.getElementById('trueque-exp-' + side).value || 'Elige una expansión…');
+      trueqeExpRenderList(side);
+    });
+    trueqePickersReady = true;
+  } finally {
+    trueqePickersLoading = false;
+  }
+}
+
+function trueqeExpRenderList(side) {
+  const list = document.getElementById('trueque-exp-list-' + side);
+  if (!list) return;
+  const actual = document.getElementById('trueque-exp-' + side).value;
+  list.innerHTML = trueqeSets.map((st, i) => `
+    <div class="trueque-exp-item${st.name === actual ? ' sel' : ''}" onclick="trueqeExpPick('${side}', ${i})">
+      ${trueqeSetBadgeHtml(st.logo, st.setId)}${trueqeEsc(st.name)}
     </div>
   `).join('');
-  trueqeAutocompleteMatches = matches;
 }
 
-let trueqeAutocompleteMatches = [];
+function trueqeExpToggle(side) {
+  if (!trueqeSets.length) return;
+  const list = document.getElementById('trueque-exp-list-' + side);
+  const abrir = list.style.display === 'none';
+  trueqeExpCloseAll();
+  if (abrir) { trueqeExpRenderList(side); list.style.display = 'block'; }
+}
 
-function trueqeSelectCard(i) {
-  const card = trueqeAutocompleteMatches[i];
+function trueqeExpCloseAll() {
+  ['busca', 'ofrece'].forEach(side => {
+    const l = document.getElementById('trueque-exp-list-' + side);
+    if (l) l.style.display = 'none';
+  });
+}
+
+function trueqeExpPick(side, i) {
+  const st = trueqeSets[i];
+  if (!st) return;
+  document.getElementById('trueque-exp-' + side).value = st.name;
+  trueqeExpSetLabel(side, st.name);
+  trueqeExpCloseAll();
+  trueqePickerExp(side);
+}
+
+// Cierra el desplegable de expansiones al tocar fuera de él.
+document.addEventListener('click', e => {
+  if (!e.target.closest || !e.target.closest('.trueque-exp')) trueqeExpCloseAll();
+});
+
+function trueqePickerExp(side) {
+  const exp = document.getElementById('trueque-exp-' + side).value;
+  const panel = document.getElementById('trueque-dd-panel-' + side);
+  document.getElementById('trueque-dd-search-' + side).value = '';
+  if (!exp) {
+    panel.style.display = 'none';
+    document.getElementById('trueque-dd-grid-' + side).innerHTML = '';
+    trueqePickerUpdateToggle(side);
+    return;
+  }
+  panel.style.display = 'block';
+  trueqePickerRender(side);
+  trueqePickerUpdateToggle(side);
+}
+
+function trueqePickerToggle(side) {
+  const exp = document.getElementById('trueque-exp-' + side).value;
+  if (!exp) { showToast('⚠️ Primero elige una expansión', true); return; }
+  const panel = document.getElementById('trueque-dd-panel-' + side);
+  const abrir = panel.style.display === 'none';
+  panel.style.display = abrir ? 'block' : 'none';
+  if (abrir) trueqePickerRender(side);
+  trueqePickerUpdateToggle(side);
+}
+
+function trueqePickerUpdateToggle(side) {
+  const panel = document.getElementById('trueque-dd-panel-' + side);
+  const btn = document.getElementById('trueque-dd-toggle-' + side);
+  const abierto = panel.style.display !== 'none';
+  btn.textContent = (abierto ? '▴ Ocultar cartas' : '▾ Ver cartas de la expansión');
+}
+
+function trueqePickerRender(side) {
+  const exp = document.getElementById('trueque-exp-' + side).value;
+  const grid = document.getElementById('trueque-dd-grid-' + side);
+  if (!exp || !TRUEQUE_CARD_INDEX) { grid.innerHTML = ''; return; }
+  const q = trueqeNormalizeSearch(document.getElementById('trueque-dd-search-' + side).value);
+  const view = TRUEQUE_CARD_INDEX.filter(c =>
+    c.setName === exp && (!q || trueqeNormalizeSearch(c.name).includes(q))
+  );
+  trueqePickerView[side] = view;
+  const chosen = new Set(trueqeSel[side].map(trueqeCardKey));
+  grid.innerHTML = view.length ? view.map((c, i) => `
+    <div class="trueque-dd-item${chosen.has(trueqeCardKey(c)) ? ' sel' : ''}" title="${trueqeEsc(c.name)}" onclick="trueqePickerToggleCard('${side}', ${i}, this)">
+      ${trueqeImgHtml(c, true)}
+      <div class="dd-name">${c.localId ? '#' + trueqeEsc(String(c.localId)) + ' ' : ''}${trueqeEsc(c.name)}</div>
+    </div>
+  `).join('') : '<div class="trueque-autocomplete-empty" style="grid-column:1/-1">No hay cartas con ese nombre en esta expansión.</div>';
+}
+
+function trueqePickerToggleCard(side, i, el) {
+  const card = trueqePickerView[side][i];
   if (!card) return;
-  trueqeSelectedCard = card;
-  document.getElementById('trueque-card-name').value = card.name;
-  document.getElementById('trueque-autocomplete').style.display = 'none';
-
-  const preview = document.getElementById('trueque-selected-preview');
-  preview.classList.add('active');
-  document.getElementById('trueque-selected-thumb').src = card.image;
-  document.getElementById('trueque-selected-name').textContent = card.name;
-  document.getElementById('trueque-selected-set').innerHTML =
-    (card.setLogo ? `<img src="${trueqeEsc(card.setLogo)}" onerror="this.style.display='none'">` : '') + trueqeEsc(card.setName);
+  const key = trueqeCardKey(card);
+  const list = trueqeSel[side];
+  const pos = list.findIndex(c => trueqeCardKey(c) === key);
+  if (pos >= 0) {
+    list.splice(pos, 1);
+    if (el) el.classList.remove('sel');
+  } else {
+    if (list.length >= TRUEQUE_MAX_POR_LADO) {
+      showToast('⚠️ Máximo ' + TRUEQUE_MAX_POR_LADO + ' cartas en cada lado', true);
+      return;
+    }
+    const im = el && el.querySelector('img');
+    const funciona = im && im.complete && im.naturalWidth > 0 ? im.src : '';
+    list.push(funciona ? { ...card, image: funciona } : card);
+    if (el) el.classList.add('sel');
+  }
+  trueqeRenderChosen(side);
 }
 
-function trueqeClearSelectedCard() {
-  trueqeSelectedCard = null;
-  document.getElementById('trueque-selected-preview').classList.remove('active');
+function trueqeQuitarCarta(side, i) {
+  trueqeSel[side].splice(i, 1);
+  trueqeRenderChosen(side);
+  const panel = document.getElementById('trueque-dd-panel-' + side);
+  if (panel && panel.style.display !== 'none') trueqePickerRender(side);
 }
 
-function trueqeHideAutocompleteDelayed() {
-  // El "onmousedown" del ítem se dispara antes que este blur, así que el
-  // pequeño delay evita que el clic se pierda al ocultar la lista.
-  setTimeout(() => {
-    const box = document.getElementById('trueque-autocomplete');
-    if (box) box.style.display = 'none';
-  }, 150);
+function trueqeRenderChosen(side) {
+  const el = document.getElementById('trueque-chosen-' + side);
+  if (!el) return;
+  const list = trueqeSel[side];
+  el.innerHTML = list.length ? list.map((c, i) => `
+    <div class="trueque-chip">
+      ${trueqeImgHtml(c, false, 'thumb')}
+      <div>
+        <div class="chip-name">${trueqeEsc(c.name)}</div>
+        <div class="chip-set">${trueqeSetBadgeHtml(c.setLogo, c.setId)}${trueqeEsc(c.setName)}</div>
+      </div>
+      <button type="button" aria-label="Quitar" onclick="trueqeQuitarCarta('${side}', ${i})">✕</button>
+    </div>
+  `).join('') : '<div class="trueque-chosen-empty">Aún no añadiste ninguna carta.</div>';
+}
+
+function trueqeResetForm() {
+  ['busca', 'ofrece'].forEach(side => {
+    trueqeSel[side] = [];
+    trueqePickerView[side] = [];
+    const sel = document.getElementById('trueque-exp-' + side);
+    if (sel) sel.value = '';
+    if (trueqeSets.length) trueqeExpSetLabel(side, 'Elige una expansión…');
+    const panel = document.getElementById('trueque-dd-panel-' + side);
+    if (panel) panel.style.display = 'none';
+    const search = document.getElementById('trueque-dd-search-' + side);
+    if (search) search.value = '';
+    const grid = document.getElementById('trueque-dd-grid-' + side);
+    if (grid) grid.innerHTML = '';
+    trueqePickerUpdateToggle(side);
+    trueqeRenderChosen(side);
+  });
+  const notes = document.getElementById('trueque-card-notes');
+  if (notes) notes.value = '';
 }
 
 function loadTrueques() {
-  if (trueqeUser) {
-    document.getElementById('trueque-auth-card').style.display = 'none';
-    document.getElementById('trueque-app').style.display = 'block';
-    document.getElementById('trueque-whoami-name').textContent = trueqeUser.nombre;
-    trueqeFetchCards();
-  } else {
-    document.getElementById('trueque-auth-card').style.display = 'block';
-    document.getElementById('trueque-app').style.display = 'none';
+  // La identidad viene del login de entrada a la página. El administrador
+  // (sin usuario propio) puede ver y moderar el tablón, pero no publicar.
+  const sesion = window.appSession;
+  trueqeUser = (sesion && sesion.tipo === 'user')
+    ? { id: sesion.id, nombre: sesion.usuario, usuario: sesion.usuario, whatsapp: sesion.whatsapp }
+    : null;
+  const puede = !!trueqeUser;
+  document.getElementById('trueque-app').style.display = 'block';
+  document.getElementById('trueque-publish-card').style.display = puede ? 'block' : 'none';
+  document.getElementById('trueque-mine-card').style.display = puede ? 'block' : 'none';
+  document.getElementById('trueque-admin-note').style.display = puede ? 'none' : 'block';
+  if (puede) {
+    document.getElementById('trueque-whoami-name').textContent = trueqeUser.usuario;
+    trueqeRenderChosen('busca');
+    trueqeRenderChosen('ofrece');
+    trueqeInitPickers();
   }
-}
-
-async function trueqeEntrar() {
-  const nombre = document.getElementById('trueque-name-input').value.trim();
-  const wa = trueqeNormWa(document.getElementById('trueque-wa-input').value);
-  const err = document.getElementById('trueque-auth-error');
-  err.style.display = 'none';
-  if (!nombre || !wa) {
-    err.textContent = 'Escribe tu nombre y tu WhatsApp.';
-    err.style.display = 'block';
-    return;
-  }
-  if (!window._fbDb) {
-    err.textContent = 'No se pudo conectar. Intenta de nuevo en un momento.';
-    err.style.display = 'block';
-    return;
-  }
-  try {
-    const existing = await window._fbDb.collection('trueques_usuarios').where('whatsapp', '==', wa).limit(1).get();
-    let userId, data;
-    if (!existing.empty) {
-      userId = existing.docs[0].id;
-      data = existing.docs[0].data();
-    } else {
-      const ref = await window._fbDb.collection('trueques_usuarios').add({ nombre, whatsapp: wa, creado: firebase.firestore.FieldValue.serverTimestamp() });
-      userId = ref.id;
-      data = { nombre, whatsapp: wa };
-    }
-    trueqeUser = { id: userId, nombre: data.nombre, whatsapp: data.whatsapp };
-    localStorage.setItem('trueque_user', JSON.stringify(trueqeUser));
-    loadTrueques();
-  } catch (e) {
-    err.textContent = 'No se pudo conectar. Revisa tu internet.';
-    err.style.display = 'block';
-    console.error(e);
-  }
-}
-
-function trueqeSalir() {
-  localStorage.removeItem('trueque_user');
-  trueqeUser = null;
-  loadTrueques();
+  trueqeFetchCards();
 }
 
 async function trueqeAgregarCarta() {
   if (!trueqeUser || !window._fbDb) return;
-  const tipo = document.getElementById('trueque-card-type').value;
-  const nombreCarta = document.getElementById('trueque-card-name').value.trim();
+  if (!trueqeSel.busca.length) { showToast('⚠️ Añade al menos una carta que buscas', true); return; }
+  if (!trueqeSel.ofrece.length) { showToast('⚠️ Añade al menos una carta que ofreces a cambio', true); return; }
   const notas = document.getElementById('trueque-card-notes').value.trim();
-  if (!nombreCarta) return;
-  // Si el nombre coincide con la carta seleccionada del autocompletado, se
-  // guardan también su imagen y expansión para mostrarlas en el tablón.
-  const cardData = (trueqeSelectedCard && trueqeSelectedCard.name === nombreCarta) ? trueqeSelectedCard : null;
-  await window._fbDb.collection('trueques_cartas').add({
-    tipo, nombreCarta, notas,
-    imagen: cardData ? cardData.image : '',
-    expansion: cardData ? cardData.setName : '',
-    expansionLogo: cardData ? cardData.setLogo : '',
-    userId: trueqeUser.id,
-    userNombre: trueqeUser.nombre,
-    userWhatsapp: trueqeUser.whatsapp,
-    creado: firebase.firestore.FieldValue.serverTimestamp()
+  const pack = c => ({
+    name: c.name,
+    image: c.image,
+    setId: c.setId || '',
+    setName: c.setName,
+    setLogo: c.setLogo || '',
+    localId: String(c.localId || '')
   });
-  trueqeClearSelectedCard();
-  document.getElementById('trueque-card-name').value = '';
-  document.getElementById('trueque-card-notes').value = '';
-  trueqeFetchCards();
-  showToast('✅ Carta publicada');
+  try {
+    await window._fbDb.collection('trueques_cartas').add({
+      busca: trueqeSel.busca.map(pack),
+      ofrece: trueqeSel.ofrece.map(pack),
+      notas,
+      userId: trueqeUser.id,
+      userNombre: trueqeUser.usuario || trueqeUser.nombre,
+      userWhatsapp: trueqeUser.whatsapp,
+      creado: firebase.firestore.FieldValue.serverTimestamp()
+    });
+    trueqeResetForm();
+    trueqeFetchCards();
+    showToast('✅ Intercambio publicado');
+  } catch (e) {
+    showToast('❌ No se pudo publicar. Intenta de nuevo.', true);
+    console.error(e);
+  }
 }
 
 async function trueqeFetchCards() {
@@ -9655,27 +10521,57 @@ function trueqeAdminToggle() {
     });
 }
 
+// Las publicaciones antiguas (una sola carta, tipo "tengo"/"busco") se leen
+// como un intercambio con un solo lado completo.
+function trueqeNormCard(c) {
+  if (Array.isArray(c.busca) || Array.isArray(c.ofrece)) {
+    return { busca: c.busca || [], ofrece: c.ofrece || [] };
+  }
+  const one = { name: c.nombreCarta || '', image: c.imagen || '', setName: c.expansion || '', setLogo: c.expansionLogo || '' };
+  return c.tipo === 'busco' ? { busca: [one], ofrece: [] } : { busca: [], ofrece: [one] };
+}
+
+function trueqeMiniCardsHtml(list) {
+  if (!list.length) return '<div class="trade-none">—</div>';
+  return '<div class="trade-cards">' + list.map(x => `
+    <div class="trade-mini" title="${trueqeEsc(x.name)}">
+      ${trueqeImgHtml(x, true)}
+      <div class="tm-name">${trueqeEsc(x.name)}</div>
+      ${x.setName ? `<div class="tm-set">${trueqeEsc(x.setName)}</div>` : ''}
+    </div>`).join('') + '</div>';
+}
+
 function trueqeSleeveHtml(c, showDelete, esAdmin) {
-  const texto = 'Hola ' + c.userNombre + ', vi que ' + (c.tipo === 'tengo' ? 'tienes' : 'buscas') + ' ' + c.nombreCarta + ' en el tablón de intercambios.';
+  const t = trueqeNormCard(c);
+  const nombres = l => l.map(x => x.name).join(', ');
+  let texto = 'Hola ' + c.userNombre + ', vi tu publicación en el tablón de intercambios';
+  if (t.busca.length) texto += ': buscas ' + nombres(t.busca);
+  if (t.ofrece.length) texto += (t.busca.length ? ' y ' : ': ') + 'ofreces ' + nombres(t.ofrece);
+  texto += '.';
   const waLink = 'https://wa.me/' + c.userWhatsapp + '?text=' + encodeURIComponent(texto);
   return `<div class="trueque-sleeve">
-    ${c.imagen ? `<img class="card-thumb" src="${trueqeEsc(c.imagen)}" alt="" onerror="this.style.display='none'">` : ''}
-    <span class="kind ${c.tipo}">${c.tipo}</span>
-    <div class="name">${trueqeEsc(c.nombreCarta)}</div>
-    ${c.expansion ? `<div class="exp-badge">${c.expansionLogo ? `<img src="${trueqeEsc(c.expansionLogo)}" onerror="this.style.display='none'">` : ''}${trueqeEsc(c.expansion)}</div>` : ''}
+    <div class="trade-block busca">
+      <span class="trade-label">🔍 Busca</span>
+      ${trueqeMiniCardsHtml(t.busca)}
+    </div>
+    <div class="trade-arrow">⇅</div>
+    <div class="trade-block ofrece">
+      <span class="trade-label">🎁 Ofrece a cambio</span>
+      ${trueqeMiniCardsHtml(t.ofrece)}
+    </div>
     ${c.notas ? `<div class="notes">${trueqeEsc(c.notas)}</div>` : ''}
-    <div class="owner">${trueqeEsc(c.userNombre)}</div>
+    <div class="owner">👤 ${trueqeEsc(c.userNombre)}</div>
     <a class="wa" href="${waLink}" target="_blank" rel="noopener">Escribir por WhatsApp</a>
     ${showDelete ? `<button class="trueque-delete-btn" onclick="trueqeEliminarCarta('${c.id}')">${esAdmin ? '✕ Eliminar (admin)' : '🗑️ Eliminar (ya se cerró el trueque)'}</button>` : ''}
   </div>`;
 }
 
 async function trueqeEliminarCarta(cardId) {
-  if (!window._fbDb || !trueqeUser) return;
+  if (!window._fbDb || (!trueqeUser && !trueqeAdminUnlocked)) return;
   const carta = trueqeCards.find(c => c.id === cardId);
   if (!carta) return;
   // Se puede borrar la publicación propia, o cualquiera si se activó el modo admin.
-  if (carta.userId !== trueqeUser.id && !trueqeAdminUnlocked) return;
+  if ((!trueqeUser || carta.userId !== trueqeUser.id) && !trueqeAdminUnlocked) return;
   if (!confirm('¿Eliminar esta publicación? No se puede deshacer.')) return;
   try {
     await window._fbDb.collection('trueques_cartas').doc(cardId).delete();
@@ -9688,19 +10584,29 @@ async function trueqeEliminarCarta(cardId) {
 }
 
 function trueqeRenderBinder() {
-  const term = (document.getElementById('trueque-search').value || '').toLowerCase();
-  let list = trueqeCards;
-  if (trueqeFilter !== 'todos') list = list.filter(c => c.tipo === trueqeFilter);
-  if (term) list = list.filter(c => c.nombreCarta.toLowerCase().includes(term));
+  const term = trueqeNormalizeSearch(document.getElementById('trueque-search').value || '');
+  let list = trueqeCards.map(c => ({ c, t: trueqeNormCard(c) }));
+  if (trueqeFilter === 'busca') list = list.filter(x => x.t.busca.length);
+  else if (trueqeFilter === 'ofrece') list = list.filter(x => x.t.ofrece.length);
+  if (term) {
+    const coincide = l => l.some(x => trueqeNormalizeSearch(x.name).includes(term));
+    list = list.filter(({ c, t }) => {
+      if (trueqeNormalizeSearch(c.userNombre || '').includes(term)) return true;
+      if (trueqeFilter === 'busca') return coincide(t.busca);
+      if (trueqeFilter === 'ofrece') return coincide(t.ofrece);
+      return coincide(t.busca) || coincide(t.ofrece);
+    });
+  }
   document.getElementById('trueque-count').textContent = trueqeCards.length;
   const binder = document.getElementById('trueque-binder');
-  binder.innerHTML = list.length ? list.map(c => trueqeSleeveHtml(c, trueqeAdminUnlocked, true)).join('') : '<div class="mazo-empty-hint">Nada por aquí todavía. Sé el primero en publicar una carta.</div>';
+  binder.innerHTML = list.length ? list.map(x => trueqeSleeveHtml(x.c, trueqeAdminUnlocked, true)).join('') : '<div class="mazo-empty-hint">Nada por aquí todavía. Sé el primero en publicar un intercambio.</div>';
 }
 
 function trueqeRenderMine() {
+  if (!trueqeUser) return;
   const mine = trueqeCards.filter(c => c.userId === trueqeUser.id);
   const el = document.getElementById('trueque-mine');
-  el.innerHTML = mine.length ? mine.map(c => trueqeSleeveHtml(c, true, false)).join('') : '<div class="mazo-empty-hint">Aún no has publicado ninguna carta.</div>';
+  el.innerHTML = mine.length ? mine.map(c => trueqeSleeveHtml(c, true, false)).join('') : '<div class="mazo-empty-hint">Aún no has publicado ningún intercambio.</div>';
 }
 
 // ── TOAST ──────────────────────────────────────────────────────────────────
