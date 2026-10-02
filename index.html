@@ -542,6 +542,119 @@
     margin-left: 8px;
   }
   .trueque-refresh-btn:hover { background: var(--purple); color: #fff; }
+  /* Intercambios: selector de juego y sección Pokémon GO */
+  .trueque-back-btn {
+    background: none;
+    border: 1px solid rgba(255,255,255,0.25);
+    color: var(--text);
+    font-family: 'Nunito', sans-serif;
+    font-size: 0.75rem;
+    font-weight: 700;
+    padding: 6px 12px;
+    border-radius: 8px;
+    cursor: pointer;
+    margin-bottom: 14px;
+  }
+  .trueque-back-btn:hover { background: var(--purple); color: #fff; }
+  .tgo-head { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+  .tgo-head img { width: 44px; height: 44px; object-fit: contain; }
+  .tgo-field { position: relative; margin-bottom: 8px; }
+  .tgo-field .trueque-input { margin-bottom: 0; }
+  .tgo-ac {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    z-index: 45;
+    margin-top: 4px;
+    background: #ffffff;
+    border-radius: 10px;
+    max-height: 320px;
+    overflow-y: auto;
+    box-shadow: 0 8px 20px rgba(0,0,0,0.45);
+  }
+  .tgo-ac-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 6px 12px;
+    color: #000000;
+    font-weight: 600;
+    font-size: 0.88rem;
+    cursor: pointer;
+  }
+  .tgo-ac-item img { width: 36px; height: 36px; object-fit: contain; flex-shrink: 0; }
+  .tgo-ac-item:hover { background: var(--purple); color: #ffffff; }
+  .tgo-ac-empty { padding: 12px; color: #444444; font-size: 0.8rem; text-align: center; }
+  .tgo-shiny-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-family: 'Nunito', sans-serif;
+    font-weight: 800;
+    font-size: 0.85rem;
+    padding: 9px 14px;
+    border-radius: 999px;
+    border: 1px solid rgba(255,255,255,0.2);
+    background: rgba(255,255,255,0.06);
+    color: var(--text);
+    cursor: pointer;
+    margin: 6px 0 10px;
+  }
+  .tgo-shiny-toggle img { width: 16px; height: auto; opacity: 0.6; }
+  .tgo-shiny-toggle.on { background: rgba(252,190,29,0.18); border-color: #fcbe1d; color: #ffd75e; }
+  .tgo-shiny-toggle.on img { opacity: 1; }
+  .tgo-preview {
+    align-items: center;
+    gap: 14px;
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 12px;
+    padding: 10px 12px;
+    margin-bottom: 10px;
+  }
+  .tgo-preview.shiny { border-color: rgba(252,190,29,0.6); box-shadow: 0 0 14px rgba(252,190,29,0.18); }
+  .tgo-sprite { position: relative; width: 96px; height: 96px; flex-shrink: 0; }
+  .tgo-sprite img.sp { width: 100%; height: 100%; object-fit: contain; display: block; }
+  .tgo-badge { position: absolute; top: -2px; right: -2px; width: 22px; height: auto; }
+  .tgo-pname { font-weight: 800; font-size: 0.95rem; }
+  .tgo-ptag { font-size: 0.74rem; color: var(--muted); margin-top: 2px; }
+  .tgo-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px; }
+  .tgo-card {
+    position: relative;
+    background: var(--dark-card);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 10px;
+    padding: 12px;
+    text-align: center;
+  }
+  .tgo-card.shiny { border-color: rgba(252,190,29,0.6); box-shadow: 0 0 14px rgba(252,190,29,0.18); }
+  .tgo-card .tgo-sprite { margin: 0 auto 6px; }
+  .tgo-card .tgo-name { font-weight: 800; font-size: 0.92rem; margin-bottom: 4px; }
+  .tgo-tag {
+    display: inline-block;
+    font-size: 0.62rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    padding: 2px 7px;
+    border-radius: 5px;
+    margin-bottom: 6px;
+    background: rgba(155,89,182,0.25);
+    color: #d3a6ec;
+  }
+  .tgo-tag.shiny { background: rgba(252,190,29,0.2); color: #ffd75e; }
+  .tgo-card .notes { font-size: 0.75rem; color: var(--muted); margin-bottom: 6px; }
+  .tgo-card .owner { font-size: 0.75rem; color: var(--muted); margin-bottom: 8px; }
+  .tgo-card a.wa {
+    display: inline-block;
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: #0a2e12;
+    background: #4CAF50;
+    padding: 6px 10px;
+    border-radius: 7px;
+    text-decoration: none;
+  }
   /* Tarjeta de intercambio publicada */
   .trade-block { margin-bottom: 8px; }
   .trade-label {
@@ -2467,6 +2580,7 @@
   .mode-tab-btn.active.go        { background: var(--blue);   color: white; }
   .mode-tab-btn.active.tcg       { background: var(--purple); color: white; }
   .mode-tab-btn.active.mazos     { background: var(--green);  color: white; }
+  .mode-tab-btn.active.usuarios  { background: #e67e22;       color: white; }
 
   .mode-section { display: none; }
   .mode-section.active { display: block; }
@@ -2921,6 +3035,41 @@
   .usuario-row button.del:hover { background: rgba(229,115,115,0.3); color: #fff; }
   .usuarios-add { display: grid; gap: 8px; margin-bottom: 14px; text-align: left; }
   .usuarios-add .gate-input { margin-bottom: 0; }
+  .usuarios-toolbar { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 12px; }
+  .usuarios-toolbar .password-input { flex: 1; min-width: 180px; }
+  #usuarios-count { font-size: 0.78rem; color: var(--muted); white-space: nowrap; }
+  .usuarios-table-wrap { overflow-x: auto; border-radius: 10px; border: 1px solid rgba(255,255,255,0.08); }
+  .usuarios-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+  .usuarios-table th {
+    text-align: left;
+    padding: 10px 12px;
+    font-size: 0.68rem;
+    text-transform: uppercase;
+    color: var(--yellow);
+    background: rgba(255,255,255,0.04);
+    white-space: nowrap;
+  }
+  .usuarios-table td { padding: 9px 12px; border-top: 1px solid rgba(255,255,255,0.07); vertical-align: middle; }
+  .usuarios-table tr:hover td { background: rgba(255,255,255,0.03); }
+  .usuarios-table .u-num { color: var(--muted); width: 36px; }
+  .usuarios-table .u-name { font-weight: 800; }
+  .usuarios-table .u-date { color: var(--muted); font-size: 0.78rem; white-space: nowrap; }
+  .usuarios-table .u-actions { white-space: nowrap; }
+  .usuarios-table .u-empty { text-align: center; color: var(--muted); padding: 22px; }
+  .u-btn {
+    font-size: 0.7rem;
+    font-weight: 700;
+    padding: 5px 9px;
+    margin-right: 4px;
+    border-radius: 7px;
+    border: 1px solid rgba(255,255,255,0.2);
+    background: rgba(255,255,255,0.08);
+    color: var(--text);
+    cursor: pointer;
+  }
+  .u-btn:hover { background: var(--purple); color: #fff; }
+  .u-btn.del { border-color: rgba(229,115,115,0.5); color: #ff8a80; }
+  .u-btn.del:hover { background: rgba(229,115,115,0.3); color: #fff; }
   .u-label { display: block; font-size: 0.72rem; font-weight: 800; color: var(--muted); margin-bottom: 3px; text-align: left; }
 </style>
 </head>
@@ -3134,6 +3283,7 @@
       <button class="mode-tab-btn go" id="modetab-go" onclick="showMode('go')">🗺️ Pokémon GO</button>
       <button class="mode-tab-btn tcg" id="modetab-tcg" onclick="showMode('tcg')">🃏 TCG Pocket</button>
       <button class="mode-tab-btn mazos" id="modetab-mazos" onclick="showMode('mazos')">🗂️ Mazos Pocket</button>
+      <button class="mode-tab-btn usuarios" id="modetab-usuarios" onclick="showMode('usuarios')">👥 Usuarios</button>
     </div>
 
     <div class="translate-moves-toolbar" style="margin-top:10px">
@@ -3157,12 +3307,12 @@
     <div class="datos-header">
       <span class="datos-title" id="datos-title">🏆 Champions</span>
       <div class="datos-actions">
-        <button class="btn btn-yellow" onclick="showAddPokemon()">➕ Agregar Pokémon</button>
-        <button class="btn btn-yellow" onclick="showAddPokemonVarios()">📋 Agregar varios</button>
-        <button class="btn" style="background:var(--purple);color:#fff" onclick="openExpansionesModal()">🏷️ Expansiones</button>
-        <button class="btn" style="background:var(--purple);color:#fff" onclick="openUsuariosModal()">👥 Usuarios</button>
+        <button class="btn btn-yellow datos-only-data" onclick="showAddPokemon()">➕ Agregar Pokémon</button>
+        <button class="btn btn-yellow datos-only-data" onclick="showAddPokemonVarios()">📋 Agregar varios</button>
+        <button class="btn datos-only-data" style="background:var(--purple);color:#fff" onclick="openExpansionesModal()">🏷️ Expansiones</button>
+        <button class="btn" style="background:#e67e22;color:#fff" onclick="openUsuariosModal()">➕ Crear usuario</button>
         <button class="btn btn-danger" id="btn-borrar-vacios" onclick="borrarVaciosModoActual()">🗑️ Borrar vacíos</button>
-        <button class="btn btn-primary" onclick="saveAllData()">💾 Guardar cambios</button>
+        <button class="btn btn-primary datos-only-data" onclick="saveAllData()">💾 Guardar cambios</button>
         <button class="btn btn-danger" onclick="lockDatos()">🔒 Bloquear</button>
       </div>
     </div>
@@ -3281,6 +3431,21 @@
       <div class="mazos-list" id="mazos-list"></div>
     </div>
 
+    <!-- ===== USUARIOS ===== -->
+    <div class="mode-section" id="mode-section-usuarios">
+      <div class="usuarios-toolbar">
+        <input type="text" id="usuarios-search" class="password-input" placeholder="🔍 Buscar usuario o teléfono..." oninput="renderUsuarios()">
+        <span id="usuarios-count"></span>
+        <button class="btn" onclick="cargarUsuarios()">🔄 Actualizar</button>
+      </div>
+      <div class="usuarios-table-wrap">
+        <table class="usuarios-table">
+          <thead><tr><th>#</th><th>Usuario</th><th>Teléfono</th><th>Creado</th><th>Acciones</th></tr></thead>
+          <tbody id="usuarios-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+
   </div>
   </div>
 
@@ -3359,6 +3524,20 @@
     </div>
 
     <div id="trueques-content-wrap">
+    <div id="trueque-game-select" class="torneo-game-select" style="display:none">
+      <div class="torneo-game-title">¿Intercambios de qué juego?</div>
+      <div class="torneo-game-grid">
+        <button class="torneo-game-btn" onclick="truequesElegirJuego('go')">
+          <img id="trueque-logo-go" class="torneo-game-logo" alt="Pokémon GO">
+        </button>
+        <button class="torneo-game-btn" onclick="truequesElegirJuego('pocket')">
+          <img id="trueque-logo-tcg" class="torneo-game-logo" alt="TCG Pocket">
+        </button>
+      </div>
+    </div>
+
+    <div id="trueque-pocket-wrap" style="display:none">
+    <button type="button" class="trueque-back-btn" onclick="truequesVolver()">← Cambiar juego</button>
     <div id="trueque-app" style="display:none">
 
       <div class="trueque-card" id="trueque-admin-note" style="display:none">
@@ -3422,6 +3601,59 @@
       </div>
 
     </div>
+    </div><!-- /trueque-pocket-wrap -->
+
+    <!-- ===== INTERCAMBIOS: POKÉMON GO ===== -->
+    <div id="trueque-go-wrap" style="display:none">
+      <button type="button" class="trueque-back-btn" onclick="truequesVolver()">← Cambiar juego</button>
+
+      <div class="trueque-card" id="tgo-admin-note" style="display:none">
+        <p style="font-size:0.82rem;color:var(--muted)">Estás usando la página como administrador: puedes ver el tablón y borrar publicaciones con «Admin». Para publicar hay que entrar con un usuario creado en Datos → Usuarios.</p>
+      </div>
+
+      <div class="trueque-card" id="tgo-publish-card">
+        <div class="tgo-head"><img id="tgo-head-logo" alt="Pokémon GO"><div class="trueque-whoami" style="margin:0">👤 <span id="tgo-whoami-name"></span></div></div>
+        <h3>➕ Publicar búsqueda</h3>
+        <div class="tgo-field">
+          <input class="trueque-input" id="tgo-poke-input" type="text" placeholder="Pokémon que buscas (escribe el nombre)..." autocomplete="off"
+            oninput="tgoOnPokeInput()" onfocus="tgoOnPokeInput()" onblur="tgoHideAcDelayed()" onkeydown="tgoPokeKey(event)">
+          <div class="tgo-ac" id="tgo-ac" style="display:none"></div>
+        </div>
+        <button type="button" class="tgo-shiny-toggle" id="tgo-shiny-btn" onclick="tgoToggleShiny()">
+          <img id="tgo-shiny-btn-icon" alt=""><span id="tgo-shiny-btn-text">Variocolor (shiny): No</span>
+        </button>
+        <div class="tgo-preview" id="tgo-preview" style="display:none">
+          <div class="tgo-sprite"><img class="sp" id="tgo-preview-img" alt=""><img class="tgo-badge" id="tgo-preview-badge" alt="Variocolor" style="display:none"></div>
+          <div style="flex:1;min-width:0">
+            <div class="tgo-pname" id="tgo-preview-name"></div>
+            <div class="tgo-ptag" id="tgo-preview-tag"></div>
+          </div>
+          <button type="button" class="trueque-back-btn" style="margin:0" onclick="tgoClearSelected()">Quitar</button>
+        </div>
+        <input class="trueque-input" id="tgo-notes" type="text" placeholder="Notas (opcional)" maxlength="140">
+        <button class="btn btn-primary" onclick="tgoPublicar()">Publicar</button>
+      </div>
+
+      <div class="trueque-card">
+        <h3 style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap">
+          <span>📋 Tablón de búsquedas (<span id="tgo-count">0</span>)</span>
+          <button class="btn" id="tgo-admin-btn" style="padding:4px 10px;font-size:0.72rem" onclick="tgoAdminToggle()">🔑 Admin</button>
+        </h3>
+        <div class="trueque-filters">
+          <button class="active" data-tgof="todos" onclick="tgoFiltrar('todos', this)">Todos</button>
+          <button data-tgof="shiny" onclick="tgoFiltrar('shiny', this)">✨ Variocolor</button>
+          <button data-tgof="normal" onclick="tgoFiltrar('normal', this)">Normales</button>
+          <input class="trueque-input" id="tgo-search" type="text" placeholder="Buscar Pokémon o usuario..." oninput="tgoRender()">
+        </div>
+        <div id="tgo-binder" class="tgo-grid"></div>
+      </div>
+
+      <div class="trueque-card" id="tgo-mine-card">
+        <h3>🗂️ Mis búsquedas</h3>
+        <div id="tgo-mine" class="tgo-grid"></div>
+      </div>
+    </div>
+
     </div>
 
   </div>
@@ -3645,9 +3877,8 @@
 <!-- MODAL USUARIOS DE LA APP -->
 <div class="modal-overlay" id="modal-usuarios">
   <div class="modal" style="max-width:560px">
-    <h3>👥 USUARIOS DE LA APP</h3>
-    <p>Estas personas pueden entrar a la página. El usuario y el teléfono no se pueden repetir. Entregales su usuario y contraseña; el teléfono se usa para el WhatsApp de los intercambios.</p>
-    <div class="usuarios-list" id="usuarios-list"></div>
+    <h3>➕ CREAR USUARIO</h3>
+    <p>El usuario y el teléfono no se pueden repetir. Entrega al usuario su nombre y contraseña; el teléfono se usa para el WhatsApp de los intercambios. La lista de usuarios está en la pestaña «Usuarios».</p>
     <div class="usuarios-add">
       <div>
         <label class="u-label" for="usuario-new-name">1. Usuario (3-20 caracteres: letras, números . _ -)</label>
@@ -4354,6 +4585,7 @@ function backToModeSelect() {
 let currentTab = 'consulta';
 
 function showTab(tab) {
+  const prevTab = currentTab;
   currentTab = tab;
   document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
   document.getElementById('section-' + tab).classList.add('active');
@@ -4381,7 +4613,7 @@ function showTab(tab) {
     const enReparacion = getModoEnReparacion('trueques');
     document.getElementById('trueques-en-reparacion-banner').style.display = enReparacion ? 'block' : 'none';
     document.getElementById('trueques-content-wrap').style.display = enReparacion ? 'none' : 'block';
-    if (!enReparacion) loadTrueques();
+    if (!enReparacion) truequesEnter(prevTab !== 'trueques');
   }
 }
 
@@ -6923,7 +7155,8 @@ const MODE_TITLES = {
   champions: '🏆 Champions',
   go: '🗺️ Pokémon GO',
   tcg: '🃏 TCG Pocket',
-  mazos: '🗂️ Mazos Pocket'
+  mazos: '🗂️ Mazos Pocket',
+  usuarios: '👥 Usuarios'
 };
 
 function showMode(mode) {
@@ -6935,7 +7168,9 @@ function showMode(mode) {
   document.getElementById('datos-title').textContent = MODE_TITLES[mode];
   const btnVacios = document.getElementById('btn-borrar-vacios');
   if (btnVacios) btnVacios.style.display = (mode === 'champions' || mode === 'go') ? '' : 'none';
+  document.querySelectorAll('.datos-only-data').forEach(b => { b.style.display = (mode === 'usuarios') ? 'none' : ''; });
   renderCurrentTable();
+  if (mode === 'usuarios') cargarUsuarios();
 }
 
 function renderCurrentTable() {
@@ -6947,7 +7182,8 @@ function renderCurrentTable() {
   else if (currentDatosMode === 'go') renderTableGO();
   else if (currentDatosMode === 'tcg') renderTableTCG();
   else if (currentDatosMode === 'mazos') renderMazos('mazos');
-  const isMazosMode = (currentDatosMode === 'mazos');
+  else if (currentDatosMode === 'usuarios') renderUsuarios();
+  const isMazosMode = (currentDatosMode === 'mazos' || currentDatosMode === 'usuarios'); // modos sin tabla de Pokémon
   document.getElementById('datos-search').style.display = isMazosMode ? 'none' : '';
   const bulkToolbar = document.getElementById('datos-bulk-toolbar');
   if (bulkToolbar) bulkToolbar.style.display = isMazosMode ? 'none' : '';
@@ -8711,7 +8947,7 @@ function renamePokemonEntry(oldName, newNameRaw) {
 }
 
 function filterDatosTable() {
-  if (currentDatosMode === 'mazos') return;
+  if (currentDatosMode === 'mazos' || currentDatosMode === 'usuarios') return;
   if (LITE_MODE) {
     // En Lite no todas las filas están en el DOM (solo la página actual),
     // así que buscar implica volver a la página 1 y re-dibujar con el filtro.
@@ -9938,15 +10174,19 @@ function usuarioEsc(s) {
   return (s || '').replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
 }
 
-async function openUsuariosModal() {
+// El botón «Crear usuario» abre este modal (solo sirve para crear).
+function openUsuariosModal() {
   document.getElementById('modal-usuarios').classList.add('open');
-  await cargarUsuarios();
+  setTimeout(() => { const el = document.getElementById('usuario-new-name'); if (el) el.focus(); }, 50);
 }
 
+// Pestaña «Usuarios» de Datos: carga la lista desde Firestore y la dibuja.
 async function cargarUsuarios() {
-  const el = document.getElementById('usuarios-list');
-  if (!window._fbDb) { el.innerHTML = '<div class="trueque-autocomplete-empty">Sin conexión con la nube.</div>'; return; }
-  el.innerHTML = '<div class="trueque-autocomplete-empty">Cargando…</div>';
+  const tbody = document.getElementById('usuarios-tbody');
+  if (!tbody) return;
+  const msg = t => { tbody.innerHTML = `<tr><td colspan="5" class="u-empty">${t}</td></tr>`; };
+  if (!window._fbDb) { msg('Sin conexión con la nube.'); return; }
+  msg('Cargando…');
   try {
     const snap = await window._fbDb.collection(APP_USERS_COL).get();
     usuariosCache = snap.docs.map(d => ({ id: d.id, ...d.data() }))
@@ -9954,23 +10194,40 @@ async function cargarUsuarios() {
     renderUsuarios();
   } catch (e) {
     console.error(e);
-    el.innerHTML = '<div class="trueque-autocomplete-empty">No se pudo cargar la lista. Revisa las reglas de Firestore para "app_usuarios".</div>';
+    msg('No se pudo cargar la lista. Revisa las reglas de Firestore para "app_usuarios".');
   }
 }
 
 function renderUsuarios() {
-  const el = document.getElementById('usuarios-list');
-  el.innerHTML = usuariosCache.length ? usuariosCache.map(u => `
-    <div class="usuario-row">
-      <div class="u-info">
-        <div class="u-name">👤 ${usuarioEsc(u.usuario)}</div>
-        <div class="u-tel">📞 ${usuarioEsc(u.whatsapp)}</div>
-      </div>
-      <button type="button" onclick="cambiarPasswordUsuario('${u.id}')">🔑 Contraseña</button>
-      <button type="button" onclick="cambiarTelefonoUsuario('${u.id}')">📞 Teléfono</button>
-      <button type="button" class="del" onclick="eliminarUsuario('${u.id}')">🗑️</button>
-    </div>
-  `).join('') : '<div class="trueque-autocomplete-empty">Todavía no hay usuarios. Crea el primero abajo.</div>';
+  const tbody = document.getElementById('usuarios-tbody');
+  if (!tbody) return;
+  const qRaw = ((document.getElementById('usuarios-search') || {}).value || '').trim().toLowerCase();
+  const qNorm = gateNormUser(qRaw);
+  const qDig = qRaw.replace(/\D/g, '');
+  const lista = usuariosCache.filter(u =>
+    !qRaw || (u.usuarioNorm || '').includes(qNorm) || (qDig && (u.whatsapp || '').includes(qDig)));
+  const count = document.getElementById('usuarios-count');
+  if (count) count.textContent = usuariosCache.length
+    ? (lista.length === usuariosCache.length ? usuariosCache.length + ' usuarios' : lista.length + ' de ' + usuariosCache.length)
+    : '';
+  if (!lista.length) {
+    tbody.innerHTML = `<tr><td colspan="5" class="u-empty">${usuariosCache.length ? 'Ningún usuario coincide con la búsqueda.' : 'Todavía no hay usuarios. Crea el primero con «➕ Crear usuario».'}</td></tr>`;
+    return;
+  }
+  tbody.innerHTML = lista.map((u, i) => {
+    const fecha = (u.creado && u.creado.toDate) ? u.creado.toDate().toLocaleDateString('es') : '';
+    return `<tr>
+      <td class="u-num">${i + 1}</td>
+      <td class="u-name">👤 ${usuarioEsc(u.usuario)}</td>
+      <td>📞 ${usuarioEsc(u.whatsapp)}</td>
+      <td class="u-date">${usuarioEsc(fecha)}</td>
+      <td class="u-actions">
+        <button type="button" class="u-btn" onclick="cambiarPasswordUsuario('${u.id}')">🔑 Contraseña</button>
+        <button type="button" class="u-btn" onclick="cambiarTelefonoUsuario('${u.id}')">📞 Teléfono</button>
+        <button type="button" class="u-btn del" onclick="eliminarUsuario('${u.id}')">🗑️ Eliminar</button>
+      </td>
+    </tr>`;
+  }).join('');
 }
 
 function usuarioTelValido(t) { return t.length >= 8 && t.length <= 15; }
@@ -10659,6 +10916,344 @@ function trueqeRenderMine() {
   const mine = trueqeCards.filter(c => c.userId === trueqeUser.id);
   const el = document.getElementById('trueque-mine');
   el.innerHTML = mine.length ? mine.map(c => trueqeSleeveHtml(c, true, false)).join('') : '<div class="mazo-empty-hint">Aún no has publicado ningún intercambio.</div>';
+}
+
+// ── INTERCAMBIOS: ELEGIR JUEGO ───────────────────────────────────────────
+// Al entrar a Intercambios se pregunta el juego. La parte de TCG Pocket es la
+// de siempre (loadTrueques y compañía) y la de Pokémon GO es independiente:
+// usa su propia colección 'trueques_go' y sus funciones empiezan con "tgo".
+let truequesGame = null; // null (sin elegir) | 'go' | 'pocket'
+
+function initTruequeLogos() {
+  [['go', 'trueque-logo-go'], ['tcg', 'trueque-logo-tcg']].forEach(([mode, id]) => {
+    const source = document.getElementById('logo-' + mode);
+    const target = document.getElementById(id);
+    if (source && target && source.src) target.src = source.src;
+  });
+}
+
+function truequesEnter(reset) {
+  if (reset) truequesGame = null;
+  if (!truequesGame) initTruequeLogos();
+  document.getElementById('trueque-game-select').style.display = truequesGame ? 'none' : 'block';
+  document.getElementById('trueque-go-wrap').style.display = truequesGame === 'go' ? 'block' : 'none';
+  document.getElementById('trueque-pocket-wrap').style.display = truequesGame === 'pocket' ? 'block' : 'none';
+  if (truequesGame === 'pocket') loadTrueques();
+  else if (truequesGame === 'go') tgoLoad();
+}
+function truequesElegirJuego(juego) { truequesGame = juego; truequesEnter(false); }
+function truequesVolver() { truequesGame = null; truequesEnter(false); }
+
+// ── INTERCAMBIOS: POKÉMON GO (solo "busco", normal o variocolor) ──────────
+const TGO_SHINY_ICON = 'data:image/png;base64,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';
+const TGO_COL = 'trueques_go';
+const TGO_CACHE = new Map(); // slug -> Promise con los datos de PokeAPI
+
+let tgoCards = [];
+let tgoFilter = 'todos';
+let tgoShiny = false;
+let tgoSelected = null;        // nombre tal cual está en la lista de la Consulta
+let tgoSelectedLabel = '';     // nombre en español que se muestra
+let tgoSelectedImg = '';       // dirección de la imagen que sí cargó
+let tgoAcMatches = [];
+let tgoAcTimer = null;
+let tgoAdminUnlocked = false;
+
+function tgoEsc(s) {
+  return String(s == null ? '' : s).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+}
+function tgoNorm(s) {
+  return String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
+}
+function tgoUser() {
+  const s = window.appSession;
+  return (s && s.tipo === 'user') ? { id: s.id, usuario: s.usuario, whatsapp: s.whatsapp } : null;
+}
+
+// Sprites: se usa el render de Pokémon HOME (normal o variocolor) para que la
+// comparación se vea igual en ambos casos, con respaldos si alguno falla.
+function tgoFetchPokeData(slug) {
+  if (!TGO_CACHE.has(slug)) {
+    TGO_CACHE.set(slug, fetch(`https://pokeapi.co/api/v2/pokemon/${slug}`)
+      .then(r => r.ok ? r.json() : null).catch(() => null));
+  }
+  return TGO_CACHE.get(slug);
+}
+
+async function tgoSpriteCandidates(name, shiny) {
+  const limpio = (name || '').replace(/\s*\boscuro\b\s*/gi, ' ').trim() || name;
+  const slug = getSpriteSlug(limpio);
+  const out = [];
+  const d = await tgoFetchPokeData(slug);
+  if (d && d.sprites) {
+    const o = d.sprites.other || {};
+    if (shiny) out.push(o.home && o.home.front_shiny, o['official-artwork'] && o['official-artwork'].front_shiny, d.sprites.front_shiny);
+    else out.push(o.home && o.home.front_default, o['official-artwork'] && o['official-artwork'].front_default, d.sprites.front_default);
+  }
+  out.push(shiny ? `https://img.pokemondb.net/sprites/home/shiny/${slug}.png` : `https://img.pokemondb.net/sprites/home/normal/${slug}.png`);
+  out.push(shiny ? `https://play.pokemonshowdown.com/sprites/gen5-shiny/${slug}.png` : `https://play.pokemonshowdown.com/sprites/gen5/${slug}.png`);
+  return out.filter(Boolean);
+}
+
+async function tgoLoadSprite(imgEl, name, shiny, onOk) {
+  const tok = (imgEl._tgoTok = (imgEl._tgoTok || 0) + 1);
+  imgEl.style.visibility = '';
+  const cands = await tgoSpriteCandidates(name, shiny);
+  if (imgEl._tgoTok !== tok) return; // llegó una petición más nueva para esta imagen
+  loadSpriteWithFallback(imgEl, cands, url => { if (imgEl._tgoTok === tok && onOk) onOk(url); }, () => { imgEl.style.visibility = 'hidden'; });
+}
+
+// ── Buscador de Pokémon (misma lista que usa la Consulta de GO) ──
+function tgoOnPokeInput() {
+  clearTimeout(tgoAcTimer);
+  tgoAcTimer = setTimeout(tgoRenderAc, 120);
+}
+
+function tgoRenderAc() {
+  const input = document.getElementById('tgo-poke-input');
+  const box = document.getElementById('tgo-ac');
+  if (!input || !box) return;
+  if (tgoSelected && input.value !== tgoSelectedLabel) tgoClearSelected(true);
+  const q = tgoNorm(input.value);
+  if (!q) { box.style.display = 'none'; box.innerHTML = ''; return; }
+  const matches = [];
+  for (const p of (POKEMON_LISTS.go || [])) {
+    if (tgoNorm(p).includes(q) || tgoNorm(traducirNombrePokemon(p)).includes(q)) {
+      matches.push(p);
+      if (matches.length >= 12) break;
+    }
+  }
+  tgoAcMatches = matches;
+  box.style.display = 'block';
+  if (!matches.length) { box.innerHTML = '<div class="tgo-ac-empty">No hay ningún Pokémon con ese nombre en la lista.</div>'; return; }
+  box.innerHTML = matches.map((p, i) => `
+    <div class="tgo-ac-item" onmousedown="event.preventDefault(); tgoSelectPoke(${i})">
+      <img data-i="${i}" alt=""><span>${tgoEsc(traducirNombrePokemon(p))}</span>
+    </div>`).join('');
+  box.querySelectorAll('img[data-i]').forEach(im => tgoLoadSprite(im, matches[+im.dataset.i], tgoShiny));
+}
+
+function tgoPokeKey(e) {
+  if (e.key !== 'Enter') return;
+  e.preventDefault();
+  if (tgoAcMatches.length && document.getElementById('tgo-ac').style.display !== 'none') tgoSelectPoke(0);
+}
+
+function tgoHideAcDelayed() {
+  setTimeout(() => { const b = document.getElementById('tgo-ac'); if (b) b.style.display = 'none'; }, 150);
+}
+
+function tgoSelectPoke(i) {
+  const p = tgoAcMatches[i];
+  if (!p) return;
+  tgoSelected = p;
+  tgoSelectedLabel = traducirNombrePokemon(p);
+  document.getElementById('tgo-poke-input').value = tgoSelectedLabel;
+  document.getElementById('tgo-ac').style.display = 'none';
+  tgoRenderPreview();
+}
+
+function tgoRenderPreview() {
+  const prev = document.getElementById('tgo-preview');
+  if (!tgoSelected) { prev.style.display = 'none'; return; }
+  prev.style.display = 'flex';
+  prev.classList.toggle('shiny', tgoShiny);
+  document.getElementById('tgo-preview-name').textContent = tgoSelectedLabel;
+  document.getElementById('tgo-preview-tag').textContent = tgoShiny ? '✨ Lo buscas variocolor (shiny)' : 'Lo buscas en su forma normal';
+  document.getElementById('tgo-preview-badge').style.display = tgoShiny ? 'block' : 'none';
+  tgoSelectedImg = '';
+  tgoLoadSprite(document.getElementById('tgo-preview-img'), tgoSelected, tgoShiny, url => { tgoSelectedImg = url; });
+}
+
+function tgoToggleShiny() {
+  tgoShiny = !tgoShiny;
+  tgoUpdateShinyBtn();
+  if (tgoSelected) tgoRenderPreview();
+}
+
+function tgoUpdateShinyBtn() {
+  const btn = document.getElementById('tgo-shiny-btn');
+  if (!btn) return;
+  btn.classList.toggle('on', tgoShiny);
+  document.getElementById('tgo-shiny-btn-text').textContent = 'Variocolor (shiny): ' + (tgoShiny ? 'Sí' : 'No');
+}
+
+function tgoClearSelected(keepText) {
+  tgoSelected = null;
+  tgoSelectedLabel = '';
+  tgoSelectedImg = '';
+  document.getElementById('tgo-preview').style.display = 'none';
+  if (!keepText) document.getElementById('tgo-poke-input').value = '';
+}
+
+function tgoResetForm() {
+  tgoClearSelected();
+  tgoShiny = false;
+  tgoUpdateShinyBtn();
+  const n = document.getElementById('tgo-notes');
+  if (n) n.value = '';
+}
+
+// ── Publicar / tablón ──
+async function tgoPublicar() {
+  const u = tgoUser();
+  if (!u || !window._fbDb) return;
+  if (!tgoSelected) { showToast('⚠️ Elige un Pokémon de la lista', true); return; }
+  const notas = document.getElementById('tgo-notes').value.trim();
+  try {
+    await window._fbDb.collection(TGO_COL).add({
+      pokemon: tgoSelected,
+      nombreEs: tgoSelectedLabel,
+      shiny: !!tgoShiny,
+      imagen: tgoSelectedImg || '',
+      notas,
+      userId: u.id,
+      userNombre: u.usuario,
+      userWhatsapp: u.whatsapp,
+      creado: firebase.firestore.FieldValue.serverTimestamp()
+    });
+    tgoResetForm();
+    tgoFetch();
+    showToast('✅ Búsqueda publicada');
+  } catch (e) {
+    console.error(e);
+    showToast('❌ No se pudo publicar. Revisa las reglas de Firestore para "trueques_go".', true);
+  }
+}
+
+async function tgoFetch() {
+  if (!window._fbDb) return;
+  try {
+    const snap = await window._fbDb.collection(TGO_COL).orderBy('creado', 'desc').get();
+    tgoCards = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    tgoRender();
+  } catch (e) {
+    console.error(e);
+    tgoCards = [];
+    const msg = '<div class="mazo-empty-hint">No se pudo cargar el tablón. Revisa las reglas de Firestore para "trueques_go".</div>';
+    document.getElementById('tgo-binder').innerHTML = msg;
+    document.getElementById('tgo-mine').innerHTML = '';
+  }
+}
+
+function tgoFiltrar(f, btn) {
+  tgoFilter = f;
+  document.querySelectorAll('.trueque-filters button[data-tgof]').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  tgoRender();
+}
+
+function tgoCardHtml(c, showDelete, esAdmin) {
+  const nombre = c.nombreEs || c.pokemon;
+  const texto = 'Hola ' + c.userNombre + ', vi que buscas ' + nombre + (c.shiny ? ' variocolor (shiny)' : '') + ' en el tablón de intercambios de Pokémon GO.';
+  const waLink = 'https://wa.me/' + c.userWhatsapp + '?text=' + encodeURIComponent(texto);
+  return `<div class="tgo-card${c.shiny ? ' shiny' : ''}">
+    <div class="tgo-sprite">
+      <img class="sp" data-name="${tgoEsc(c.pokemon)}" data-shiny="${c.shiny ? 1 : 0}"${c.imagen ? ` src="${tgoEsc(c.imagen)}"` : ''} alt="" onerror="tgoImgFail(this)">
+      ${c.shiny ? `<img class="tgo-badge" src="${TGO_SHINY_ICON}" alt="Variocolor" title="Variocolor (shiny)">` : ''}
+    </div>
+    <div class="tgo-name">${tgoEsc(nombre)}</div>
+    <span class="tgo-tag${c.shiny ? ' shiny' : ''}">${c.shiny ? 'Busca variocolor' : 'Busca'}</span>
+    ${c.notas ? `<div class="notes">${tgoEsc(c.notas)}</div>` : ''}
+    <div class="owner">👤 ${tgoEsc(c.userNombre)}</div>
+    <a class="wa" href="${waLink}" target="_blank" rel="noopener">Escribir por WhatsApp</a>
+    ${showDelete ? `<button class="trueque-delete-btn" onclick="tgoEliminar('${c.id}')">${esAdmin ? '✕ Eliminar (admin)' : '🗑️ Eliminar (ya se cerró el trueque)'}</button>` : ''}
+  </div>`;
+}
+
+// Si la imagen guardada ya no carga (o no había), se busca de nuevo.
+function tgoImgFail(img) {
+  if (img.dataset.retried) { img.style.visibility = 'hidden'; return; }
+  img.dataset.retried = '1';
+  tgoLoadSprite(img, img.dataset.name, img.dataset.shiny === '1');
+}
+
+function tgoHydrate(container) {
+  container.querySelectorAll('img.sp[data-name]').forEach(im => {
+    if (!im.getAttribute('src')) tgoLoadSprite(im, im.dataset.name, im.dataset.shiny === '1');
+  });
+}
+
+function tgoRender() {
+  const term = tgoNorm((document.getElementById('tgo-search') || {}).value);
+  let list = tgoCards;
+  if (tgoFilter === 'shiny') list = list.filter(c => c.shiny);
+  else if (tgoFilter === 'normal') list = list.filter(c => !c.shiny);
+  if (term) list = list.filter(c => tgoNorm(c.pokemon).includes(term) || tgoNorm(c.nombreEs).includes(term) || tgoNorm(c.userNombre).includes(term));
+  document.getElementById('tgo-count').textContent = tgoCards.length;
+  const binder = document.getElementById('tgo-binder');
+  binder.innerHTML = list.length
+    ? list.map(c => tgoCardHtml(c, tgoAdminUnlocked, true)).join('')
+    : '<div class="mazo-empty-hint">Nada por aquí todavía. Sé el primero en publicar una búsqueda.</div>';
+  tgoHydrate(binder);
+
+  const u = tgoUser();
+  const mineEl = document.getElementById('tgo-mine');
+  if (u) {
+    const mine = tgoCards.filter(c => c.userId === u.id);
+    mineEl.innerHTML = mine.length
+      ? mine.map(c => tgoCardHtml(c, true, false)).join('')
+      : '<div class="mazo-empty-hint">Aún no has publicado ninguna búsqueda.</div>';
+    tgoHydrate(mineEl);
+  }
+}
+
+async function tgoEliminar(cardId) {
+  if (!window._fbDb) return;
+  const u = tgoUser();
+  const carta = tgoCards.find(c => c.id === cardId);
+  if (!carta) return;
+  if ((!u || carta.userId !== u.id) && !tgoAdminUnlocked) return;
+  if (!confirm('¿Eliminar esta publicación? No se puede deshacer.')) return;
+  try {
+    await window._fbDb.collection(TGO_COL).doc(cardId).delete();
+    showToast('🗑️ Publicación eliminada');
+    tgoFetch();
+  } catch (e) {
+    console.error(e);
+    showToast('❌ No se pudo eliminar. Intenta de nuevo.', true);
+  }
+}
+
+// ── Administrador (misma autenticación que Datos) ──
+function tgoSetAdmin(on) {
+  tgoAdminUnlocked = on;
+  const btn = document.getElementById('tgo-admin-btn');
+  if (btn) {
+    btn.textContent = on ? '🔓 Salir de modo admin' : '🔑 Admin';
+    btn.classList.toggle('btn-danger', on);
+  }
+}
+
+function tgoAdminToggle() {
+  if (tgoAdminUnlocked) {
+    tgoSetAdmin(false);
+    tgoRender();
+    showToast('🔒 Modo administrador desactivado');
+    return;
+  }
+  if (!window._fbAuth) { showToast('⚠️ Todavía no se conectó a la nube, espera un momento y vuelve a intentar.', true); return; }
+  const input = prompt('Contraseña de administrador:');
+  if (input == null) return;
+  window._fbAuth.signInWithEmailAndPassword(ADMIN_EMAIL, input)
+    .then(() => { tgoSetAdmin(true); tgoRender(); showToast('🔓 Modo administrador activado: ya puedes borrar cualquier publicación del tablón'); })
+    .catch(() => { showToast('❌ Contraseña incorrecta', true); });
+}
+
+function tgoLoad() {
+  const u = tgoUser();
+  const puede = !!u;
+  document.getElementById('tgo-publish-card').style.display = puede ? 'block' : 'none';
+  document.getElementById('tgo-mine-card').style.display = puede ? 'block' : 'none';
+  document.getElementById('tgo-admin-note').style.display = puede ? 'none' : 'block';
+  const logo = document.getElementById('logo-go');
+  if (logo && logo.src) document.getElementById('tgo-head-logo').src = logo.src;
+  document.getElementById('tgo-shiny-btn-icon').src = TGO_SHINY_ICON;
+  document.getElementById('tgo-preview-badge').src = TGO_SHINY_ICON;
+  if (puede) document.getElementById('tgo-whoami-name').textContent = u.usuario;
+  tgoUpdateShinyBtn();
+  if (window.appSession && window.appSession.tipo === 'admin') tgoSetAdmin(true);
+  tgoFetch();
 }
 
 // ── TOAST ──────────────────────────────────────────────────────────────────
