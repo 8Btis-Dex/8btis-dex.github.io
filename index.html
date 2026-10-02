@@ -585,6 +585,7 @@
   }
   .tgo-ac-item img { width: 36px; height: 36px; object-fit: contain; flex-shrink: 0; }
   .tgo-ac-item:hover { background: var(--purple); color: #ffffff; }
+  .tgo-dex-status { font-size: 0.7rem; color: var(--muted); margin: 2px 0 8px; min-height: 0; }
   .tgo-ac-empty { padding: 12px; color: #444444; font-size: 0.8rem; text-align: center; }
   .tgo-shiny-toggle {
     display: inline-flex;
@@ -3622,6 +3623,7 @@
             oninput="tgoOnPokeInput()" onfocus="tgoOnPokeInput()" onblur="tgoHideAcDelayed()" onkeydown="tgoPokeKey(event)">
           <div class="tgo-ac" id="tgo-ac" style="display:none"></div>
         </div>
+        <div class="tgo-dex-status" id="tgo-dex-status"></div>
         <button type="button" class="tgo-shiny-toggle" id="tgo-shiny-btn" onclick="tgoToggleShiny()">
           <img id="tgo-shiny-btn-icon" alt=""><span id="tgo-shiny-btn-text">Variocolor (shiny): No</span>
         </button>
@@ -11052,6 +11054,7 @@ let tgoFilter = 'todos';
 let tgoShiny = false;
 let tgoSelected = null;        // nombre tal cual está en la lista de la Consulta
 let tgoSelectedLabel = '';     // nombre en español que se muestra
+let tgoSelectedSlug = '';      // nombre exacto en PokeAPI (para el sprite)
 let tgoSelectedImg = '';       // dirección de la imagen que sí cargó
 let tgoAcMatches = [];
 let tgoAcTimer = null;
@@ -11078,9 +11081,96 @@ function tgoFetchPokeData(slug) {
   return TGO_CACHE.get(slug);
 }
 
-async function tgoSpriteCandidates(name, shiny) {
+// ── Lista completa de Pokémon (desde PokeAPI) ──
+// Así no hace falta cargar uno por uno en Datos → Pokémon GO: el buscador de
+// Intercambios usa todos los Pokémon de la base de datos de internet (más las
+// formas de Alola, Galar, Hisui y Paldea) y suma además lo que tengas en Datos.
+// Se descarga una sola vez y se guarda 30 días en el navegador.
+const TGO_DEX_KEY = 'tgo_dex_v1';
+const TGO_DEX_MAX_AGE = 1000 * 60 * 60 * 24 * 30;
+let TGO_DEX = null;            // [{ n: nombre, s: slug de PokeAPI, i: orden }]
+let TGO_DEX_PROMISE = null;
+const TGO_SLUG_OF = new Map(); // nombre -> slug (para encontrar el sprite exacto)
+
+const TGO_NAME_SPECIAL = {
+  'mr-mime': 'Mr. Mime', 'mime-jr': 'Mime Jr.', 'mr-rime': 'Mr. Rime', 'nidoran-f': 'Nidoran ♀',
+  'nidoran-m': 'Nidoran ♂', 'farfetchd': "Farfetch'd", 'sirfetchd': "Sirfetch'd", 'ho-oh': 'Ho-Oh',
+  'porygon-z': 'Porygon-Z', 'type-null': 'Type: Null', 'jangmo-o': 'Jangmo-o', 'hakamo-o': 'Hakamo-o',
+  'kommo-o': 'Kommo-o', 'flabebe': 'Flabébé', 'wo-chien': 'Wo-Chien', 'chien-pao': 'Chien-Pao',
+  'ting-lu': 'Ting-Lu', 'chi-yu': 'Chi-Yu'
+};
+
+function tgoFormatName(slug) {
+  if (TGO_NAME_SPECIAL[slug]) return TGO_NAME_SPECIAL[slug];
+  return slug.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+}
+
+function tgoIndexDex() {
+  TGO_SLUG_OF.clear();
+  (TGO_DEX || []).forEach(x => TGO_SLUG_OF.set(x.n, x.s));
+}
+
+function tgoLoadDex() {
+  if (TGO_DEX) return Promise.resolve(TGO_DEX);
+  if (TGO_DEX_PROMISE) return TGO_DEX_PROMISE;
+  try {
+    const cached = JSON.parse(localStorage.getItem(TGO_DEX_KEY) || 'null');
+    if (cached && Array.isArray(cached.data) && cached.data.length > 500 && (Date.now() - cached.ts) < TGO_DEX_MAX_AGE) {
+      TGO_DEX = cached.data;
+      tgoIndexDex();
+      return Promise.resolve(TGO_DEX);
+    }
+  } catch (e) { /* caché corrupto: se vuelve a descargar */ }
+
+  const get = async u => { const r = await fetch(u); if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); };
+  const idOf = u => { const m = /\/(\d+)\/?$/.exec(u || ''); return m ? +m[1] : 0; };
+  const REGION = { alola: 'Alola', galar: 'Galar', hisui: 'Hisui', paldea: 'Paldea' };
+
+  TGO_DEX_PROMISE = Promise.all([
+    get('https://pokeapi.co/api/v2/pokemon-species?limit=2000'),
+    get('https://pokeapi.co/api/v2/pokemon?limit=2000')
+  ]).then(([sp, po]) => {
+    const slugById = {};
+    po.results.forEach(x => { const id = idOf(x.url); if (id && id < 10000) slugById[id] = x.name; });
+    const idBySpecies = {};
+    const out = [];
+    sp.results.forEach(x => {
+      const id = idOf(x.url);
+      if (!id) return;
+      idBySpecies[x.name] = id;
+      // El sprite se pide con el nombre de la forma por defecto (ej. "deoxys-normal").
+      out.push({ n: tgoFormatName(x.name), s: slugById[id] || x.name, i: id });
+    });
+    po.results.forEach(x => {
+      if (idOf(x.url) < 10000) return;
+      const m = /^(.+)-(alola|galar|hisui|paldea)$/.exec(x.name);
+      if (m && idBySpecies[m[1]]) out.push({ n: `${tgoFormatName(m[1])} de ${REGION[m[2]]}`, s: x.name, i: idBySpecies[m[1]] + 0.5 });
+    });
+    out.sort((a, b) => a.i - b.i);
+    if (out.length < 500) throw new Error('lista incompleta');
+    TGO_DEX = out;
+    tgoIndexDex();
+    try { localStorage.setItem(TGO_DEX_KEY, JSON.stringify({ ts: Date.now(), data: out })); } catch (e) {}
+    return out;
+  }).finally(() => { TGO_DEX_PROMISE = null; });
+  return TGO_DEX_PROMISE;
+}
+
+// Lista de búsqueda: toda la de internet + lo que esté en Datos y no esté ya.
+function tgoPokeList() {
+  const out = (TGO_DEX || []).slice();
+  const vistos = new Set(out.map(x => x.s));
+  (POKEMON_LISTS.go || []).forEach(p => {
+    const limpio = (p || '').replace(/\s*\boscuro\b\s*/gi, ' ').trim() || p;
+    const s = getSpriteSlug(limpio);
+    if (!vistos.has(s)) { vistos.add(s); out.push({ n: p, s, i: 99999 }); }
+  });
+  return out;
+}
+
+async function tgoSpriteCandidates(name, shiny, slugExacto) {
   const limpio = (name || '').replace(/\s*\boscuro\b\s*/gi, ' ').trim() || name;
-  const slug = getSpriteSlug(limpio);
+  const slug = slugExacto || TGO_SLUG_OF.get(name) || getSpriteSlug(limpio);
   const out = [];
   const d = await tgoFetchPokeData(slug);
   if (d && d.sprites) {
@@ -11093,15 +11183,15 @@ async function tgoSpriteCandidates(name, shiny) {
   return out.filter(Boolean);
 }
 
-async function tgoLoadSprite(imgEl, name, shiny, onOk) {
+async function tgoLoadSprite(imgEl, name, shiny, onOk, slug) {
   const tok = (imgEl._tgoTok = (imgEl._tgoTok || 0) + 1);
   imgEl.style.visibility = '';
-  const cands = await tgoSpriteCandidates(name, shiny);
+  const cands = await tgoSpriteCandidates(name, shiny, slug);
   if (imgEl._tgoTok !== tok) return; // llegó una petición más nueva para esta imagen
   loadSpriteWithFallback(imgEl, cands, url => { if (imgEl._tgoTok === tok && onOk) onOk(url); }, () => { imgEl.style.visibility = 'hidden'; });
 }
 
-// ── Buscador de Pokémon (misma lista que usa la Consulta de GO) ──
+// ── Buscador de Pokémon (lista completa de internet + la de Datos) ──
 function tgoOnPokeInput() {
   clearTimeout(tgoAcTimer);
   tgoAcTimer = setTimeout(tgoRenderAc, 120);
@@ -11114,21 +11204,25 @@ function tgoRenderAc() {
   if (tgoSelected && input.value !== tgoSelectedLabel) tgoClearSelected(true);
   const q = tgoNorm(input.value);
   if (!q) { box.style.display = 'none'; box.innerHTML = ''; return; }
-  const matches = [];
-  for (const p of (POKEMON_LISTS.go || [])) {
-    if (tgoNorm(p).includes(q) || tgoNorm(traducirNombrePokemon(p)).includes(q)) {
-      matches.push(p);
-      if (matches.length >= 12) break;
-    }
+  const empiezan = [], contienen = [];
+  for (const x of tgoPokeList()) {
+    const nEn = tgoNorm(x.n), nEs = tgoNorm(traducirNombrePokemon(x.n));
+    if (nEn.startsWith(q) || nEs.startsWith(q)) empiezan.push(x);
+    else if (nEn.includes(q) || nEs.includes(q)) contienen.push(x);
+    if (empiezan.length >= 12) break;
   }
+  const matches = empiezan.concat(contienen).slice(0, 12);
   tgoAcMatches = matches;
   box.style.display = 'block';
-  if (!matches.length) { box.innerHTML = '<div class="tgo-ac-empty">No hay ningún Pokémon con ese nombre en la lista.</div>'; return; }
-  box.innerHTML = matches.map((p, i) => `
+  if (!matches.length) {
+    box.innerHTML = '<div class="tgo-ac-empty">No hay ningún Pokémon con ese nombre' + (TGO_DEX ? '.' : ' (la lista completa todavía no se descargó).') + '</div>';
+    return;
+  }
+  box.innerHTML = matches.map((x, i) => `
     <div class="tgo-ac-item" onmousedown="event.preventDefault(); tgoSelectPoke(${i})">
-      <img data-i="${i}" alt=""><span>${tgoEsc(traducirNombrePokemon(p))}</span>
+      <img data-i="${i}" alt=""><span>${tgoEsc(traducirNombrePokemon(x.n))}</span>
     </div>`).join('');
-  box.querySelectorAll('img[data-i]').forEach(im => tgoLoadSprite(im, matches[+im.dataset.i], tgoShiny));
+  box.querySelectorAll('img[data-i]').forEach(im => { const x = matches[+im.dataset.i]; tgoLoadSprite(im, x.n, tgoShiny, null, x.s); });
 }
 
 function tgoPokeKey(e) {
@@ -11142,10 +11236,11 @@ function tgoHideAcDelayed() {
 }
 
 function tgoSelectPoke(i) {
-  const p = tgoAcMatches[i];
-  if (!p) return;
-  tgoSelected = p;
-  tgoSelectedLabel = traducirNombrePokemon(p);
+  const x = tgoAcMatches[i];
+  if (!x) return;
+  tgoSelected = x.n;
+  tgoSelectedSlug = x.s;
+  tgoSelectedLabel = traducirNombrePokemon(x.n);
   document.getElementById('tgo-poke-input').value = tgoSelectedLabel;
   document.getElementById('tgo-ac').style.display = 'none';
   tgoRenderPreview();
@@ -11160,7 +11255,7 @@ function tgoRenderPreview() {
   document.getElementById('tgo-preview-tag').textContent = tgoShiny ? '✨ Lo buscas variocolor (shiny)' : 'Lo buscas en su forma normal';
   document.getElementById('tgo-preview-badge').style.display = tgoShiny ? 'block' : 'none';
   tgoSelectedImg = '';
-  tgoLoadSprite(document.getElementById('tgo-preview-img'), tgoSelected, tgoShiny, url => { tgoSelectedImg = url; });
+  tgoLoadSprite(document.getElementById('tgo-preview-img'), tgoSelected, tgoShiny, url => { tgoSelectedImg = url; }, tgoSelectedSlug);
 }
 
 function tgoToggleShiny() {
@@ -11178,6 +11273,7 @@ function tgoUpdateShinyBtn() {
 
 function tgoClearSelected(keepText) {
   tgoSelected = null;
+  tgoSelectedSlug = '';
   tgoSelectedLabel = '';
   tgoSelectedImg = '';
   document.getElementById('tgo-preview').style.display = 'none';
@@ -11201,6 +11297,7 @@ async function tgoPublicar() {
   try {
     await window._fbDb.collection(TGO_COL).add({
       pokemon: tgoSelected,
+      slug: tgoSelectedSlug || '',
       nombreEs: tgoSelectedLabel,
       shiny: !!tgoShiny,
       imagen: tgoSelectedImg || '',
@@ -11247,7 +11344,7 @@ function tgoCardHtml(c, showDelete, esAdmin) {
   const waLink = 'https://wa.me/' + c.userWhatsapp + '?text=' + encodeURIComponent(texto);
   return `<div class="tgo-card${c.shiny ? ' shiny' : ''}">
     <div class="tgo-sprite">
-      <img class="sp" data-name="${tgoEsc(c.pokemon)}" data-shiny="${c.shiny ? 1 : 0}"${c.imagen ? ` src="${tgoEsc(c.imagen)}"` : ''} alt="" onerror="tgoImgFail(this)">
+      <img class="sp" data-name="${tgoEsc(c.pokemon)}" data-slug="${tgoEsc(c.slug || '')}" data-shiny="${c.shiny ? 1 : 0}"${c.imagen ? ` src="${tgoEsc(c.imagen)}"` : ''} alt="" onerror="tgoImgFail(this)">
       ${c.shiny ? `<img class="tgo-badge" src="${TGO_SHINY_ICON}" alt="Variocolor" title="Variocolor (shiny)">` : ''}
     </div>
     <div class="tgo-name">${tgoEsc(nombre)}</div>
@@ -11263,12 +11360,12 @@ function tgoCardHtml(c, showDelete, esAdmin) {
 function tgoImgFail(img) {
   if (img.dataset.retried) { img.style.visibility = 'hidden'; return; }
   img.dataset.retried = '1';
-  tgoLoadSprite(img, img.dataset.name, img.dataset.shiny === '1');
+  tgoLoadSprite(img, img.dataset.name, img.dataset.shiny === '1', null, img.dataset.slug || '');
 }
 
 function tgoHydrate(container) {
   container.querySelectorAll('img.sp[data-name]').forEach(im => {
-    if (!im.getAttribute('src')) tgoLoadSprite(im, im.dataset.name, im.dataset.shiny === '1');
+    if (!im.getAttribute('src')) tgoLoadSprite(im, im.dataset.name, im.dataset.shiny === '1', null, im.dataset.slug || '');
   });
 }
 
@@ -11352,6 +11449,22 @@ function tgoLoad() {
   tgoUpdateShinyBtn();
   if (window.appSession && window.appSession.tipo === 'admin') tgoSetAdmin(true);
   tgoFetch();
+  tgoCargarLista();
+}
+
+// Descarga (o recupera del caché) la lista completa de Pokémon y avisa del estado.
+function tgoCargarLista() {
+  const st = document.getElementById('tgo-dex-status');
+  if (TGO_DEX) { if (st) st.textContent = ''; return; }
+  if (st) st.textContent = '⏳ Descargando la lista completa de Pokémon…';
+  tgoLoadDex().then(() => {
+    if (st) st.textContent = '';
+    const inp = document.getElementById('tgo-poke-input');
+    if (inp && inp.value.trim() && !tgoSelected) tgoRenderAc(); // refresca las sugerencias si ya estaba escribiendo
+  }).catch(e => {
+    console.log('No se pudo descargar la lista de Pokémon', e);
+    if (st) st.textContent = '⚠️ No se pudo descargar la lista completa; por ahora solo aparecen los Pokémon cargados en Datos.';
+  });
 }
 
 // ── TOAST ──────────────────────────────────────────────────────────────────
