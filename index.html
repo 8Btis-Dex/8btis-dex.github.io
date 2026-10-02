@@ -3070,6 +3070,8 @@
   .u-btn:hover { background: var(--purple); color: #fff; }
   .u-btn.del { border-color: rgba(229,115,115,0.5); color: #ff8a80; }
   .u-btn.del:hover { background: rgba(229,115,115,0.3); color: #fff; }
+  .u-online { color: #8ce08f; font-weight: 800; white-space: nowrap; }
+  .u-offline { color: var(--muted); white-space: nowrap; }
   .u-label { display: block; font-size: 0.72rem; font-weight: 800; color: var(--muted); margin-bottom: 3px; text-align: left; }
 </style>
 </head>
@@ -3302,6 +3304,7 @@
 
     <div class="datos-header" style="margin-top:-4px">
       <span id="visit-counter" style="font-size:0.78rem;color:var(--muted)">👁️ Visitas totales: <strong id="visit-counter-value">–</strong></span>
+      <button class="btn" style="font-size:0.7rem;padding:4px 10px" onclick="showMode('usuarios')" title="Ver qué usuarios entraron y cuándo">👥 ¿Quién entró?</button>
       <button class="btn" style="font-size:0.7rem;padding:4px 10px" onclick="reiniciarContadorVisitas()" title="Vuelve el contador de visitas a 0">🔄 Reiniciar contador</button>
     </div>
     <div class="datos-header">
@@ -3440,7 +3443,7 @@
       </div>
       <div class="usuarios-table-wrap">
         <table class="usuarios-table">
-          <thead><tr><th>#</th><th>Usuario</th><th>Teléfono</th><th>Creado</th><th>Acciones</th></tr></thead>
+          <thead><tr><th>#</th><th>Usuario</th><th>Teléfono</th><th>Creado</th><th>Última visita / estado</th><th title="Cuántos días distintos ha entrado (una visita por día)">Visitas</th><th>Acciones</th></tr></thead>
           <tbody id="usuarios-tbody"></tbody>
         </table>
       </div>
@@ -3955,8 +3958,51 @@ function gateToggleAdmin() {
   if (box.style.display === 'block') document.getElementById('gate-admin-pass').focus();
 }
 
-function gateOpen(session) {
+// Presencia y visitas. Todo se guarda en el propio documento del usuario
+// (colección app_usuarios), sin historial:
+//   ultimoAcceso / ultimaActividad : última vez que abrió la página / estuvo activo
+//   conectado                      : true mientras tiene la página abierta
+//   visitas / ultimoDia            : contador de visitas, una por día
+// El administrador no cuenta.
+function gateDiaLocal(d) {
+  const z = n => String(n).padStart(2, '0');
+  return d.getFullYear() + '-' + z(d.getMonth() + 1) + '-' + z(d.getDate());
+}
+
+let gatePresenciaTimer = null;
+
+function gateIniciarPresencia(session) {
+  try {
+    if (!session || session.tipo !== 'user' || !window._fbDb) return;
+    const ref = window._fbDb.collection(APP_USERS_COL).doc(session.id);
+    const ts = () => firebase.firestore.FieldValue.serverTimestamp();
+    const hoy = gateDiaLocal(new Date());
+
+    // Al abrir la página: marca el acceso y suma la visita del día (solo una por día).
+    window._fbDb.runTransaction(async tx => {
+      const snap = await tx.get(ref);
+      if (!snap.exists) return;
+      const d = snap.data();
+      const upd = { ultimoAcceso: ts(), ultimaActividad: ts(), conectado: true };
+      if (d.ultimoDia !== hoy) { upd.visitas = (d.visitas || 0) + 1; upd.ultimoDia = hoy; }
+      tx.update(ref, upd);
+    }).catch(e => console.log('No se pudo registrar la visita', e));
+
+    // Mientras la página está abierta y visible: "sigo aquí" cada 90 segundos.
+    const ping = () => {
+      if (document.visibilityState !== 'visible') return;
+      ref.update({ ultimaActividad: ts(), conectado: true }).catch(() => {});
+    };
+    clearInterval(gatePresenciaTimer);
+    gatePresenciaTimer = setInterval(ping, 90000);
+    document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') ping(); });
+    window.addEventListener('pagehide', () => { ref.update({ conectado: false }).catch(() => {}); });
+  } catch (e) { /* esto es secundario: nunca debe impedir entrar */ }
+}
+
+function gateOpen(session, via) {
   window.appSession = session;
+  gateIniciarPresencia(session);
   ['gate-user', 'gate-pass', 'gate-admin-pass'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
   document.documentElement.classList.remove('gate-locked');
   const pill = document.getElementById('session-pill');
@@ -3968,6 +4014,16 @@ function gateOpen(session) {
 
 async function appLogout() {
   try { localStorage.removeItem(APP_SESSION_KEY); } catch (e) {}
+  try {
+    // Al salir se marca como desconectado (máximo 1,5 s de espera).
+    const s = window.appSession;
+    if (s && s.tipo === 'user' && window._fbDb) {
+      await Promise.race([
+        window._fbDb.collection(APP_USERS_COL).doc(s.id).update({ conectado: false }),
+        new Promise(r => setTimeout(r, 1500))
+      ]);
+    }
+  } catch (e) {}
   try { if (window._fbAuth && window._fbAuth.currentUser) await window._fbAuth.signOut(); } catch (e) {}
   location.reload();
 }
@@ -4053,7 +4109,7 @@ async function gateLogin(ev) {
     }
     const session = { tipo: 'user', id, usuario: d.usuario, whatsapp: d.whatsapp, hv: d.hash.slice(0, 16) };
     try { localStorage.setItem(APP_SESSION_KEY, JSON.stringify(session)); } catch (e) {}
-    gateOpen(session);
+    gateOpen(session, 'login');
   } catch (e) {
     console.error(e);
     if (e && e.message === 'crypto') gateError('Este navegador no permite verificar contraseñas (hace falta abrir la página con HTTPS).');
@@ -10181,12 +10237,15 @@ function openUsuariosModal() {
 }
 
 // Pestaña «Usuarios» de Datos: carga la lista desde Firestore y la dibuja.
-async function cargarUsuarios() {
+// Considera "en línea" a quien avisó que sigue activo en los últimos ~3,5 minutos.
+const USUARIO_ENLINEA_MS = 210000;
+
+async function cargarUsuarios(silencioso) {
   const tbody = document.getElementById('usuarios-tbody');
   if (!tbody) return;
-  const msg = t => { tbody.innerHTML = `<tr><td colspan="5" class="u-empty">${t}</td></tr>`; };
+  const msg = t => { tbody.innerHTML = `<tr><td colspan="7" class="u-empty">${t}</td></tr>`; };
   if (!window._fbDb) { msg('Sin conexión con la nube.'); return; }
-  msg('Cargando…');
+  if (!silencioso) msg('Cargando…');
   try {
     const snap = await window._fbDb.collection(APP_USERS_COL).get();
     usuariosCache = snap.docs.map(d => ({ id: d.id, ...d.data() }))
@@ -10194,8 +10253,36 @@ async function cargarUsuarios() {
     renderUsuarios();
   } catch (e) {
     console.error(e);
-    msg('No se pudo cargar la lista. Revisa las reglas de Firestore para "app_usuarios".');
+    if (!silencioso) msg('No se pudo cargar la lista. Revisa las reglas de Firestore para "app_usuarios".');
   }
+}
+
+function usuarioFechaHora(d) {
+  if (!d) return '';
+  return d.toLocaleDateString('es') + ' ' + d.toLocaleTimeString('es', { hour: '2-digit', minute: '2-digit' });
+}
+
+function usuarioHace(ms) {
+  const min = Math.floor(ms / 60000);
+  if (min < 1) return 'hace un momento';
+  if (min < 60) return 'hace ' + min + ' min';
+  const h = Math.floor(min / 60);
+  if (h < 24) return 'hace ' + h + ' h';
+  const dias = Math.floor(h / 24);
+  return 'hace ' + dias + (dias === 1 ? ' día' : ' días');
+}
+
+function usuarioEnLinea(u) {
+  const act = (u.ultimaActividad && u.ultimaActividad.toDate) ? u.ultimaActividad.toDate() : null;
+  return !!(u.conectado && act && (Date.now() - act.getTime()) < USUARIO_ENLINEA_MS);
+}
+
+function usuarioEstadoHtml(u) {
+  if (usuarioEnLinea(u)) return '<span class="u-online">🟢 En línea ahora</span>';
+  const ref = (u.ultimaActividad && u.ultimaActividad.toDate) ? u.ultimaActividad.toDate()
+            : (u.ultimoAcceso && u.ultimoAcceso.toDate) ? u.ultimoAcceso.toDate() : null;
+  if (!ref) return '<span class="u-offline">Nunca ha entrado</span>';
+  return `<span class="u-offline">⚪ ${usuarioEsc(usuarioFechaHora(ref))} (${usuarioHace(Date.now() - ref.getTime())})</span>`;
 }
 
 function renderUsuarios() {
@@ -10207,11 +10294,14 @@ function renderUsuarios() {
   const lista = usuariosCache.filter(u =>
     !qRaw || (u.usuarioNorm || '').includes(qNorm) || (qDig && (u.whatsapp || '').includes(qDig)));
   const count = document.getElementById('usuarios-count');
-  if (count) count.textContent = usuariosCache.length
-    ? (lista.length === usuariosCache.length ? usuariosCache.length + ' usuarios' : lista.length + ' de ' + usuariosCache.length)
-    : '';
+  if (count) {
+    const enLinea = usuariosCache.filter(usuarioEnLinea).length;
+    count.textContent = usuariosCache.length
+      ? (lista.length === usuariosCache.length ? usuariosCache.length + ' usuarios' : lista.length + ' de ' + usuariosCache.length) + ' · 🟢 ' + enLinea + ' en línea'
+      : '';
+  }
   if (!lista.length) {
-    tbody.innerHTML = `<tr><td colspan="5" class="u-empty">${usuariosCache.length ? 'Ningún usuario coincide con la búsqueda.' : 'Todavía no hay usuarios. Crea el primero con «➕ Crear usuario».'}</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="7" class="u-empty">${usuariosCache.length ? 'Ningún usuario coincide con la búsqueda.' : 'Todavía no hay usuarios. Crea el primero con «➕ Crear usuario».'}</td></tr>`;
     return;
   }
   tbody.innerHTML = lista.map((u, i) => {
@@ -10221,6 +10311,8 @@ function renderUsuarios() {
       <td class="u-name">👤 ${usuarioEsc(u.usuario)}</td>
       <td>📞 ${usuarioEsc(u.whatsapp)}</td>
       <td class="u-date">${usuarioEsc(fecha)}</td>
+      <td>${usuarioEstadoHtml(u)}</td>
+      <td>${u.visitas || 0}</td>
       <td class="u-actions">
         <button type="button" class="u-btn" onclick="cambiarPasswordUsuario('${u.id}')">🔑 Contraseña</button>
         <button type="button" class="u-btn" onclick="cambiarTelefonoUsuario('${u.id}')">📞 Teléfono</button>
@@ -10229,6 +10321,12 @@ function renderUsuarios() {
     </tr>`;
   }).join('');
 }
+
+// Mientras la pestaña «Usuarios» está abierta, la lista se actualiza sola cada 30 s
+// (así se ve quién entra y sale sin tener que pulsar 🔄).
+setInterval(() => {
+  if (currentDatosMode === 'usuarios' && currentTab === 'datos' && document.visibilityState === 'visible') cargarUsuarios(true);
+}, 30000);
 
 function usuarioTelValido(t) { return t.length >= 8 && t.length <= 15; }
 
