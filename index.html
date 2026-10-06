@@ -2502,6 +2502,7 @@
     padding: 2px 4px;
   }
   .btn-editar-ataque:hover { opacity: 1; }
+  .btn-editar-ataque.btn-eliminar-ataque { margin-left: 0; }
   .carta-detalle-ataque-efecto { font-size: 0.8rem; color: var(--text); white-space: pre-wrap; }
   .carta-detalle-ataque-input {
     width: 100%;
@@ -8109,7 +8110,7 @@ function renderCartaDetalleAtaques(carta) {
     return `<div class="carta-detalle-ataque" id="carta-detalle-ataque-${i}">
       <div class="carta-detalle-ataque-header">
         ${nombre ? `<strong>${esc(nombre)}</strong>` : ''}${dano}
-        ${permitirEditar ? `<button type="button" class="btn-editar-ataque" title="Editar este ataque" onclick="editarAtaqueCarta(${i})">✏️</button>` : ''}
+        ${permitirEditar ? `<button type="button" class="btn-editar-ataque" title="Editar este ataque" onclick="editarAtaqueCarta(${i})">✏️</button><button type="button" class="btn-editar-ataque btn-eliminar-ataque" title="Eliminar este ataque" onclick="eliminarAtaqueCarta(${i})">🗑️</button>` : ''}
       </div>
       ${efectoTexto ? `<div class="carta-detalle-ataque-efecto" id="carta-detalle-ataque-efecto-${i}">${esc(efectoTexto)}</div>` : ''}
     </div>`;
@@ -8152,8 +8153,24 @@ function editarAtaqueCarta(i) {
     <div class="modal-btns" style="justify-content:flex-start;margin-top:6px">
       <button type="button" class="btn btn-yellow" style="padding:4px 10px;font-size:0.72rem" onclick="guardarAtaqueCarta(${i})">💾 Guardar</button>
       <button type="button" class="btn" style="padding:4px 10px;font-size:0.72rem;background:#444;color:#fff" onclick="renderCartaDetalleAtaques(obtenerCartaDetalleActual())">Cancelar</button>
+      <button type="button" class="btn" style="padding:4px 10px;font-size:0.72rem;background:#c0392b;color:#fff;margin-left:auto" onclick="eliminarAtaqueCarta(${i})">🗑️ Eliminar</button>
     </div>
   `;
+}
+
+// Elimina un ataque de la carta (por ejemplo, uno agregado por error).
+// Pide confirmación porque el cambio se guarda de inmediato.
+function eliminarAtaqueCarta(i) {
+  const carta = obtenerCartaDetalleActual();
+  if (!carta || !Array.isArray(carta.ataques) || !carta.ataques[i]) return;
+  const a = carta.ataques[i];
+  const nombre = a.nombreEs || a.name || '';
+  const desc = nombre ? `el ataque "${nombre}"` : 'este ataque en blanco';
+  if (!confirm(`¿Eliminar ${desc}? No se puede deshacer.`)) return;
+  carta.ataques.splice(i, 1);
+  persistAll();
+  renderCartaDetalleAtaques(carta);
+  showToast('🗑️ Ataque eliminado');
 }
 
 function guardarAtaqueCarta(i) {
