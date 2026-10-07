@@ -2503,6 +2503,10 @@
   }
   .btn-editar-ataque:hover { opacity: 1; }
   .btn-editar-ataque.btn-eliminar-ataque { margin-left: 0; }
+  /* Sprite principal (Champions / GO): altura fija y ancho según su forma, para
+     que los GIF anchos (ej. Metagross, 142x73) no queden diminutos dentro de
+     una caja cuadrada y los altos (ej. Charizard, 133x140) se vean más grandes. */
+  .pokemon-sprite { width: auto; height: 96px; max-width: 150px; object-fit: contain; }
   .carta-detalle-ataque-efecto { font-size: 0.8rem; color: var(--text); white-space: pre-wrap; }
   .carta-detalle-ataque-input {
     width: 100%;
@@ -4981,6 +4985,68 @@ async function getSpriteCandidates(name, opts) {
   return [...new Set([...animados, ...candidates])];
 }
 
+// ── RECORTE DE GIF ANIMADOS ──────────────────────────────────────────────
+// trimTransparentPadding no sirve con GIF (congela la animación), así que acá
+// se calcula, con ImageDecoder, el rectángulo que ocupa el dibujo sumando TODOS
+// los cuadros de la animación, y se aplica con CSS object-view-box (recorte
+// visual: el GIF sigue siendo el mismo archivo y sigue moviéndose). Así un
+// Pokémon chico en su lienzo se ve del mismo tamaño que uno grande. Si el
+// navegador no soporta estas APIs, o el servidor del GIF no permite CORS, se
+// deja el GIF tal cual llegó.
+const _gifBBoxCache = new Map();
+async function calcularBBoxGif(url) {
+  if (_gifBBoxCache.has(url)) return _gifBBoxCache.get(url);
+  if (typeof ImageDecoder === 'undefined') return null;
+  let dec = null, result = null;
+  try {
+    const res = await fetch(url, { mode: 'cors' });
+    if (!res.ok) return null;
+    dec = new ImageDecoder({ data: await res.arrayBuffer(), type: 'image/gif' });
+    await dec.tracks.ready;
+    const total = Math.min(dec.tracks.selectedTrack.frameCount || 1, 150);
+    let w = 0, h = 0, minX = Infinity, minY = Infinity, maxX = -1, maxY = -1;
+    let canvas = null, ctx = null;
+    for (let i = 0; i < total; i++) {
+      const { image } = await dec.decode({ frameIndex: i });
+      if (!canvas) {
+        w = image.displayWidth; h = image.displayHeight;
+        canvas = document.createElement('canvas');
+        canvas.width = w; canvas.height = h;
+        ctx = canvas.getContext('2d', { willReadFrequently: true });
+      }
+      ctx.clearRect(0, 0, w, h);
+      ctx.drawImage(image, 0, 0);
+      image.close();
+      const d = ctx.getImageData(0, 0, w, h).data;
+      for (let y = 0; y < h; y++) {
+        for (let x = 0; x < w; x++) {
+          if (d[(y * w + x) * 4 + 3] > 15) {
+            if (x < minX) minX = x;
+            if (x > maxX) maxX = x;
+            if (y < minY) minY = y;
+            if (y > maxY) maxY = y;
+          }
+        }
+      }
+    }
+    if (maxX >= 0) result = { w, h, minX, minY, maxX, maxY };
+  } catch (e) { result = null; }
+  finally { try { if (dec) dec.close(); } catch (e) {} }
+  _gifBBoxCache.set(url, result);
+  return result;
+}
+
+async function recortarGifAnimado(imgEl, url) {
+  try {
+    if (!(window.CSS && CSS.supports && CSS.supports('object-view-box', 'inset(0px)'))) return;
+    const b = await calcularBBoxGif(url);
+    if (!b) return;
+    const cw = b.maxX - b.minX + 1, ch = b.maxY - b.minY + 1;
+    if (cw >= b.w * 0.94 && ch >= b.h * 0.94) return; // ya ocupa casi todo el lienzo
+    imgEl.style.objectViewBox = `inset(${b.minY}px ${b.w - b.maxX - 1}px ${b.h - b.maxY - 1}px ${b.minX}px)`;
+  } catch (e) { /* sin recorte */ }
+}
+
 function loadSpriteWithFallback(imgEl, candidates, onSuccess, onFail) {
   let i = 0;
   function tryNext() {
@@ -4999,9 +5065,16 @@ function loadSpriteWithFallback(imgEl, candidates, onSuccess, onFail) {
     const esGif = /\.gif(\?|$)/i.test(url);
     if (imgEl._irOriginal === undefined) imgEl._irOriginal = imgEl.style.imageRendering || '';
     imgEl.style.imageRendering = esGif ? 'auto' : imgEl._irOriginal;
+    const tok = (imgEl._lsTok = (imgEl._lsTok || 0) + 1);
+    imgEl.style.objectViewBox = ''; // quita el recorte de un GIF anterior
     imgEl.onerror = tryNext;
-    imgEl.onload = () => {
-      if (!esGif) trimTransparentPadding(imgEl);
+    imgEl.onload = async () => {
+      if (esGif) {
+        await recortarGifAnimado(imgEl, url);
+        if (imgEl._lsTok !== tok) return; // llegó otra carga para esta imagen
+      } else {
+        trimTransparentPadding(imgEl);
+      }
       if (onSuccess) onSuccess(url);
     };
     imgEl.src = url;
