@@ -2507,6 +2507,7 @@
      que los GIF anchos (ej. Metagross, 142x73) no queden diminutos dentro de
      una caja cuadrada y los altos (ej. Charizard, 133x140) se vean más grandes. */
   .pokemon-sprite { width: auto; height: 96px; max-width: 150px; object-fit: contain; }
+  .pokemon-sprite-wrap { min-height: 72px; }
   .carta-detalle-ataque-efecto { font-size: 0.8rem; color: var(--text); white-space: pre-wrap; }
   .carta-detalle-ataque-input {
     width: 100%;
@@ -5044,7 +5045,14 @@ async function calcularBBoxGif(url) {
 // chico que uno compacto. Solo se aplica a imágenes con data-norm-tam="1".
 const NORM_REF_URL = 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/showdown/376.gif';
 const NORM_REF_ANCHO_NATIVO = 142, NORM_REF_ANCHO = 110;
-const NORM_MAX_ANCHO = 150, NORM_MAX_ALTO = 130;
+const NORM_MAX_ANCHO = 150, NORM_MAX_ALTO = 100;
+// Alto que el sprite "reserva" dentro del recuadro. Si el sprite es más alto,
+// el exceso sobresale por arriba y abajo (margen negativo) en vez de agrandar
+// el recuadro del Pokémon.
+const NORM_CAJA_ALTO = 72;
+// Excepciones: alto fijo en px para Pokémon concretos (clave = slug del nombre).
+// El ancho se ajusta solo, manteniendo la proporción del GIF.
+const NORM_ALTO_FIJO = { 'charizard': 100 };
 let _normAreaRefPromise = null;
 function areaReferenciaMetagross() {
   if (!_normAreaRefPromise) {
@@ -5067,14 +5075,26 @@ async function recortarGifAnimado(imgEl, url) {
       imgEl.style.objectViewBox = `inset(${b.minY}px ${b.w - b.maxX - 1}px ${b.h - b.maxY - 1}px ${b.minX}px)`;
       dispW = cw; dispH = ch;
     }
-    if (imgEl.dataset.normTam === '1' && b.area) {
-      const areaRef = await areaReferenciaMetagross();
-      if (areaRef) {
-        const k = Math.sqrt(areaRef / b.area);
-        let dw = dispW * k, dh = dispH * k;
+    if (imgEl.dataset.normTam === '1') {
+      const altoFijo = NORM_ALTO_FIJO[imgEl.dataset.pokeSlug];
+      let dw = 0, dh = 0;
+      if (altoFijo) {
+        dh = altoFijo; dw = dispW / dispH * altoFijo;
+      } else if (b.area) {
+        const areaRef = await areaReferenciaMetagross();
+        if (areaRef) {
+          const k = Math.sqrt(areaRef / b.area);
+          dw = dispW * k; dh = dispH * k;
+        }
+      }
+      if (dw && dh) {
         const c = Math.min(1, NORM_MAX_ANCHO / dw, NORM_MAX_ALTO / dh);
+        const hFinal = dh * c;
         imgEl.style.width = (dw * c) + 'px';
-        imgEl.style.height = (dh * c) + 'px';
+        imgEl.style.height = hFinal + 'px';
+        const exceso = Math.max(0, (hFinal - NORM_CAJA_ALTO) / 2);
+        imgEl.style.marginTop = exceso ? `-${exceso}px` : '';
+        imgEl.style.marginBottom = exceso ? `-${exceso}px` : '';
       }
     }
   } catch (e) { /* sin recorte */ }
@@ -5100,7 +5120,7 @@ function loadSpriteWithFallback(imgEl, candidates, onSuccess, onFail) {
     imgEl.style.imageRendering = esGif ? 'auto' : imgEl._irOriginal;
     const tok = (imgEl._lsTok = (imgEl._lsTok || 0) + 1);
     imgEl.style.objectViewBox = ''; // quita el recorte de un GIF anterior
-    if (imgEl.dataset.normTam === '1') { imgEl.style.width = ''; imgEl.style.height = ''; } // vuelve al tamaño por defecto del CSS
+    if (imgEl.dataset.normTam === '1') { imgEl.style.width = ''; imgEl.style.height = ''; imgEl.style.marginTop = ''; imgEl.style.marginBottom = ''; } // vuelve al tamaño por defecto del CSS
     imgEl.onerror = tryNext;
     imgEl.onload = async () => {
       if (esGif) {
@@ -5296,7 +5316,7 @@ async function showResult(name) {
         <div class="ri-value">
           <div class="pokemon-name-row">
             <span class="pokemon-sprite-wrap" style="position:relative;display:inline-flex;align-items:center">
-              <img id="poke-sprite" class="pokemon-sprite" data-norm-tam="1" src="" alt="" style="display:none">
+              <img id="poke-sprite" class="pokemon-sprite" data-norm-tam="1" data-poke-slug="${esc(getPokemonSlug(name))}" src="" alt="" style="display:none">
               ${esVarianteOscura(name) ? svgFlameOscuroHTML() : ''}
             </span>
             <span>${esc(traducirNombrePokemon(name))}</span>
