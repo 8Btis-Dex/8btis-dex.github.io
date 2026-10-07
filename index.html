@@ -4441,7 +4441,7 @@ function selectGoConsultaLiga(liga) {
     // se prueban las fuentes alternativas.
     nombres.forEach(async n => {
       try {
-        const candidates = await getSpriteCandidates(n);
+        const candidates = await getSpriteCandidates(n, { animado: true });
         const img = listEl.querySelector(`.go-liga-list-icon[data-pokemon="${CSS.escape(n)}"]`);
         if (img) loadSpriteWithFallback(img, candidates, () => { img.style.visibility = 'visible'; }, null);
       } catch (e) { /* sin conexión, se queda sin ícono */ }
@@ -4910,7 +4910,24 @@ function getRetroSpriteCandidates(data) {
 }
 
 // ── CARGA DE SPRITES CON FUENTES ALTERNATIVAS ───────────────────────────
-async function getSpriteCandidates(name) {
+// Nombre que usa Pokémon Showdown para sus sprites animados (/sprites/ani/):
+// el nombre base va todo junto y sin guiones (mrmime, hooh, porygonz) y la
+// forma se pega con UN guion y sin separadores internos (vulpix-hisui,
+// urshifu-rapidstrike).
+function getShowdownAnimId(name) {
+  const { base, form } = parseGoFormName(name);
+  const baseId = getPokemonSlug(base).replace(/[^a-z0-9]/g, '');
+  if (form === 'normal') return baseId;
+  const suf = (GO_FORM_TO_SPRITE_SUFFIX[form] || form).replace(/[^a-z0-9]/g, '');
+  return `${baseId}-${suf}`;
+}
+
+// opts.animado = true → pone primero sprites ANIMADOS (GIF) con el mismo
+// diseño 3D en dos fuentes: 1) PokeAPI other/showdown (por número) y, si ese
+// número no tiene GIF, 2) Pokémon Showdown /ani/ (por nombre). Si ninguna
+// existe, sigue la cadena de siempre (HOME, artwork oficial, etc.).
+async function getSpriteCandidates(name, opts) {
+  const animado = !!(opts && opts.animado);
   // La variante "Oscuro" (Pokémon Sombra) usa el mismo sprite que su forma
   // base: solo cambia el nombre/registro, no el Pokémon en sí. Se le quita
   // la palabra antes de resolver el sprite para que no rompa la búsqueda.
@@ -4918,16 +4935,23 @@ async function getSpriteCandidates(name) {
   const { form } = parseGoFormName(nombreParaSprite);
   const slug = getSpriteSlug(nombreParaSprite);
   const candidates = [];
+  const animados = [];
   try {
     const res = await fetch(`https://pokeapi.co/api/v2/pokemon/${slug}`);
     if (res.ok) {
       const data = await res.json();
+      if (animado && data.id) {
+        // Fuente base: PokeAPI other/showdown (el campo de la API puede venir
+        // vacío aunque el archivo exista, por eso también se arma por número).
+        animados.push(data.sprites?.other?.showdown?.front_default
+          || `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/showdown/${data.id}.gif`);
+      }
       // Solo aplica a la forma base: las formas regionales no existían en
       // los juegos clásicos (no tienen sprite retro ni ícono) y usan
       // sufijos propios de GO que no siempre coinciden con los que maneja
       // PokeAPI, así que esas van directo a la cadena de abajo (HOME /
       // artwork oficial / PokemonDB / Showdown).
-      if (form === 'normal') {
+      if (form === 'normal' && !animado) {
         // Estilo retro/ícono (8/16 bits), acorde al espíritu "8 Bits" de la
         // app. Va primero porque el ícono de Pokémon GO (PokeMiners), que
         // antes era la primera opción, viene con tamaños y recortes
@@ -4949,7 +4973,12 @@ async function getSpriteCandidates(name) {
   } catch (e) { /* sin conexión, seguimos con las demás fuentes */ }
   candidates.push(`https://img.pokemondb.net/sprites/home/normal/${slug}.png`);
   candidates.push(`https://play.pokemonshowdown.com/sprites/gen5/${slug}.png`);
-  return candidates;
+  if (animado) {
+    // Respaldo con el mismo diseño: Showdown /ani/ por nombre (cubre los
+    // números que PokeAPI no tiene y las formas regionales).
+    animados.push(`https://play.pokemonshowdown.com/sprites/ani/${getShowdownAnimId(nombreParaSprite)}.gif`);
+  }
+  return [...new Set([...animados, ...candidates])];
 }
 
 function loadSpriteWithFallback(imgEl, candidates, onSuccess, onFail) {
@@ -4964,9 +4993,15 @@ function loadSpriteWithFallback(imgEl, candidates, onSuccess, onFail) {
     // marcar para no arriesgar que fallen por CORS si ese servidor no lo
     // soporta.
     imgEl.crossOrigin = url.includes('raw.githubusercontent.com') ? 'anonymous' : null;
+    // Los GIF animados NO se recortan (el canvas los dejaría quietos, solo
+    // con el primer cuadro) y se suavizan en vez de pixelarse, porque son
+    // renders 3D y no pixel art. Para el resto se restaura el estilo original.
+    const esGif = /\.gif(\?|$)/i.test(url);
+    if (imgEl._irOriginal === undefined) imgEl._irOriginal = imgEl.style.imageRendering || '';
+    imgEl.style.imageRendering = esGif ? 'auto' : imgEl._irOriginal;
     imgEl.onerror = tryNext;
     imgEl.onload = () => {
-      trimTransparentPadding(imgEl);
+      if (!esGif) trimTransparentPadding(imgEl);
       if (onSuccess) onSuccess(url);
     };
     imgEl.src = url;
@@ -5168,7 +5203,7 @@ async function showResult(name) {
   const img = document.getElementById('poke-sprite');
   if (img) {
     img.style.display = 'none';
-    const candidates = await getSpriteCandidates(name);
+    const candidates = await getSpriteCandidates(name, { animado: currentMode === 'champions' || currentMode === 'go' });
     loadSpriteWithFallback(
       img,
       candidates,
@@ -9431,7 +9466,7 @@ function showAddPokemon() {
     addSpriteTimer = setTimeout(async () => {
       preview.innerHTML = '<div style="font-size:0.75rem;color:var(--muted)">Buscando sprite...</div>';
       try {
-        const candidates = await getSpriteCandidates(name);
+        const candidates = await getSpriteCandidates(name, { animado: true });
         preview.innerHTML = '<img id="add-sprite-img" style="width:72px;height:72px;image-rendering:pixelated;filter:drop-shadow(0 0 6px rgba(255,215,0,0.4));display:none">';
         const img = document.getElementById('add-sprite-img');
         loadSpriteWithFallback(img, candidates,
