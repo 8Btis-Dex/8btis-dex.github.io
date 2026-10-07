@@ -2502,6 +2502,7 @@
     padding: 2px 4px;
   }
   .btn-editar-ataque:hover { opacity: 1; }
+  .btn-editar-ataque.btn-eliminar-ataque { margin-left: 0; }
   .carta-detalle-ataque-efecto { font-size: 0.8rem; color: var(--text); white-space: pre-wrap; }
   .carta-detalle-ataque-input {
     width: 100%;
@@ -3051,6 +3052,18 @@
   .usuario-row button.del:hover { background: rgba(229,115,115,0.3); color: #fff; }
   .usuarios-add { display: grid; gap: 8px; margin-bottom: 14px; text-align: left; }
   .usuarios-add .gate-input { margin-bottom: 0; }
+  .usuarios-add select.gate-input { cursor: pointer; }
+  .u-pais-row { display: flex; align-items: center; gap: 10px; }
+  .u-pais-row select { flex: 1; }
+  .u-flag { height: 15px; width: auto; vertical-align: -2px; border-radius: 2px; margin-right: 6px; box-shadow: 0 0 0 1px rgba(255,255,255,0.18); }
+  .u-flag-big { height: 26px; }
+  .u-code-line { margin-top: 3px; font-size: 0.74rem; color: var(--muted); white-space: nowrap; }
+  .u-cod { font-family: 'Courier New', monospace; letter-spacing: 0.5px; color: #fff; }
+  .owner-code { margin: 6px 0 2px; font-size: 0.78rem; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+  .owner-code b { font-family: 'Courier New', monospace; letter-spacing: 0.5px; }
+  .owner-code.none { color: var(--muted); font-style: italic; }
+  .code-copy { background: rgba(255,255,255,0.1); color: inherit; border: 1px solid rgba(255,255,255,0.2); border-radius: 6px; padding: 2px 8px; font-size: 0.72rem; cursor: pointer; }
+  .code-copy:hover { background: rgba(255,255,255,0.2); }
   .usuarios-toolbar { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 12px; }
   .usuarios-toolbar .password-input { flex: 1; min-width: 180px; }
   #usuarios-count { font-size: 0.78rem; color: var(--muted); white-space: nowrap; }
@@ -3451,10 +3464,11 @@
         <input type="text" id="usuarios-search" class="password-input" placeholder="🔍 Buscar usuario o teléfono..." oninput="renderUsuarios()">
         <span id="usuarios-count"></span>
         <button class="btn" onclick="cargarUsuarios()">🔄 Actualizar</button>
+        <button class="btn" onclick="quitarTelefonosPublicaciones()" title="Borra el teléfono guardado en publicaciones antiguas de intercambios">🧹 Quitar teléfonos de publicaciones</button>
       </div>
       <div class="usuarios-table-wrap">
         <table class="usuarios-table">
-          <thead><tr><th>#</th><th>Usuario</th><th>Teléfono</th><th>Creado</th><th>Última visita / estado</th><th title="Cuántos días distintos ha entrado (una visita por día)">Visitas</th><th>Acciones</th></tr></thead>
+          <thead><tr><th>#</th><th>Usuario</th><th>Teléfono (solo admin)</th><th>País y códigos</th><th>Creado</th><th>Última visita / estado</th><th title="Cuántos días distintos ha entrado (una visita por día)">Visitas</th><th>Acciones</th></tr></thead>
           <tbody id="usuarios-tbody"></tbody>
         </table>
       </div>
@@ -3561,6 +3575,7 @@
       <div class="trueque-card" id="trueque-publish-card">
         <div class="trueque-whoami">
           👤 <span id="trueque-whoami-name"></span>
+          <span id="trueque-admin-como-wrap" style="display:none"> · Publicar como <select id="trueque-admin-como" class="trueque-input" style="width:auto;display:inline-block;padding:4px 8px" onchange="adminElegirIdentidad(this.value)"></select></span>
         </div>
         <h3>➕ Publicar intercambio <button type="button" class="trueque-refresh-btn" onclick="trueqeRefrescarIndice()" title="Vuelve a descargar las cartas y expansiones">↻ Actualizar cartas</button></h3>
         <div class="trueque-side busca">
@@ -3626,7 +3641,8 @@
       </div>
 
       <div class="trueque-card" id="tgo-publish-card">
-        <div class="tgo-head"><img id="tgo-head-logo" alt="Pokémon GO"><div class="trueque-whoami" style="margin:0">👤 <span id="tgo-whoami-name"></span></div></div>
+        <div class="tgo-head"><img id="tgo-head-logo" alt="Pokémon GO"><div class="trueque-whoami" style="margin:0">👤 <span id="tgo-whoami-name"></span>
+            <span id="tgo-admin-como-wrap" style="display:none"> · Publicar como <select id="tgo-admin-como" class="trueque-input" style="width:auto;display:inline-block;padding:4px 8px" onchange="adminElegirIdentidad(this.value)"></select></span></div></div>
         <h3>➕ Publicar búsqueda</h3>
         <div class="tgo-field">
           <input class="trueque-input" id="tgo-poke-input" type="text" placeholder="Pokémon que buscas (escribe el nombre)..." autocomplete="off"
@@ -3897,22 +3913,67 @@
   </div>
 </div>
 
+<!-- MODAL PAÍS Y CÓDIGOS DE UN USUARIO -->
+<div class="modal-overlay" id="modal-usuario-perfil">
+  <div class="modal" style="max-width:520px">
+    <h3>🎮 PAÍS Y CÓDIGOS: <span id="up-nombre"></span></h3>
+    <p>Se muestran junto a sus publicaciones de intercambio. El teléfono no se muestra.</p>
+    <div class="usuarios-add">
+      <input type="hidden" id="up-id">
+      <div>
+        <label class="u-label" for="up-pais">País</label>
+        <div class="u-pais-row">
+          <select class="gate-input" id="up-pais" onchange="usuarioActualizarBandera('up-pais','up-flag')"></select>
+          <span id="up-flag"></span>
+        </div>
+      </div>
+      <div>
+        <label class="u-label" for="up-go">Código de entrenador de Pokémon GO (12 dígitos)</label>
+        <input class="gate-input" id="up-go" type="text" inputmode="numeric" placeholder="1234 5678 9012" autocomplete="off">
+      </div>
+      <div>
+        <label class="u-label" for="up-pocket">ID de jugador de TCG Pocket (16 dígitos)</label>
+        <input class="gate-input" id="up-pocket" type="text" inputmode="numeric" placeholder="1234 5678 9012 3456" autocomplete="off">
+      </div>
+      <button class="btn btn-primary" onclick="guardarPerfilUsuario()">💾 Guardar</button>
+    </div>
+    <div class="modal-btns">
+      <button class="btn btn-yellow" onclick="closeModal('modal-usuario-perfil')">Cerrar</button>
+    </div>
+  </div>
+</div>
+
 <!-- MODAL USUARIOS DE LA APP -->
 <div class="modal-overlay" id="modal-usuarios">
   <div class="modal" style="max-width:560px">
     <h3>➕ CREAR USUARIO</h3>
-    <p>El usuario y el teléfono no se pueden repetir. Entrega al usuario su nombre y contraseña; el teléfono se usa para el WhatsApp de los intercambios. La lista de usuarios está en la pestaña «Usuarios».</p>
+    <p>El usuario y el teléfono no se pueden repetir. Entrega al usuario su nombre y contraseña. El teléfono solo lo ves tú aquí: en los intercambios se muestra el país y el código de entrenador, y si hace falta pasas tú el teléfono. La lista de usuarios está en la pestaña «Usuarios».</p>
     <div class="usuarios-add">
       <div>
         <label class="u-label" for="usuario-new-name">1. Usuario (3-20 caracteres: letras, números . _ -)</label>
         <input class="gate-input" id="usuario-new-name" type="text" placeholder="Ej. juan23" maxlength="20" autocomplete="off" autocapitalize="none">
       </div>
       <div>
-        <label class="u-label" for="usuario-new-tel">2. Teléfono / WhatsApp</label>
-        <input class="gate-input" id="usuario-new-tel" type="tel" placeholder="Ej. 5491130136403 o 11 3013-6403" autocomplete="off">
+        <label class="u-label" for="usuario-new-tel">2. Teléfono / WhatsApp (solo lo ve el administrador)</label>
+        <input class="gate-input" id="usuario-new-tel" type="tel" placeholder="Ej. 5491130136403 o 11 3013-6403" autocomplete="off" onchange="usuarioSugerirPais()">
       </div>
       <div>
-        <label class="u-label" for="usuario-new-pass">3. Contraseña (mínimo 4 caracteres)</label>
+        <label class="u-label" for="usuario-new-pais">3. País (opcional)</label>
+        <div class="u-pais-row">
+          <select class="gate-input" id="usuario-new-pais" onchange="usuarioActualizarBandera('usuario-new-pais','usuario-new-flag')"></select>
+          <span id="usuario-new-flag"></span>
+        </div>
+      </div>
+      <div>
+        <label class="u-label" for="usuario-new-go">4. Código de entrenador de Pokémon GO (12 dígitos, opcional)</label>
+        <input class="gate-input" id="usuario-new-go" type="text" inputmode="numeric" placeholder="Ej. 1234 5678 9012" autocomplete="off">
+      </div>
+      <div>
+        <label class="u-label" for="usuario-new-pocket">5. ID de jugador de TCG Pocket (16 dígitos, opcional)</label>
+        <input class="gate-input" id="usuario-new-pocket" type="text" inputmode="numeric" placeholder="Ej. 1234 5678 9012 3456" autocomplete="off">
+      </div>
+      <div>
+        <label class="u-label" for="usuario-new-pass">6. Contraseña (mínimo 4 caracteres)</label>
         <input class="gate-input" id="usuario-new-pass" type="text" placeholder="Ej. clave1234" autocomplete="off">
       </div>
       <button class="btn btn-primary" onclick="crearUsuario()">➕ Crear usuario</button>
@@ -8109,7 +8170,7 @@ function renderCartaDetalleAtaques(carta) {
     return `<div class="carta-detalle-ataque" id="carta-detalle-ataque-${i}">
       <div class="carta-detalle-ataque-header">
         ${nombre ? `<strong>${esc(nombre)}</strong>` : ''}${dano}
-        ${permitirEditar ? `<button type="button" class="btn-editar-ataque" title="Editar este ataque" onclick="editarAtaqueCarta(${i})">✏️</button>` : ''}
+        ${permitirEditar ? `<button type="button" class="btn-editar-ataque" title="Editar este ataque" onclick="editarAtaqueCarta(${i})">✏️</button><button type="button" class="btn-editar-ataque btn-eliminar-ataque" title="Eliminar este ataque" onclick="eliminarAtaqueCarta(${i})">🗑️</button>` : ''}
       </div>
       ${efectoTexto ? `<div class="carta-detalle-ataque-efecto" id="carta-detalle-ataque-efecto-${i}">${esc(efectoTexto)}</div>` : ''}
     </div>`;
@@ -8152,8 +8213,24 @@ function editarAtaqueCarta(i) {
     <div class="modal-btns" style="justify-content:flex-start;margin-top:6px">
       <button type="button" class="btn btn-yellow" style="padding:4px 10px;font-size:0.72rem" onclick="guardarAtaqueCarta(${i})">💾 Guardar</button>
       <button type="button" class="btn" style="padding:4px 10px;font-size:0.72rem;background:#444;color:#fff" onclick="renderCartaDetalleAtaques(obtenerCartaDetalleActual())">Cancelar</button>
+      <button type="button" class="btn" style="padding:4px 10px;font-size:0.72rem;background:#c0392b;color:#fff;margin-left:auto" onclick="eliminarAtaqueCarta(${i})">🗑️ Eliminar</button>
     </div>
   `;
+}
+
+// Elimina un ataque de la carta (por ejemplo, uno agregado por error).
+// Pide confirmación porque el cambio se guarda de inmediato.
+function eliminarAtaqueCarta(i) {
+  const carta = obtenerCartaDetalleActual();
+  if (!carta || !Array.isArray(carta.ataques) || !carta.ataques[i]) return;
+  const a = carta.ataques[i];
+  const nombre = a.nombreEs || a.name || '';
+  const desc = nombre ? `el ataque "${nombre}"` : 'este ataque en blanco';
+  if (!confirm(`¿Eliminar ${desc}? No se puede deshacer.`)) return;
+  carta.ataques.splice(i, 1);
+  persistAll();
+  renderCartaDetalleAtaques(carta);
+  showToast('🗑️ Ataque eliminado');
 }
 
 function guardarAtaqueCarta(i) {
@@ -10300,6 +10377,8 @@ function usuarioEsc(s) {
 
 // El botón «Crear usuario» abre este modal (solo sirve para crear).
 function openUsuariosModal() {
+  usuarioPoblarPaises(document.getElementById('usuario-new-pais'), '');
+  usuarioActualizarBandera('usuario-new-pais', 'usuario-new-flag');
   document.getElementById('modal-usuarios').classList.add('open');
   setTimeout(() => { const el = document.getElementById('usuario-new-name'); if (el) el.focus(); }, 50);
 }
@@ -10311,7 +10390,7 @@ const USUARIO_ENLINEA_MS = 210000;
 async function cargarUsuarios(silencioso) {
   const tbody = document.getElementById('usuarios-tbody');
   if (!tbody) return;
-  const msg = t => { tbody.innerHTML = `<tr><td colspan="7" class="u-empty">${t}</td></tr>`; };
+  const msg = t => { tbody.innerHTML = `<tr><td colspan="8" class="u-empty">${t}</td></tr>`; };
   if (!window._fbDb) { msg('Sin conexión con la nube.'); return; }
   if (!silencioso) msg('Cargando…');
   try {
@@ -10369,7 +10448,7 @@ function renderUsuarios() {
       : '';
   }
   if (!lista.length) {
-    tbody.innerHTML = `<tr><td colspan="7" class="u-empty">${usuariosCache.length ? 'Ningún usuario coincide con la búsqueda.' : 'Todavía no hay usuarios. Crea el primero con «➕ Crear usuario».'}</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="8" class="u-empty">${usuariosCache.length ? 'Ningún usuario coincide con la búsqueda.' : 'Todavía no hay usuarios. Crea el primero con «➕ Crear usuario».'}</td></tr>`;
     return;
   }
   tbody.innerHTML = lista.map((u, i) => {
@@ -10378,12 +10457,17 @@ function renderUsuarios() {
       <td class="u-num">${i + 1}</td>
       <td class="u-name">👤 ${usuarioEsc(u.usuario)}</td>
       <td>📞 ${usuarioEsc(u.whatsapp)}</td>
+      <td>${banderaHtml(u.pais)}${usuarioEsc(paisNombre(u.pais)) || '<span class="u-offline">Sin país</span>'}
+        <div class="u-code-line">GO: <b class="u-cod">${usuarioEsc(codigoFormat(u.codigoGo)) || '—'}</b></div>
+        <div class="u-code-line">Pocket: <b class="u-cod">${usuarioEsc(codigoFormat(u.codigoPocket)) || '—'}</b></div>
+      </td>
       <td class="u-date">${usuarioEsc(fecha)}</td>
       <td>${usuarioEstadoHtml(u)}</td>
       <td>${u.visitas || 0}</td>
       <td class="u-actions">
         <button type="button" class="u-btn" onclick="cambiarPasswordUsuario('${u.id}')">🔑 Contraseña</button>
         <button type="button" class="u-btn" onclick="cambiarTelefonoUsuario('${u.id}')">📞 Teléfono</button>
+        <button type="button" class="u-btn" onclick="abrirPerfilUsuario('${u.id}')">🎮 País y códigos</button>
         <button type="button" class="u-btn del" onclick="eliminarUsuario('${u.id}')">🗑️ Eliminar</button>
       </td>
     </tr>`;
@@ -10440,14 +10524,167 @@ function usuarioMsgTelInvalido(tel) {
     '. Debe tener entre 8 y 15, con código de país y sin 0 ni 15 delante.';
 }
 
+// ── PAÍS Y CÓDIGOS DE ENTRENADOR ───────────────────────────────────────────
+// Cada usuario puede tener país y un código por juego (GO: 12 dígitos; TCG
+// Pocket: 16). Se guardan en su documento de app_usuarios (pais, codigoGo,
+// codigoPocket) y se copian a sus publicaciones de intercambio. El teléfono
+// NO se copia a ninguna publicación: solo lo ve el administrador.
+const PAISES = [
+  ['AR','Argentina'],['AU','Australia'],['AT','Austria'],['BE','Bélgica'],['BO','Bolivia'],['BR','Brasil'],
+  ['CA','Canadá'],['CL','Chile'],['CN','China'],['CO','Colombia'],['KR','Corea del Sur'],['CR','Costa Rica'],
+  ['CU','Cuba'],['DK','Dinamarca'],['EC','Ecuador'],['EG','Egipto'],['SV','El Salvador'],['ES','España'],
+  ['US','Estados Unidos'],['PH','Filipinas'],['FI','Finlandia'],['FR','Francia'],['DE','Alemania'],['GR','Grecia'],
+  ['GT','Guatemala'],['HN','Honduras'],['IN','India'],['ID','Indonesia'],['IE','Irlanda'],['IT','Italia'],
+  ['JP','Japón'],['MA','Marruecos'],['MX','México'],['NI','Nicaragua'],['NO','Noruega'],['NL','Países Bajos'],
+  ['PA','Panamá'],['PY','Paraguay'],['PE','Perú'],['PL','Polonia'],['PT','Portugal'],['PR','Puerto Rico'],
+  ['GB','Reino Unido'],['DO','República Dominicana'],['RU','Rusia'],['SE','Suecia'],['CH','Suiza'],
+  ['TH','Tailandia'],['TR','Turquía'],['UY','Uruguay'],['VE','Venezuela'],['ZA','Sudáfrica']
+].sort((a, b) => a[1].localeCompare(b[1], 'es'));
+// Prefijos telefónicos para sugerir el país al escribir el teléfono.
+const PAIS_POR_PREFIJO = { '54':'AR','52':'MX','57':'CO','56':'CL','51':'PE','598':'UY','595':'PY','591':'BO','593':'EC','58':'VE','34':'ES','55':'BR','506':'CR','507':'PA','502':'GT','503':'SV','504':'HN','505':'NI','53':'CU' };
+const CODIGO_DIGITOS = { go: 12, pocket: 16 };
+
+function paisNombre(cod) {
+  const p = PAISES.find(x => x[0] === String(cod || '').toUpperCase());
+  return p ? p[1] : '';
+}
+// Windows no dibuja los emojis de bandera, por eso se usa la imagen de flagcdn.com.
+function banderaHtml(cod, grande) {
+  const c = String(cod || '').toLowerCase();
+  if (!/^[a-z]{2}$/.test(c)) return '';
+  return `<img class="u-flag${grande ? ' u-flag-big' : ''}" src="https://flagcdn.com/h20/${c}.png" alt="${c.toUpperCase()}" title="${usuarioEsc(paisNombre(c))}" onerror="this.style.display='none'">`;
+}
+function usuarioPoblarPaises(sel, valor) {
+  if (!sel) return;
+  sel.innerHTML = '<option value="">— Sin país —</option>' +
+    PAISES.map(p => `<option value="${p[0]}">${usuarioEsc(p[1])}</option>`).join('');
+  sel.value = valor || '';
+}
+function usuarioActualizarBandera(selId, flagId) {
+  const sel = document.getElementById(selId), f = document.getElementById(flagId);
+  if (f && sel) f.innerHTML = banderaHtml(sel.value, true);
+}
+function usuarioSugerirPais() {
+  const sel = document.getElementById('usuario-new-pais');
+  if (!sel || sel.value) return;
+  const tel = usuarioNormTel(document.getElementById('usuario-new-tel').value);
+  const cod = PAIS_POR_PREFIJO[tel.slice(0, 3)] || PAIS_POR_PREFIJO[tel.slice(0, 2)];
+  if (cod) { sel.value = cod; usuarioActualizarBandera('usuario-new-pais', 'usuario-new-flag'); }
+}
+
+function codigoNorm(v) { return String(v || '').normalize('NFKC').replace(/\D/g, ''); }
+function codigoFormat(v) { return codigoNorm(v).replace(/(\d{4})(?=\d)/g, '$1 '); }
+// Vacío es válido (el código es opcional); si se escribe, debe tener los dígitos exactos.
+function codigoValido(d, juego) { return d === '' || d.length === CODIGO_DIGITOS[juego]; }
+function codigoMsgInvalido(d, juego) {
+  const nombre = juego === 'go' ? 'Pokémon GO' : 'TCG Pocket';
+  return '⚠️ El código de ' + nombre + ' debe tener ' + CODIGO_DIGITOS[juego] + ' dígitos (se detectaron ' + d.length + ').';
+}
+
+// Datos públicos del usuario (país y código del juego) leídos de su ficha en el
+// momento de publicar. Nunca incluye el teléfono.
+async function usuarioPerfilPublico(id, juego) {
+  try {
+    const snap = await window._fbDb.collection(APP_USERS_COL).doc(id).get();
+    const d = snap.exists ? snap.data() : {};
+    return { pais: d.pais || '', codigo: (juego === 'go' ? d.codigoGo : d.codigoPocket) || '' };
+  } catch (e) { return { pais: '', codigo: '' }; }
+}
+
+function contactoPublicoHtml(c) {
+  const cod = codigoNorm(c.userCodigo);
+  if (!cod) return '<div class="owner-code none">Sin código de entrenador. Pídele el contacto al administrador.</div>';
+  return `<div class="owner-code">🆔 <b>${codigoFormat(cod)}</b> <button type="button" class="code-copy" onclick="copiarCodigoEntrenador('${cod}')">📋 Copiar</button></div>`;
+}
+function copiarCodigoEntrenador(cod) {
+  const ok = () => showToast('📋 Código copiado');
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(cod).then(ok).catch(() => prompt('Copia el código:', cod));
+  } else prompt('Copia el código:', cod);
+}
+
+function abrirPerfilUsuario(id) {
+  const u = usuariosCache.find(x => x.id === id);
+  if (!u) return;
+  document.getElementById('up-id').value = id;
+  document.getElementById('up-nombre').textContent = u.usuario;
+  usuarioPoblarPaises(document.getElementById('up-pais'), u.pais || '');
+  usuarioActualizarBandera('up-pais', 'up-flag');
+  document.getElementById('up-go').value = codigoFormat(u.codigoGo);
+  document.getElementById('up-pocket').value = codigoFormat(u.codigoPocket);
+  document.getElementById('modal-usuario-perfil').classList.add('open');
+}
+
+async function guardarPerfilUsuario() {
+  if (!window._fbDb) { showToast('⚠️ Sin conexión con la nube.', true); return; }
+  const id = document.getElementById('up-id').value;
+  const pais = document.getElementById('up-pais').value;
+  const go = codigoNorm(document.getElementById('up-go').value);
+  const pocket = codigoNorm(document.getElementById('up-pocket').value);
+  if (!codigoValido(go, 'go')) { showToast(codigoMsgInvalido(go, 'go'), true); return; }
+  if (!codigoValido(pocket, 'pocket')) { showToast(codigoMsgInvalido(pocket, 'pocket'), true); return; }
+  try {
+    await window._fbDb.collection(APP_USERS_COL).doc(id).update({ pais, codigoGo: go, codigoPocket: pocket });
+  } catch (e) {
+    console.error(e);
+    showToast('❌ No se pudo guardar el perfil.', true);
+    return;
+  }
+  // Actualiza también sus publicaciones existentes (si las reglas lo permiten).
+  try {
+    const db = window._fbDb;
+    const [a, b] = await Promise.all([
+      db.collection('trueques_cartas').where('userId', '==', id).get(),
+      db.collection('trueques_go').where('userId', '==', id).get()
+    ]);
+    const batch = db.batch();
+    a.forEach(d => batch.update(d.ref, { userPais: pais, userCodigo: pocket }));
+    b.forEach(d => batch.update(d.ref, { userPais: pais, userCodigo: go }));
+    if (a.size + b.size) await batch.commit();
+  } catch (e) { console.warn('No se pudieron actualizar las publicaciones del usuario', e); }
+  closeModal('modal-usuario-perfil');
+  showToast('✅ País y códigos guardados');
+  await cargarUsuarios();
+}
+
+// Borra el campo userWhatsapp de las publicaciones antiguas de intercambios,
+// para que el teléfono deje de estar guardado ahí.
+async function quitarTelefonosPublicaciones() {
+  if (!window._fbDb) { showToast('⚠️ Sin conexión con la nube.', true); return; }
+  if (!confirm('Se borrará el teléfono guardado dentro de las publicaciones de intercambios (los teléfonos de los usuarios no se tocan). ¿Continuar?')) return;
+  try {
+    const db = window._fbDb;
+    let total = 0;
+    for (const col of ['trueques_cartas', 'trueques_go']) {
+      const snap = await db.collection(col).get();
+      const docs = snap.docs.filter(d => d.data().userWhatsapp !== undefined);
+      for (let i = 0; i < docs.length; i += 400) {
+        const batch = db.batch();
+        docs.slice(i, i + 400).forEach(d => batch.update(d.ref, { userWhatsapp: firebase.firestore.FieldValue.delete() }));
+        await batch.commit();
+      }
+      total += docs.length;
+    }
+    showToast('🧹 Teléfono quitado de ' + total + ' publicación(es)');
+  } catch (e) {
+    console.error(e);
+    showToast('❌ No se pudo completar la limpieza. Revisa las reglas de Firestore.', true);
+  }
+}
+
 async function crearUsuario() {
   if (!window._fbDb) { showToast('⚠️ Sin conexión con la nube.', true); return; }
   const usuario = document.getElementById('usuario-new-name').value.trim();
   const usuarioNorm = gateNormUser(usuario);
   const tel = usuarioNormTel(document.getElementById('usuario-new-tel').value);
   const pass = document.getElementById('usuario-new-pass').value;
+  const pais = document.getElementById('usuario-new-pais').value;
+  const codigoGo = codigoNorm(document.getElementById('usuario-new-go').value);
+  const codigoPocket = codigoNorm(document.getElementById('usuario-new-pocket').value);
   if (!USUARIO_RE.test(usuarioNorm)) { showToast('⚠️ Usuario no válido: 3-20 caracteres (letras, números, punto, guion o guion bajo, sin espacios).', true); return; }
   if (!usuarioTelValido(tel)) { showToast(usuarioMsgTelInvalido(tel), true); return; }
+  if (!codigoValido(codigoGo, 'go')) { showToast(codigoMsgInvalido(codigoGo, 'go'), true); return; }
+  if (!codigoValido(codigoPocket, 'pocket')) { showToast(codigoMsgInvalido(codigoPocket, 'pocket'), true); return; }
   if (pass.length < 4) { showToast('⚠️ La contraseña debe tener al menos 4 caracteres.', true); return; }
   try {
     const col = window._fbDb.collection(APP_USERS_COL);
@@ -10460,11 +10697,15 @@ async function crearUsuario() {
     const salt = gateNewSalt();
     const hash = await gateHashPassword(pass, salt);
     await col.add({
-      usuario, usuarioNorm, whatsapp: tel, salt, hash,
+      usuario, usuarioNorm, whatsapp: tel, pais, codigoGo, codigoPocket, salt, hash,
       creado: firebase.firestore.FieldValue.serverTimestamp()
     });
     document.getElementById('usuario-new-name').value = '';
     document.getElementById('usuario-new-tel').value = '';
+    document.getElementById('usuario-new-pais').value = '';
+    document.getElementById('usuario-new-go').value = '';
+    document.getElementById('usuario-new-pocket').value = '';
+    usuarioActualizarBandera('usuario-new-pais', 'usuario-new-flag');
     document.getElementById('usuario-new-pass').value = '';
     showToast('✅ Usuario creado (WhatsApp: ' + tel + ')');
     await cargarUsuarios();
@@ -11003,13 +11244,67 @@ function trueqeResetForm() {
   if (notes) notes.value = '';
 }
 
+// ── PUBLICAR COMO ADMINISTRADOR (PARA PRUEBAS) ──────────────────────────────
+// El administrador puede publicar en los dos tablones. Por defecto lo hace como
+// «Administrador (prueba)», sin país ni código; en el selector también puede
+// elegir un usuario real para probar cómo se ven su bandera y su código.
+// Estas publicaciones se pueden borrar desde «Mis publicaciones».
+let adminComoId = 'admin-prueba';
+
+function identidadAdmin() {
+  if (adminComoId !== 'admin-prueba') {
+    const u = usuariosCache.find(x => x.id === adminComoId);
+    if (u) return { id: u.id, nombre: u.usuario, usuario: u.usuario, whatsapp: u.whatsapp };
+  }
+  return { id: 'admin-prueba', nombre: 'Administrador (prueba)', usuario: 'Administrador (prueba)', whatsapp: '' };
+}
+
+async function adminPrepararSelector() {
+  const sesion = window.appSession;
+  const esAdmin = !!(sesion && sesion.tipo === 'admin');
+  ['trueque-admin-como-wrap', 'tgo-admin-como-wrap'].forEach(id => {
+    const e = document.getElementById(id);
+    if (e) e.style.display = esAdmin ? 'inline' : 'none';
+  });
+  if (!esAdmin) return;
+  if (!usuariosCache.length) { try { await cargarUsuarios(true); } catch (e) {} }
+  if (adminComoId !== 'admin-prueba' && !usuariosCache.some(x => x.id === adminComoId)) adminComoId = 'admin-prueba';
+  const opts = '<option value="admin-prueba">👑 Administrador (prueba)</option>' +
+    usuariosCache.map(u => `<option value="${u.id}">👤 ${usuarioEsc(u.usuario)}</option>`).join('');
+  ['trueque-admin-como', 'tgo-admin-como'].forEach(id => {
+    const e = document.getElementById(id);
+    if (e) { e.innerHTML = opts; e.value = adminComoId; }
+  });
+  trueqeUser = identidadAdmin();
+  ['trueque-whoami-name', 'tgo-whoami-name'].forEach(id => {
+    const e = document.getElementById(id);
+    if (e) e.textContent = trueqeUser.usuario;
+  });
+}
+
+function adminElegirIdentidad(id) {
+  adminComoId = id || 'admin-prueba';
+  ['trueque-admin-como', 'tgo-admin-como'].forEach(sid => {
+    const e = document.getElementById(sid);
+    if (e) e.value = adminComoId;
+  });
+  trueqeUser = identidadAdmin();
+  ['trueque-whoami-name', 'tgo-whoami-name'].forEach(nid => {
+    const e = document.getElementById(nid);
+    if (e) e.textContent = trueqeUser.usuario;
+  });
+  trueqeRenderMine();
+  tgoRender();
+  if (adminComoId !== 'admin-prueba') showToast('👤 Publicarás como ' + trueqeUser.usuario + ' (solo para pruebas; bórralas después)');
+}
+
 function loadTrueques() {
   // La identidad viene del login de entrada a la página. El administrador
   // (sin usuario propio) puede ver y moderar el tablón, pero no publicar.
   const sesion = window.appSession;
   trueqeUser = (sesion && sesion.tipo === 'user')
     ? { id: sesion.id, nombre: sesion.usuario, usuario: sesion.usuario, whatsapp: sesion.whatsapp }
-    : null;
+    : (sesion && sesion.tipo === 'admin') ? identidadAdmin() : null;
   const puede = !!trueqeUser;
   document.getElementById('trueque-app').style.display = 'block';
   document.getElementById('trueque-publish-card').style.display = puede ? 'block' : 'none';
@@ -11021,6 +11316,7 @@ function loadTrueques() {
     trueqeRenderChosen('ofrece');
     trueqeInitPickers();
   }
+  adminPrepararSelector();
   trueqeFetchCards();
 }
 
@@ -11038,13 +11334,15 @@ async function trueqeAgregarCarta() {
     localId: String(c.localId || '')
   });
   try {
+    const perfil = await usuarioPerfilPublico(trueqeUser.id, 'pocket');
     await window._fbDb.collection('trueques_cartas').add({
       busca: trueqeSel.busca.map(pack),
       ofrece: trueqeSel.ofrece.map(pack),
       notas,
       userId: trueqeUser.id,
       userNombre: trueqeUser.usuario || trueqeUser.nombre,
-      userWhatsapp: trueqeUser.whatsapp,
+      userPais: perfil.pais,
+      userCodigo: perfil.codigo,
       creado: firebase.firestore.FieldValue.serverTimestamp()
     });
     trueqeResetForm();
@@ -11128,12 +11426,6 @@ function trueqeMiniCardsHtml(list) {
 
 function trueqeSleeveHtml(c, showDelete, esAdmin) {
   const t = trueqeNormCard(c);
-  const nombres = l => l.map(x => x.name).join(', ');
-  let texto = 'Hola ' + c.userNombre + ', vi tu publicación en el tablón de intercambios';
-  if (t.busca.length) texto += ': buscas ' + nombres(t.busca);
-  if (t.ofrece.length) texto += (t.busca.length ? ' y ' : ': ') + 'ofreces ' + nombres(t.ofrece);
-  texto += '.';
-  const waLink = 'https://wa.me/' + c.userWhatsapp + '?text=' + encodeURIComponent(texto);
   return `<div class="trueque-sleeve">
     <div class="trade-block busca">
       <span class="trade-label">🔍 Busca</span>
@@ -11145,8 +11437,8 @@ function trueqeSleeveHtml(c, showDelete, esAdmin) {
       ${trueqeMiniCardsHtml(t.ofrece)}
     </div>
     ${c.notas ? `<div class="notes">${trueqeEsc(c.notas)}</div>` : ''}
-    <div class="owner">👤 ${trueqeEsc(c.userNombre)}</div>
-    <a class="wa" href="${waLink}" target="_blank" rel="noopener">Escribir por WhatsApp</a>
+    <div class="owner">${banderaHtml(c.userPais)}👤 ${trueqeEsc(c.userNombre)}</div>
+    ${contactoPublicoHtml(c)}
     ${showDelete ? `<button class="trueque-delete-btn" onclick="trueqeEliminarCarta('${c.id}')">${esAdmin ? '✕ Eliminar (admin)' : '🗑️ Eliminar (ya se cerró el trueque)'}</button>` : ''}
   </div>`;
 }
@@ -11258,6 +11550,7 @@ function tgoFormaBadgeHtml(c) {
 
 function tgoUser() {
   const s = window.appSession;
+  if (s && s.tipo === 'admin') return identidadAdmin();
   return (s && s.tipo === 'user') ? { id: s.id, usuario: s.usuario, whatsapp: s.whatsapp } : null;
 }
 
@@ -11571,6 +11864,7 @@ async function tgoPublicar() {
   if (!tgoSelected) { showToast('⚠️ Elige un Pokémon de la lista', true); return; }
   const notas = document.getElementById('tgo-notes').value.trim();
   try {
+    const perfil = await usuarioPerfilPublico(u.id, 'go');
     await window._fbDb.collection(TGO_COL).add({
       pokemon: tgoSelected,
       slug: tgoSelectedSlug || '',
@@ -11581,7 +11875,8 @@ async function tgoPublicar() {
       notas,
       userId: u.id,
       userNombre: u.usuario,
-      userWhatsapp: u.whatsapp,
+      userPais: perfil.pais,
+      userCodigo: perfil.codigo,
       creado: firebase.firestore.FieldValue.serverTimestamp()
     });
     tgoResetForm();
@@ -11617,8 +11912,6 @@ function tgoFiltrar(f, btn) {
 
 function tgoCardHtml(c, showDelete, esAdmin) {
   const nombre = c.nombreEs || c.pokemon;
-  const texto = 'Hola ' + c.userNombre + ', vi que buscas ' + nombre + (c.shiny ? ' variocolor (shiny)' : '') + (c.dinamax ? ' Dinamax' : '') + ' en el tablón de intercambios de Pokémon GO.';
-  const waLink = 'https://wa.me/' + c.userWhatsapp + '?text=' + encodeURIComponent(texto);
   return `<div class="tgo-card${c.shiny ? ' shiny' : ''}${c.dinamax ? ' dmax' : ''}">
     <div class="tgo-sprite">
       <img class="sp" data-name="${tgoEsc(c.pokemon)}" data-slug="${tgoEsc(c.slug || '')}" data-shiny="${c.shiny ? 1 : 0}"${c.imagen ? ` src="${tgoEsc(c.imagen)}"` : ''} alt="" onerror="tgoImgFail(this)">
@@ -11628,8 +11921,8 @@ function tgoCardHtml(c, showDelete, esAdmin) {
     <div class="tgo-name">${tgoEsc(nombre)}</div>
     <span class="tgo-tag${c.shiny ? ' shiny' : ''}">${c.shiny ? 'Busca variocolor' : 'Busca'}</span>${c.dinamax ? ' <span class="tgo-tag dmax">Dinamax</span>' : ''}
     ${c.notas ? `<div class="notes">${tgoEsc(c.notas)}</div>` : ''}
-    <div class="owner">👤 ${tgoEsc(c.userNombre)}</div>
-    <a class="wa" href="${waLink}" target="_blank" rel="noopener">Escribir por WhatsApp</a>
+    <div class="owner">${banderaHtml(c.userPais)}👤 ${tgoEsc(c.userNombre)}</div>
+    ${contactoPublicoHtml(c)}
     ${showDelete ? `<button class="trueque-delete-btn" onclick="tgoEliminar('${c.id}')">${esAdmin ? '✕ Eliminar (admin)' : '🗑️ Eliminar (ya se cerró el trueque)'}</button>` : ''}
   </div>`;
 }
@@ -11730,6 +12023,7 @@ function tgoLoad() {
   tgoUpdateShinyBtn();
   tgoUpdateDmaxBtn();
   if (window.appSession && window.appSession.tipo === 'admin') tgoSetAdmin(true);
+  adminPrepararSelector();
   tgoFetch();
   tgoCargarLista();
 }
