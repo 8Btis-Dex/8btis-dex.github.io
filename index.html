@@ -5005,7 +5005,7 @@ async function calcularBBoxGif(url) {
     await dec.tracks.ready;
     const total = Math.min(dec.tracks.selectedTrack.frameCount || 1, 150);
     let w = 0, h = 0, minX = Infinity, minY = Infinity, maxX = -1, maxY = -1;
-    let canvas = null, ctx = null;
+    let canvas = null, ctx = null, sumArea = 0;
     for (let i = 0; i < total; i++) {
       const { image } = await dec.decode({ frameIndex: i });
       if (!canvas) {
@@ -5021,6 +5021,7 @@ async function calcularBBoxGif(url) {
       for (let y = 0; y < h; y++) {
         for (let x = 0; x < w; x++) {
           if (d[(y * w + x) * 4 + 3] > 15) {
+            sumArea++;
             if (x < minX) minX = x;
             if (x > maxX) maxX = x;
             if (y < minY) minY = y;
@@ -5029,11 +5030,30 @@ async function calcularBBoxGif(url) {
         }
       }
     }
-    if (maxX >= 0) result = { w, h, minX, minY, maxX, maxY };
+    if (maxX >= 0) result = { w, h, minX, minY, maxX, maxY, area: sumArea / total };
   } catch (e) { result = null; }
   finally { try { if (dec) dec.close(); } catch (e) {} }
   _gifBBoxCache.set(url, result);
   return result;
+}
+
+// Tamaño de referencia: Metagross. Su GIF (142x73) se muestra a REF_ANCHO px
+// de ancho, y el resto de los Pokémon se escala para que la superficie que
+// ocupa su dibujo (píxeles opacos, no el rectángulo) sea igual a la de
+// Metagross. Así un Pokémon de alas y cola finas (Charizard) no se ve más
+// chico que uno compacto. Solo se aplica a imágenes con data-norm-tam="1".
+const NORM_REF_URL = 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/showdown/376.gif';
+const NORM_REF_ANCHO_NATIVO = 142, NORM_REF_ANCHO = 110;
+const NORM_MAX_ANCHO = 150, NORM_MAX_ALTO = 130;
+let _normAreaRefPromise = null;
+function areaReferenciaMetagross() {
+  if (!_normAreaRefPromise) {
+    _normAreaRefPromise = calcularBBoxGif(NORM_REF_URL).then(b => {
+      const s0 = NORM_REF_ANCHO / NORM_REF_ANCHO_NATIVO;
+      return b && b.area ? b.area * s0 * s0 : null;
+    });
+  }
+  return _normAreaRefPromise;
 }
 
 async function recortarGifAnimado(imgEl, url) {
@@ -5042,8 +5062,21 @@ async function recortarGifAnimado(imgEl, url) {
     const b = await calcularBBoxGif(url);
     if (!b) return;
     const cw = b.maxX - b.minX + 1, ch = b.maxY - b.minY + 1;
-    if (cw >= b.w * 0.94 && ch >= b.h * 0.94) return; // ya ocupa casi todo el lienzo
-    imgEl.style.objectViewBox = `inset(${b.minY}px ${b.w - b.maxX - 1}px ${b.h - b.maxY - 1}px ${b.minX}px)`;
+    let dispW = b.w, dispH = b.h;
+    if (!(cw >= b.w * 0.94 && ch >= b.h * 0.94)) { // si ocupa casi todo el lienzo, no se recorta
+      imgEl.style.objectViewBox = `inset(${b.minY}px ${b.w - b.maxX - 1}px ${b.h - b.maxY - 1}px ${b.minX}px)`;
+      dispW = cw; dispH = ch;
+    }
+    if (imgEl.dataset.normTam === '1' && b.area) {
+      const areaRef = await areaReferenciaMetagross();
+      if (areaRef) {
+        const k = Math.sqrt(areaRef / b.area);
+        let dw = dispW * k, dh = dispH * k;
+        const c = Math.min(1, NORM_MAX_ANCHO / dw, NORM_MAX_ALTO / dh);
+        imgEl.style.width = (dw * c) + 'px';
+        imgEl.style.height = (dh * c) + 'px';
+      }
+    }
   } catch (e) { /* sin recorte */ }
 }
 
@@ -5067,6 +5100,7 @@ function loadSpriteWithFallback(imgEl, candidates, onSuccess, onFail) {
     imgEl.style.imageRendering = esGif ? 'auto' : imgEl._irOriginal;
     const tok = (imgEl._lsTok = (imgEl._lsTok || 0) + 1);
     imgEl.style.objectViewBox = ''; // quita el recorte de un GIF anterior
+    if (imgEl.dataset.normTam === '1') { imgEl.style.width = ''; imgEl.style.height = ''; } // vuelve al tamaño por defecto del CSS
     imgEl.onerror = tryNext;
     imgEl.onload = async () => {
       if (esGif) {
@@ -5262,7 +5296,7 @@ async function showResult(name) {
         <div class="ri-value">
           <div class="pokemon-name-row">
             <span class="pokemon-sprite-wrap" style="position:relative;display:inline-flex;align-items:center">
-              <img id="poke-sprite" class="pokemon-sprite" src="" alt="" style="display:none">
+              <img id="poke-sprite" class="pokemon-sprite" data-norm-tam="1" src="" alt="" style="display:none">
               ${esVarianteOscura(name) ? svgFlameOscuroHTML() : ''}
             </span>
             <span>${esc(traducirNombrePokemon(name))}</span>
