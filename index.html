@@ -3059,6 +3059,47 @@
   .u-flag-big { height: 26px; }
   .u-code-line { margin-top: 3px; font-size: 0.74rem; color: var(--muted); white-space: nowrap; }
   .u-cod { font-family: 'Courier New', monospace; letter-spacing: 0.5px; color: #fff; }
+
+  /* ── Filas de intercambio: una línea que se expande ── */
+  .x-list { display: flex; flex-direction: column; gap: 6px; }
+  .x-row { background: var(--dark-card); border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; }
+  .x-row[open] { border-color: rgba(155,89,182,0.55); }
+  .x-row > summary { list-style: none; cursor: pointer; display: flex; align-items: center; gap: 10px; padding: 8px 12px; min-height: 38px; }
+  .x-row > summary::-webkit-details-marker { display: none; }
+  .x-row > summary:hover { background: rgba(255,255,255,0.04); border-radius: 10px; }
+  .x-who { flex: 0 1 auto; max-width: 28%; font-size: 0.74rem; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .x-side { flex: 1 1 0; min-width: 0; display: flex; align-items: center; gap: 6px; }
+  .x-lbl { flex: 0 0 auto; font-size: 0.8rem; }
+  .x-thumbs { display: flex; align-items: center; gap: 3px; flex: 0 0 auto; }
+  .x-thumbs img.x-t { height: 34px; width: auto; border-radius: 3px; display: block; background: rgba(255,255,255,0.05); }
+  .x-thumbs .trueque-noimg { width: 24px; height: 34px; font-size: 0; border-radius: 3px; background: rgba(255,255,255,0.08); }
+  .x-mini { position: relative; display: block; flex: 0 0 auto; }
+  .x-mini .tgo-sprite { width: 34px; height: 34px; margin: 0; }
+  .x-mini .tgo-badge { width: 12px; top: -3px; right: -3px; }
+  .x-mini .tgo-forma-badge { width: 14px; height: 14px; top: -3px; left: -3px; }
+  .x-more { font-size: 0.68rem; color: var(--muted); }
+  .x-none { color: var(--muted); font-size: 0.8rem; }
+  .x-txt { font-size: 0.8rem; font-weight: 700; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .x-arrow { flex: 0 0 auto; color: var(--muted); }
+  .x-chev { flex: 0 0 auto; color: var(--muted); transition: transform .15s; }
+  .x-row[open] .x-chev { transform: rotate(180deg); }
+  .x-body { padding: 10px 12px 12px; border-top: 1px solid rgba(255,255,255,0.07); }
+  .x-cols { display: grid; grid-template-columns: 1fr auto 1fr; gap: 10px; align-items: start; }
+  .x-arrow-big { font-size: 1.3rem; align-self: center; }
+  .x-cards { display: flex; flex-wrap: wrap; gap: 8px; }
+  .x-cards .trade-mini { width: 100px; }
+  .x-gocard { width: 100px; text-align: center; }
+  .x-gocard .tgo-sprite { margin: 0 auto 4px; }
+  .x-gocard .tgo-name { font-weight: 800; font-size: 0.78rem; line-height: 1.15; margin-bottom: 3px; }
+  .x-notes { margin-top: 8px; font-size: 0.78rem; color: var(--muted); }
+  .x-body .owner-code { margin-top: 8px; }
+  @media (max-width: 560px) {
+    .x-row > summary { gap: 6px; padding: 8px; }
+    .x-txt { font-size: 0.74rem; }
+    .x-who { max-width: 22%; }
+    .x-cards .trade-mini, .x-gocard { width: 76px; }
+    .x-gocard .tgo-sprite { width: 72px; height: 72px; }
+  }
   .owner-code { margin: 6px 0 2px; font-size: 0.78rem; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
   .owner-code b { font-family: 'Courier New', monospace; letter-spacing: 0.5px; }
   .owner-code.none { color: var(--muted); font-style: italic; }
@@ -3621,12 +3662,12 @@
           <button data-tf="ofrece" onclick="trueqeFiltrar('ofrece', this)">🎁 Ofrecen</button>
           <input class="trueque-input" id="trueque-search" type="text" placeholder="Buscar carta o usuario..." oninput="trueqeRenderBinder()">
         </div>
-        <div id="trueque-binder" class="trueque-grid"></div>
+        <div id="trueque-binder" class="x-list"></div>
       </div>
 
       <div class="trueque-card" id="trueque-mine-card">
         <h3>🗂️ Mis publicaciones</h3>
-        <div id="trueque-mine" class="trueque-grid"></div>
+        <div id="trueque-mine" class="x-list"></div>
       </div>
 
     </div>
@@ -3643,7 +3684,8 @@
       <div class="trueque-card" id="tgo-publish-card">
         <div class="tgo-head"><img id="tgo-head-logo" alt="Pokémon GO"><div class="trueque-whoami" style="margin:0">👤 <span id="tgo-whoami-name"></span>
             <span id="tgo-admin-como-wrap" style="display:none"> · Publicar como <select id="tgo-admin-como" class="trueque-input" style="width:auto;display:inline-block;padding:4px 8px" onchange="adminElegirIdentidad(this.value)"></select></span></div></div>
-        <h3>➕ Publicar búsqueda</h3>
+        <h3>➕ Publicar intercambio</h3>
+        <div class="trade-block busca"><span class="trade-label">🔍 Busca</span></div>
         <div class="tgo-field">
           <input class="trueque-input" id="tgo-poke-input" type="text" placeholder="Pokémon que buscas (escribe el nombre)..." autocomplete="off"
             oninput="tgoOnPokeInput()" onfocus="tgoOnPokeInput()" onblur="tgoHideAcDelayed()" onkeydown="tgoPokeKey(event)">
@@ -3666,13 +3708,35 @@
           </div>
           <button type="button" class="trueque-back-btn" style="margin:0" onclick="tgoClearSelected()">Quitar</button>
         </div>
+        <div class="trade-block ofrece" style="margin-top:14px"><span class="trade-label">🎁 Ofrece a cambio</span></div>
+        <div class="tgo-field">
+          <input class="trueque-input" id="tgo-of-input" type="text" placeholder="Pokémon que ofreces (escribe el nombre)..." autocomplete="off"
+            oninput="tgoOfOnInput()" onfocus="tgoOfOnInput()" onblur="tgoOfHideAcDelayed()" onkeydown="tgoOfPokeKey(event)">
+          <div class="tgo-ac" id="tgo-of-ac" style="display:none"></div>
+        </div>
+        <div class="tgo-toggles">
+          <button type="button" class="tgo-shiny-toggle" id="tgo-of-shiny-btn" onclick="tgoOfToggleShiny()">
+            <img id="tgo-of-shiny-btn-icon" alt=""><span id="tgo-of-shiny-btn-text">Variocolor (shiny): No</span>
+          </button>
+          <button type="button" class="tgo-shiny-toggle tgo-dmax-toggle" id="tgo-of-dmax-btn" onclick="tgoOfToggleDmax()">
+            <span>🔴</span><span id="tgo-of-dmax-btn-text">Dinamax: No</span>
+          </button>
+        </div>
+        <div class="tgo-preview" id="tgo-of-preview" style="display:none">
+          <div class="tgo-sprite"><img class="sp" id="tgo-of-preview-img" alt=""><img class="tgo-badge" id="tgo-of-preview-badge" alt="Variocolor" style="display:none"><img class="tgo-forma-badge" id="tgo-of-preview-forma" alt="" style="display:none"></div>
+          <div style="flex:1;min-width:0">
+            <div class="tgo-pname" id="tgo-of-preview-name"></div>
+            <div class="tgo-ptag" id="tgo-of-preview-tag"></div>
+          </div>
+          <button type="button" class="trueque-back-btn" style="margin:0" onclick="tgoOfClear()">Quitar</button>
+        </div>
         <input class="trueque-input" id="tgo-notes" type="text" placeholder="Notas (opcional)" maxlength="140">
         <button class="btn btn-primary" onclick="tgoPublicar()">Publicar</button>
       </div>
 
       <div class="trueque-card">
         <h3 style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap">
-          <span>📋 Tablón de búsquedas (<span id="tgo-count">0</span>)</span>
+          <span>📋 Tablón de intercambios (<span id="tgo-count">0</span>)</span>
           <button class="btn" id="tgo-admin-btn" style="padding:4px 10px;font-size:0.72rem" onclick="tgoAdminToggle()">🔑 Admin</button>
         </h3>
         <div class="trueque-filters">
@@ -3684,12 +3748,12 @@
           <button data-tgof="gmax" onclick="tgoFiltrar('gmax', this)">Gigamax</button>
           <input class="trueque-input" id="tgo-search" type="text" placeholder="Buscar Pokémon o usuario..." oninput="tgoRender()">
         </div>
-        <div id="tgo-binder" class="tgo-grid"></div>
+        <div id="tgo-binder" class="x-list"></div>
       </div>
 
       <div class="trueque-card" id="tgo-mine-card">
-        <h3>🗂️ Mis búsquedas</h3>
-        <div id="tgo-mine" class="tgo-grid"></div>
+        <h3>🗂️ Mis intercambios</h3>
+        <div id="tgo-mine" class="x-list"></div>
       </div>
     </div>
 
@@ -11426,21 +11490,23 @@ function trueqeMiniCardsHtml(list) {
 
 function trueqeSleeveHtml(c, showDelete, esAdmin) {
   const t = trueqeNormCard(c);
-  return `<div class="trueque-sleeve">
-    <div class="trade-block busca">
-      <span class="trade-label">🔍 Busca</span>
-      ${trueqeMiniCardsHtml(t.busca)}
-    </div>
-    <div class="trade-arrow">⇅</div>
-    <div class="trade-block ofrece">
-      <span class="trade-label">🎁 Ofrece a cambio</span>
-      ${trueqeMiniCardsHtml(t.ofrece)}
-    </div>
-    ${c.notas ? `<div class="notes">${trueqeEsc(c.notas)}</div>` : ''}
-    <div class="owner">${banderaHtml(c.userPais)}👤 ${trueqeEsc(c.userNombre)}</div>
-    ${contactoPublicoHtml(c)}
-    ${showDelete ? `<button class="trueque-delete-btn" onclick="trueqeEliminarCarta('${c.id}')">${esAdmin ? '✕ Eliminar (admin)' : '🗑️ Eliminar (ya se cerró el trueque)'}</button>` : ''}
-  </div>`;
+  const mk = x => ({
+    nombre: x.name,
+    mini: trueqeImgHtml(x, true, 'x-t'),
+    grande: `<div class="trade-mini" title="${trueqeEsc(x.name)}">
+      ${trueqeImgHtml(x, true)}
+      <div class="tm-name">${trueqeEsc(x.name)}</div>
+      ${x.setName ? `<div class="tm-set">${trueqeEsc(x.setName)}</div>` : ''}
+    </div>`
+  });
+  return xFilaHtml({
+    quien: `${banderaHtml(c.userPais)}👤 ${trueqeEsc(c.userNombre)}`,
+    busca: t.busca.map(mk),
+    ofrece: t.ofrece.map(mk),
+    notas: c.notas ? trueqeEsc(c.notas) : '',
+    extra: contactoPublicoHtml(c),
+    borrar: showDelete ? `<button class="trueque-delete-btn" onclick="trueqeEliminarCarta('${c.id}')">${esAdmin ? '✕ Eliminar (admin)' : '🗑️ Eliminar (ya se cerró el trueque)'}</button>` : ''
+  });
 }
 
 async function trueqeEliminarCarta(cardId) {
@@ -11848,6 +11914,7 @@ function tgoClearSelected(keepText) {
 }
 
 function tgoResetForm() {
+  tgoOfReset();
   tgoClearSelected();
   tgoShiny = false;
   tgoDinamax = false;
@@ -11857,11 +11924,187 @@ function tgoResetForm() {
   if (n) n.value = '';
 }
 
+// ── FILA DE INTERCAMBIO (compartida por TCG Pocket y GO) ───────────────────
+// Una línea con quién publica, lo que busca y lo que ofrece uno al lado del
+// otro; al pulsarla se expande y muestra el intercambio en grande (también con
+// los dos lados lado a lado), las notas, el código de entrenador y el borrado.
+// Usa <details>, así que abre y cierra sin JavaScript.
+function xFilaHtml(o) {
+  const lado = (tipo, icono, items) => {
+    const texto = items.length ? items.map(i => i.resumen || i.nombre).join(', ') : '—';
+    return `<div class="x-side ${tipo}" title="${tgoEsc(texto)}"><span class="x-lbl">${icono}</span><span class="x-txt">${tgoEsc(texto)}</span></div>`;
+  };
+  const col = (tipo, titulo, items) => `<div class="x-col ${tipo}">
+      <span class="trade-label">${titulo}</span>
+      <div class="x-cards">${items.length ? items.map(i => i.grande).join('') : '<div class="trade-none">—</div>'}</div>
+    </div>`;
+  return `<details class="x-row ${o.cls || ''}">
+    <summary>
+      <span class="x-who">${o.quien}</span>
+      ${lado('busca', '🔍', o.busca)}<span class="x-arrow">⇄</span>${lado('ofrece', '🎁', o.ofrece)}
+      <span class="x-chev">▾</span>
+    </summary>
+    <div class="x-body">
+      <div class="x-cols">
+        ${col('busca', '🔍 Busca', o.busca)}
+        <div class="x-arrow x-arrow-big">⇄</div>
+        ${col('ofrece', '🎁 Ofrece a cambio', o.ofrece)}
+      </div>
+      ${o.notas ? `<div class="x-notes">${o.notas}</div>` : ''}
+      ${o.extra || ''}
+      ${o.borrar || ''}
+    </div>
+  </details>`;
+}
+
+// Un Pokémon de GO (busca u ofrece) como par miniatura / versión grande.
+function tgoItemFila(p) {
+  const nombre = p.nombreEs || p.pokemon || '';
+  const sprite = `<div class="tgo-sprite">
+      <img class="sp" loading="lazy" data-name="${tgoEsc(p.pokemon)}" data-slug="${tgoEsc(p.slug || '')}" data-shiny="${p.shiny ? 1 : 0}"${p.imagen ? ` src="${tgoEsc(p.imagen)}"` : ''} alt="" onerror="tgoImgFail(this)">
+      ${p.shiny ? `<img class="tgo-badge" src="${TGO_SHINY_ICON}" alt="Variocolor" title="Variocolor (shiny)">` : ''}
+      ${tgoFormaBadgeHtml(p)}
+    </div>`;
+  const tags = (p.shiny ? '<span class="tgo-tag shiny">✨ Variocolor</span>' : '') + (p.dinamax ? ' <span class="tgo-tag dmax">Dinamax</span>' : '');
+  return {
+    nombre,
+    resumen: nombre + (p.shiny ? ' ✨' : '') + (p.dinamax ? ' 🔴' : ''),
+    mini: `<div class="x-mini" title="${tgoEsc(nombre)}">${sprite}</div>`,
+    grande: `<div class="x-gocard">${sprite}<div class="tgo-name">${tgoEsc(nombre)}</div>${tags}</div>`
+  };
+}
+
+// ── GO: LO QUE SE OFRECE A CAMBIO (segundo selector) ───────────────────────
+// Funciona igual que el de «lo que buscas», con su propio estado (tgoOf) y sus
+// propios elementos (ids tgo-of-...).
+const tgoOf = { sel: null, label: '', slug: '', img: '', shiny: false, dmax: false, queryDmax: false, matches: [], timer: null };
+
+function tgoOfEsGmax() { return /-gmax$/.test(tgoOf.slug || ''); }
+
+function tgoOfOnInput() {
+  clearTimeout(tgoOf.timer);
+  tgoOf.timer = setTimeout(tgoOfRenderAc, 120);
+}
+
+function tgoOfRenderAc() {
+  const input = document.getElementById('tgo-of-input');
+  const box = document.getElementById('tgo-of-ac');
+  if (!input || !box) return;
+  if (tgoOf.sel && input.value !== tgoOf.label) tgoOfClear(true);
+  const dmaxRe = /\b(dinamax|dynamax)\b/i;
+  tgoOf.queryDmax = dmaxRe.test(input.value);
+  const q = tgoNorm(input.value.replace(dmaxRe, ' ').replace(/gigantamax|gmax/gi, 'gigamax')).replace(/\s+/g, ' ').trim();
+  if (!q) { box.style.display = 'none'; box.innerHTML = ''; return; }
+  const palabras = q.split(' ');
+  const empiezan = [], contienen = [];
+  for (const x of tgoPokeList()) {
+    const nEn = tgoNorm(x.n), nEs = tgoNorm(traducirNombrePokemon(x.n));
+    if (nEn.startsWith(q) || nEs.startsWith(q)) empiezan.push(x);
+    else if (palabras.every(w => nEn.includes(w) || nEs.includes(w))) contienen.push(x);
+    if (empiezan.length >= 12) break;
+  }
+  const matches = empiezan.concat(contienen).slice(0, 12);
+  tgoOf.matches = matches;
+  box.style.display = 'block';
+  if (!matches.length) {
+    box.innerHTML = '<div class="tgo-ac-empty">No hay ningún Pokémon con ese nombre' + (TGO_DEX ? '.' : ' (la lista completa todavía no se descargó).') + '</div>';
+    return;
+  }
+  box.innerHTML = matches.map((x, i) => `
+    <div class="tgo-ac-item" onmousedown="event.preventDefault(); tgoOfSelectPoke(${i})">
+      <img data-i="${i}" alt=""><span>${tgoEsc(traducirNombrePokemon(x.n))}</span>
+    </div>`).join('');
+  box.querySelectorAll('img[data-i]').forEach(im => { const x = matches[+im.dataset.i]; tgoLoadSprite(im, x.n, tgoOf.shiny, null, x.s); });
+}
+
+function tgoOfPokeKey(e) {
+  if (e.key !== 'Enter') return;
+  e.preventDefault();
+  if (tgoOf.matches.length && document.getElementById('tgo-of-ac').style.display !== 'none') tgoOfSelectPoke(0);
+}
+
+function tgoOfHideAcDelayed() {
+  setTimeout(() => { const b = document.getElementById('tgo-of-ac'); if (b) b.style.display = 'none'; }, 150);
+}
+
+function tgoOfSelectPoke(i) {
+  const x = tgoOf.matches[i];
+  if (!x) return;
+  tgoOf.sel = x.n;
+  tgoOf.slug = x.s;
+  tgoOf.label = traducirNombrePokemon(x.n);
+  if (tgoOfEsGmax()) tgoOf.dmax = false;
+  else if (tgoOf.queryDmax) tgoOf.dmax = true;
+  tgoOfUpdateBtns();
+  document.getElementById('tgo-of-input').value = tgoOf.label;
+  document.getElementById('tgo-of-ac').style.display = 'none';
+  tgoOfRenderPreview();
+}
+
+function tgoOfRenderPreview() {
+  const prev = document.getElementById('tgo-of-preview');
+  if (!tgoOf.sel) { prev.style.display = 'none'; return; }
+  prev.style.display = 'flex';
+  prev.classList.toggle('shiny', tgoOf.shiny);
+  prev.classList.toggle('dmax', tgoOf.dmax);
+  document.getElementById('tgo-of-preview-name').textContent = tgoOf.label;
+  const extras = [tgoOfEsGmax() ? 'Gigamax' : '', tgoOf.shiny ? '✨ variocolor (shiny)' : '', tgoOf.dmax ? '🔴 Dinamax' : ''].filter(Boolean);
+  document.getElementById('tgo-of-preview-tag').textContent = extras.length ? 'Lo ofreces ' + extras.join(' · ') : 'Lo ofreces en su forma normal';
+  document.getElementById('tgo-of-preview-badge').style.display = tgoOf.shiny ? 'block' : 'none';
+  const fb = document.getElementById('tgo-of-preview-forma');
+  const icono = tgoOfEsGmax() ? TGO_GMAX_ICON : (tgoOf.dmax ? TGO_DMAX_ICON : '');
+  if (icono) { fb.src = icono; fb.style.display = 'block'; } else { fb.style.display = 'none'; }
+  tgoOf.img = '';
+  tgoLoadSprite(document.getElementById('tgo-of-preview-img'), tgoOf.sel, tgoOf.shiny, url => { tgoOf.img = url; }, tgoOf.slug);
+}
+
+function tgoOfToggleShiny() {
+  tgoOf.shiny = !tgoOf.shiny;
+  tgoOfUpdateBtns();
+  if (tgoOf.sel) tgoOfRenderPreview();
+}
+
+function tgoOfToggleDmax() {
+  if (tgoOfEsGmax()) { showToast('Los Gigamax ya son una forma de Dinamax', true); return; }
+  tgoOf.dmax = !tgoOf.dmax;
+  tgoOfUpdateBtns();
+  if (tgoOf.sel) tgoOfRenderPreview();
+}
+
+function tgoOfUpdateBtns() {
+  const sb = document.getElementById('tgo-of-shiny-btn');
+  if (sb) {
+    sb.classList.toggle('on', tgoOf.shiny);
+    document.getElementById('tgo-of-shiny-btn-text').textContent = 'Variocolor (shiny): ' + (tgoOf.shiny ? 'Sí' : 'No');
+  }
+  const db = document.getElementById('tgo-of-dmax-btn');
+  if (db) {
+    db.classList.toggle('on', tgoOf.dmax);
+    db.classList.toggle('off-disabled', tgoOfEsGmax());
+    document.getElementById('tgo-of-dmax-btn-text').textContent = 'Dinamax: ' + (tgoOf.dmax ? 'Sí' : 'No');
+  }
+}
+
+function tgoOfClear(keepText) {
+  tgoOf.sel = null; tgoOf.slug = ''; tgoOf.label = ''; tgoOf.img = '';
+  const prev = document.getElementById('tgo-of-preview');
+  if (prev) prev.style.display = 'none';
+  if (!keepText) { const i = document.getElementById('tgo-of-input'); if (i) i.value = ''; }
+}
+
+function tgoOfReset() {
+  tgoOfClear();
+  tgoOf.shiny = false;
+  tgoOf.dmax = false;
+  tgoOfUpdateBtns();
+}
+
 // ── Publicar / tablón ──
 async function tgoPublicar() {
   const u = tgoUser();
   if (!u || !window._fbDb) return;
-  if (!tgoSelected) { showToast('⚠️ Elige un Pokémon de la lista', true); return; }
+  if (!tgoSelected) { showToast('⚠️ Elige el Pokémon que buscas', true); return; }
+  if (!tgoOf.sel) { showToast('⚠️ Elige el Pokémon que ofreces a cambio', true); return; }
   const notas = document.getElementById('tgo-notes').value.trim();
   try {
     const perfil = await usuarioPerfilPublico(u.id, 'go');
@@ -11872,6 +12115,14 @@ async function tgoPublicar() {
       shiny: !!tgoShiny,
       dinamax: !!tgoDinamax,
       imagen: tgoSelectedImg || '',
+      ofrece: {
+        pokemon: tgoOf.sel,
+        slug: tgoOf.slug || '',
+        nombreEs: tgoOf.label,
+        shiny: !!tgoOf.shiny,
+        dinamax: !!tgoOf.dmax,
+        imagen: tgoOf.img || ''
+      },
       notas,
       userId: u.id,
       userNombre: u.usuario,
@@ -11881,7 +12132,7 @@ async function tgoPublicar() {
     });
     tgoResetForm();
     tgoFetch();
-    showToast('✅ Búsqueda publicada');
+    showToast('✅ Intercambio publicado');
   } catch (e) {
     console.error(e);
     showToast('❌ No se pudo publicar. Revisa las reglas de Firestore para "trueques_go".', true);
@@ -11911,20 +12162,16 @@ function tgoFiltrar(f, btn) {
 }
 
 function tgoCardHtml(c, showDelete, esAdmin) {
-  const nombre = c.nombreEs || c.pokemon;
-  return `<div class="tgo-card${c.shiny ? ' shiny' : ''}${c.dinamax ? ' dmax' : ''}">
-    <div class="tgo-sprite">
-      <img class="sp" data-name="${tgoEsc(c.pokemon)}" data-slug="${tgoEsc(c.slug || '')}" data-shiny="${c.shiny ? 1 : 0}"${c.imagen ? ` src="${tgoEsc(c.imagen)}"` : ''} alt="" onerror="tgoImgFail(this)">
-      ${c.shiny ? `<img class="tgo-badge" src="${TGO_SHINY_ICON}" alt="Variocolor" title="Variocolor (shiny)">` : ''}
-      ${tgoFormaBadgeHtml(c)}
-    </div>
-    <div class="tgo-name">${tgoEsc(nombre)}</div>
-    <span class="tgo-tag${c.shiny ? ' shiny' : ''}">${c.shiny ? 'Busca variocolor' : 'Busca'}</span>${c.dinamax ? ' <span class="tgo-tag dmax">Dinamax</span>' : ''}
-    ${c.notas ? `<div class="notes">${tgoEsc(c.notas)}</div>` : ''}
-    <div class="owner">${banderaHtml(c.userPais)}👤 ${tgoEsc(c.userNombre)}</div>
-    ${contactoPublicoHtml(c)}
-    ${showDelete ? `<button class="trueque-delete-btn" onclick="tgoEliminar('${c.id}')">${esAdmin ? '✕ Eliminar (admin)' : '🗑️ Eliminar (ya se cerró el trueque)'}</button>` : ''}
-  </div>`;
+  const busca = tgoItemFila({ pokemon: c.pokemon, slug: c.slug, nombreEs: c.nombreEs, shiny: c.shiny, dinamax: c.dinamax, imagen: c.imagen });
+  const ofrece = c.ofrece && c.ofrece.pokemon ? [tgoItemFila(c.ofrece)] : [];
+  return xFilaHtml({
+    quien: `${banderaHtml(c.userPais)}👤 ${tgoEsc(c.userNombre)}`,
+    busca: [busca],
+    ofrece,
+    notas: c.notas ? tgoEsc(c.notas) : '',
+    extra: contactoPublicoHtml(c),
+    borrar: showDelete ? `<button class="trueque-delete-btn" onclick="tgoEliminar('${c.id}')">${esAdmin ? '✕ Eliminar (admin)' : '🗑️ Eliminar (ya se cerró el trueque)'}</button>` : ''
+  });
 }
 
 // Si la imagen guardada ya no carga (o no había), se busca de nuevo.
@@ -11934,8 +12181,16 @@ function tgoImgFail(img) {
   tgoLoadSprite(img, img.dataset.name, img.dataset.shiny === '1', null, img.dataset.slug || '');
 }
 
+// Al abrir una fila de intercambio se cargan los sprites de GO que faltaban.
+document.addEventListener('toggle', e => {
+  const t = e.target;
+  if (t && t.matches && t.matches('details.x-row') && t.open) tgoHydrate(t);
+}, true);
+
 function tgoHydrate(container) {
   container.querySelectorAll('img.sp[data-name]').forEach(im => {
+    const fila = im.closest('details.x-row');
+    if (fila && !fila.open) return; // se cargará al abrir la fila
     if (!im.getAttribute('src')) tgoLoadSprite(im, im.dataset.name, im.dataset.shiny === '1', null, im.dataset.slug || '');
   });
 }
@@ -11948,7 +12203,8 @@ function tgoRender() {
   else if (tgoFilter === 'mega') list = list.filter(c => /^mega /i.test(c.pokemon || '') || /-mega(-[xyz])?$/.test(c.slug || ''));
   else if (tgoFilter === 'dmax') list = list.filter(c => c.dinamax);
   else if (tgoFilter === 'gmax') list = list.filter(c => /gigamax/i.test(c.pokemon || '') || /-gmax$/.test(c.slug || ''));
-  if (term) list = list.filter(c => tgoNorm(c.pokemon).includes(term) || tgoNorm(c.nombreEs).includes(term) || tgoNorm(c.userNombre).includes(term));
+  if (term) list = list.filter(c => tgoNorm(c.pokemon).includes(term) || tgoNorm(c.nombreEs).includes(term) || tgoNorm(c.userNombre).includes(term) ||
+    (c.ofrece && (tgoNorm(c.ofrece.pokemon).includes(term) || tgoNorm(c.ofrece.nombreEs).includes(term))));
   document.getElementById('tgo-count').textContent = tgoCards.length;
   const binder = document.getElementById('tgo-binder');
   binder.innerHTML = list.length
@@ -12019,6 +12275,9 @@ function tgoLoad() {
   if (logo && logo.src) document.getElementById('tgo-head-logo').src = logo.src;
   document.getElementById('tgo-shiny-btn-icon').src = TGO_SHINY_ICON;
   document.getElementById('tgo-preview-badge').src = TGO_SHINY_ICON;
+  document.getElementById('tgo-of-shiny-btn-icon').src = TGO_SHINY_ICON;
+  document.getElementById('tgo-of-preview-badge').src = TGO_SHINY_ICON;
+  tgoOfUpdateBtns();
   if (puede) document.getElementById('tgo-whoami-name').textContent = u.usuario;
   tgoUpdateShinyBtn();
   tgoUpdateDmaxBtn();
