@@ -788,7 +788,7 @@
   .torneo-group[open] > summary .tg-chev { transform: rotate(180deg); }
   .tg-body { padding: 4px 14px 14px; border-top: 1px solid rgba(255,255,255,0.07); }
   .torneo-group-table td.pos { color: var(--muted); font-weight: 800; width: 24px; }
-  .torneo-group-table img { width: 28px; height: 28px; }
+  .torneo-group-table img { width: 28px; height: 28px; object-fit: contain; }
   /* Ficha de un participante (se abre al tocar su fila en la tabla de posiciones) */
   .tg-prow { cursor: pointer; }
   .tg-prow:hover { background: rgba(255,255,255,0.06); }
@@ -798,7 +798,7 @@
   .tg-pdetail.open { display: table-row; }
   .torneo-group-table .tg-pdetail > td { padding: 4px 2px 14px; text-align: left; }
   .tg-pcard { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; background: rgba(255,255,255,0.05); border-radius: 12px; padding: 12px; }
-  .tg-pcard img.tg-big { width: 140px; height: 140px; object-fit: contain; flex: 0 0 auto; margin: 0 auto; }
+  .tg-pcard img.tg-big { width: auto; height: 140px; min-width: 100px; max-width: 220px; object-fit: contain; flex: 0 0 auto; margin: 0 auto; }
   .tg-pinfo { flex: 1; min-width: 200px; }
   .tg-pinfo .tg-pn { font-weight: 800; font-size: 1.05rem; }
   .tg-pinfo .tg-pp { font-size: 0.82rem; color: var(--muted); margin-bottom: 4px; }
@@ -820,7 +820,7 @@
   .tc-score.pend { color: var(--muted); }
   .tc-body { display: grid; grid-template-columns: 1fr auto 1fr; gap: 12px; align-items: center; padding: 10px 4px 16px; }
   .tc-poke { text-align: center; min-width: 0; }
-  .tc-poke img { width: 130px; height: 130px; object-fit: contain; display: block; margin: 0 auto 4px; }
+  .tc-poke img { width: auto; height: 130px; min-width: 90px; max-width: 100%; object-fit: contain; display: block; margin: 0 auto 4px; }
   .tc-poke .tc-pname { font-weight: 800; font-size: 0.92rem; }
   .tc-poke .tc-ppoke { font-size: 0.74rem; color: var(--muted); }
   .tc-center { display: flex; flex-direction: column; align-items: center; gap: 10px; }
@@ -832,7 +832,7 @@
   .torneo-bracket.ro .torneo-match-slot:hover:not(.empty) { background: transparent; }
   .torneo-bracket.ro .torneo-match-slot.winner:hover { background: rgba(76,175,80,0.25); }
   @media (max-width: 560px) {
-    .tc-poke img { width: 92px; height: 92px; }
+    .tc-poke img { height: 92px; min-width: 70px; }
     .tc-center .pokeball-btn { width: 26px; height: 26px; }
     .tc-body { gap: 6px; }
   }
@@ -5097,7 +5097,23 @@ function getRetroSpriteCandidates(data) {
 }
 
 // ── CARGA DE SPRITES CON FUENTES ALTERNATIVAS ───────────────────────────
-async function getSpriteCandidates(name) {
+// Nombre que usa Pokémon Showdown para sus sprites animados (/sprites/ani/):
+// el nombre base va todo junto y sin guiones (mrmime, hooh, porygonz) y la
+// forma se pega con UN guion y sin separadores internos (vulpix-hisui).
+function getShowdownAnimId(name) {
+  const { base, form } = parseGoFormName(name);
+  const baseId = getPokemonSlug(base).replace(/[^a-z0-9]/g, '');
+  if (form === 'normal') return baseId;
+  const suf = (GO_FORM_TO_SPRITE_SUFFIX[form] || form).replace(/[^a-z0-9]/g, '');
+  return `${baseId}-${suf}`;
+}
+
+// opts.animado = true → pone primero sprites ANIMADOS (GIF) con el mismo diseño
+// 3D en dos fuentes: 1) PokeAPI other/showdown (por número) y, si ese número
+// no tiene GIF, 2) Pokémon Showdown /ani/ (por nombre). Si ninguna existe,
+// sigue la cadena de siempre (HOME, artwork oficial, etc.).
+async function getSpriteCandidates(name, opts) {
+  const animado = !!(opts && opts.animado);
   // La variante "Oscuro" (Pokémon Sombra) usa el mismo sprite que su forma
   // base: solo cambia el nombre/registro, no el Pokémon en sí. Se le quita
   // la palabra antes de resolver el sprite para que no rompa la búsqueda.
@@ -5105,16 +5121,23 @@ async function getSpriteCandidates(name) {
   const { form } = parseGoFormName(nombreParaSprite);
   const slug = getSpriteSlug(nombreParaSprite);
   const candidates = [];
+  const animados = [];
   try {
     const res = await fetch(`https://pokeapi.co/api/v2/pokemon/${slug}`);
     if (res.ok) {
       const data = await res.json();
+      if (animado && data.id) {
+        // Fuente base: PokeAPI other/showdown (el campo de la API puede venir
+        // vacío aunque el archivo exista, por eso también se arma por número).
+        animados.push(data.sprites?.other?.showdown?.front_default
+          || `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/showdown/${data.id}.gif`);
+      }
       // Solo aplica a la forma base: las formas regionales no existían en
       // los juegos clásicos (no tienen sprite retro ni ícono) y usan
       // sufijos propios de GO que no siempre coinciden con los que maneja
       // PokeAPI, así que esas van directo a la cadena de abajo (HOME /
       // artwork oficial / PokemonDB / Showdown).
-      if (form === 'normal') {
+      if (form === 'normal' && !animado) {
         // Estilo retro/ícono (8/16 bits), acorde al espíritu "8 Bits" de la
         // app. Va primero porque el ícono de Pokémon GO (PokeMiners), que
         // antes era la primera opción, viene con tamaños y recortes
@@ -5136,7 +5159,12 @@ async function getSpriteCandidates(name) {
   } catch (e) { /* sin conexión, seguimos con las demás fuentes */ }
   candidates.push(`https://img.pokemondb.net/sprites/home/normal/${slug}.png`);
   candidates.push(`https://play.pokemonshowdown.com/sprites/gen5/${slug}.png`);
-  return candidates;
+  if (animado) {
+    // Respaldo con el mismo diseño: Showdown /ani/ por nombre (cubre los
+    // números que PokeAPI no tiene y las formas regionales).
+    animados.push(`https://play.pokemonshowdown.com/sprites/ani/${getShowdownAnimId(nombreParaSprite)}.gif`);
+  }
+  return [...new Set([...animados, ...candidates])];
 }
 
 function loadSpriteWithFallback(imgEl, candidates, onSuccess, onFail) {
@@ -5151,9 +5179,15 @@ function loadSpriteWithFallback(imgEl, candidates, onSuccess, onFail) {
     // marcar para no arriesgar que fallen por CORS si ese servidor no lo
     // soporta.
     imgEl.crossOrigin = url.includes('raw.githubusercontent.com') ? 'anonymous' : null;
+    // Los GIF animados NO se recortan (el canvas los dejaría quietos, solo
+    // con el primer cuadro) y se suavizan en vez de pixelarse, porque son
+    // renders 3D y no pixel art. Para el resto se restaura el estilo original.
+    const esGif = /\.gif(\?|$)/i.test(url);
+    if (imgEl._irOriginal === undefined) imgEl._irOriginal = imgEl.style.imageRendering || '';
+    imgEl.style.imageRendering = esGif ? 'auto' : imgEl._irOriginal;
     imgEl.onerror = tryNext;
     imgEl.onload = () => {
-      trimTransparentPadding(imgEl);
+      if (!esGif) trimTransparentPadding(imgEl);
       if (onSuccess) onSuccess(url);
     };
     imgEl.src = url;
@@ -10419,29 +10453,39 @@ function computeGroupStandings(g) {
 
 // ── Ficha de un participante en la tabla de grupos (la ve cualquiera) ──
 const torneoJugAbiertos = new Set();
-const torneoSpriteCache = new Map(); // nombre del Pokémon -> Promise con la lista de imágenes ordenada
+const torneoSpriteCache = new Map(); // nombre del Pokémon -> Promise con la lista de imágenes
 
-function torneoSpritesGrandes(pokemon) {
+// Imágenes de un participante: primero el GIF animado (PokeAPI showdown y, si
+// falta, Showdown /ani/) y después las estáticas HOME/artwork como respaldo.
+function torneoSpritesAnimados(pokemon) {
   if (!torneoSpriteCache.has(pokemon)) {
-    // Para verlo grande se prefiere el render HOME o el artwork oficial; los
-    // íconos pequeños (los que se guardan al agregar al participante) quedan de último recurso.
-    const pref = u => /\/other\/home\//.test(u) ? 0 : /official-artwork/.test(u) ? 1 : /pokemondb\.net\/sprites\/home/.test(u) ? 2 : 3;
-    torneoSpriteCache.set(pokemon, getSpriteCandidates(pokemon).then(cands =>
-      cands.map((u, i) => [u, i]).sort((x, y) => pref(x[0]) - pref(y[0]) || x[1] - y[1]).map(x => x[0])
-    ).catch(() => []));
+    torneoSpriteCache.set(pokemon, getSpriteCandidates(pokemon, { animado: true }).catch(() => []));
   }
   return torneoSpriteCache.get(pokemon);
 }
 
-function torneoHidratarGrandes(cont) {
-  cont.querySelectorAll('img.tg-big[data-poke]').forEach(im => {
+// Carga las imágenes animadas (img[data-anim]) que ya están a la vista; las
+// que están dentro de un desplegable cerrado esperan a que se abra.
+// data-fb es la imagen guardada del participante, por si no hay ninguna animada.
+function torneoHidratarAnimados(root) {
+  root.querySelectorAll('img[data-anim]').forEach(im => {
     if (im.dataset.listo) return;
+    if (im.closest('details:not([open])')) return;
+    const ficha = im.closest('tr.tg-pdetail');
+    if (ficha && !ficha.classList.contains('open')) return;
     im.dataset.listo = '1';
-    torneoSpritesGrandes(im.dataset.poke).then(cands => {
-      if (cands.length) loadSpriteWithFallback(im, cands, null, () => { im.style.visibility = 'hidden'; });
+    const fallback = () => { if (im.dataset.fb) { im.crossOrigin = null; im.src = im.dataset.fb; } else im.style.visibility = 'hidden'; };
+    torneoSpritesAnimados(im.dataset.anim).then(cands => {
+      if (cands.length) loadSpriteWithFallback(im, cands, null, fallback); else fallback();
     });
   });
 }
+
+// Al abrir un grupo, los cruces o un cruce se cargan sus sprites.
+document.addEventListener('toggle', e => {
+  const t = e.target;
+  if (t && t.matches && t.matches('details.torneo-group, details.torneo-crosses, details.tc-match') && t.open) torneoHidratarAnimados(t);
+}, true);
 
 function toggleJugadorGrupo(key) {
   const abrir = !torneoJugAbiertos.has(key);
@@ -10449,7 +10493,7 @@ function toggleJugadorGrupo(key) {
   document.querySelectorAll('[data-pkey]').forEach(el => {
     if (el.dataset.pkey !== key) return;
     el.classList.toggle('open', abrir);
-    if (abrir && el.classList.contains('tg-pdetail')) torneoHidratarGrandes(el);
+    if (abrir && el.classList.contains('tg-pdetail')) torneoHidratarAnimados(el);
   });
 }
 
@@ -10478,7 +10522,7 @@ function renderTorneoGroups() {
       const abierto = torneoJugAbiertos.has(key) ? ' open' : '';
       return `<tr class="tg-prow${abierto}" data-pkey="${esc(key)}" onclick="toggleJugadorGrupo('${esc(key)}')" title="Ver ficha de ${esc(p.name)}">
         <td class="pos">${pos + 1}</td>
-        <td><img src="${esc(p.sprite||'')}" onerror="this.style.visibility='hidden'">${esc(p.name)}<span class="tg-pchev">▾</span></td>
+        <td><img src="${esc(p.sprite||'')}" data-anim="${esc(p.pokemon)}" data-fb="${esc(p.sprite||'')}" onerror="this.style.visibility='hidden'">${esc(p.name)}<span class="tg-pchev">▾</span></td>
         <td>${s.played}</td>
         <td>${s.wins}</td>
         <td>${s.losses}</td>
@@ -10488,7 +10532,7 @@ function renderTorneoGroups() {
       <tr class="tg-pdetail${abierto}" data-pkey="${esc(key)}">
         <td colspan="7">
           <div class="tg-pcard">
-            <img class="tg-big" data-poke="${esc(p.pokemon)}" alt="${esc(p.pokemon)}">
+            <img class="tg-big" data-anim="${esc(p.pokemon)}" data-fb="${esc(p.sprite||'')}" alt="${esc(p.pokemon)}">
             <div class="tg-pinfo">
               <div class="tg-pn">${esc(p.name)}</div>
               <div class="tg-pp">${esc(p.pokemon)}</div>
@@ -10527,17 +10571,17 @@ function renderTorneoGroups() {
           return `<button class="pokeball-btn ${cls}" title="${esc(title)}" onclick="togglePokeball(${gi},${mi},${ri})"></button>`;
         }).join('');
         const poke = (p, dot) => `<div class="tc-poke">
-            <img src="${esc(p.sprite||'')}" alt="${esc(p.pokemon)}" onerror="this.style.visibility='hidden'">
+            <img src="${esc(p.sprite||'')}" data-anim="${esc(p.pokemon)}" data-fb="${esc(p.sprite||'')}" alt="${esc(p.pokemon)}" onerror="this.style.visibility='hidden'">
             <div class="tc-pname"><span class="torneo-color-dot ${dot}"></span> ${esc(p.name)}</div>
             <div class="tc-ppoke">${esc(p.pokemon)}</div>
           </div>`;
         return `<details class="tc-match" data-key="m${gi}-${mi}">
           <summary>
-            <img src="${esc(pa.sprite||'')}" onerror="this.style.visibility='hidden'">
+            <img src="${esc(pa.sprite||'')}" data-anim="${esc(pa.pokemon)}" data-fb="${esc(pa.sprite||'')}" onerror="this.style.visibility='hidden'">
             <span class="tc-name">${esc(pa.name)}</span>
             <span class="tc-vs">vs</span>
             <span class="tc-name">${esc(pb.name)}</span>
-            <img src="${esc(pb.sprite||'')}" onerror="this.style.visibility='hidden'">
+            <img src="${esc(pb.sprite||'')}" data-anim="${esc(pb.pokemon)}" data-fb="${esc(pb.sprite||'')}" onerror="this.style.visibility='hidden'">
             <span class="tc-score${decided || jugadas ? '' : ' pend'}">${resumen}</span>
           </summary>
           <div class="tc-body">
@@ -10574,7 +10618,7 @@ function renderTorneoGroups() {
 
   // Restauramos el estado abierto/cerrado que tenían los desplegables antes de renderizar
   grid.querySelectorAll('details[data-key]').forEach(d => { if (abiertos.has(d.dataset.key)) d.open = true; });
-  grid.querySelectorAll('tr.tg-pdetail.open').forEach(torneoHidratarGrandes);
+  torneoHidratarAnimados(grid);
 }
 
 // Cicla el estado de una pokébola: vacía → gana el de la izquierda → gana el de la derecha → vacía
