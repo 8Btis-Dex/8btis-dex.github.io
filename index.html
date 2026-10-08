@@ -774,6 +774,68 @@
     width: 34px; text-align: center; background: rgba(255,255,255,0.08);
     border: 1px solid rgba(255,255,255,0.15); color: #fff; border-radius: 4px;
   }
+
+  /* ── Torneos: grupos desplegables y cruces grandes ── */
+  .torneo-groups-grid { display: flex; flex-direction: column; gap: 8px; }
+  .torneo-group { background: var(--card); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; }
+  .torneo-group[open] { border-color: rgba(255,214,0,0.45); }
+  .torneo-group > summary { list-style: none; cursor: pointer; display: flex; align-items: center; gap: 10px; padding: 12px 14px; }
+  .torneo-group > summary::-webkit-details-marker { display: none; }
+  .torneo-group > summary:hover { background: rgba(255,255,255,0.04); border-radius: 12px; }
+  .tg-name { font-family: 'Press Start 2P', monospace; font-size: 0.6rem; color: var(--yellow); }
+  .tg-meta { flex: 1; min-width: 0; font-size: 0.74rem; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .tg-chev { color: var(--muted); transition: transform .15s; }
+  .torneo-group[open] > summary .tg-chev { transform: rotate(180deg); }
+  .tg-body { padding: 4px 14px 14px; border-top: 1px solid rgba(255,255,255,0.07); }
+  .torneo-group-table td.pos { color: var(--muted); font-weight: 800; width: 24px; }
+  .torneo-group-table img { width: 28px; height: 28px; }
+  /* Ficha de un participante (se abre al tocar su fila en la tabla de posiciones) */
+  .tg-prow { cursor: pointer; }
+  .tg-prow:hover { background: rgba(255,255,255,0.06); }
+  .tg-pchev { display: inline-block; margin-left: 6px; color: var(--muted); font-size: 0.7rem; transition: transform .15s; }
+  .tg-prow.open .tg-pchev { transform: rotate(180deg); }
+  .tg-pdetail { display: none; }
+  .tg-pdetail.open { display: table-row; }
+  .torneo-group-table .tg-pdetail > td { padding: 4px 2px 14px; text-align: left; }
+  .tg-pcard { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; background: rgba(255,255,255,0.05); border-radius: 12px; padding: 12px; }
+  .tg-pcard img.tg-big { width: 140px; height: 140px; object-fit: contain; flex: 0 0 auto; margin: 0 auto; }
+  .tg-pinfo { flex: 1; min-width: 200px; }
+  .tg-pinfo .tg-pn { font-weight: 800; font-size: 1.05rem; }
+  .tg-pinfo .tg-pp { font-size: 0.82rem; color: var(--muted); margin-bottom: 4px; }
+  .tg-pinfo .tg-pos { font-size: 0.72rem; color: var(--yellow); font-weight: 800; margin-bottom: 8px; text-transform: uppercase; }
+  .tg-stats { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; }
+  .tg-stat { background: rgba(0,0,0,0.28); border-radius: 8px; padding: 6px 2px; text-align: center; }
+  .tg-stat b { display: block; font-size: 1.1rem; }
+  .tg-stat span { font-size: 0.6rem; color: var(--muted); text-transform: uppercase; }
+  .tg-stat.total b { color: var(--yellow); }
+  .torneo-crosses > summary { font-size: 0.78rem; padding: 8px 0; }
+  .tc-match { border-top: 1px solid rgba(255,255,255,0.08); }
+  .tc-match > summary { list-style: none; cursor: pointer; display: flex; align-items: center; gap: 8px; padding: 8px 4px; font-size: 0.82rem; font-weight: 700; }
+  .tc-match > summary::-webkit-details-marker { display: none; }
+  .tc-match > summary:hover { background: rgba(255,255,255,0.05); }
+  .tc-match > summary img { width: 30px; height: 30px; object-fit: contain; flex: 0 0 auto; }
+  .tc-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .tc-vs { color: var(--muted); font-size: 0.7rem; font-weight: 400; }
+  .tc-score { margin-left: auto; font-size: 0.72rem; color: var(--yellow); white-space: nowrap; }
+  .tc-score.pend { color: var(--muted); }
+  .tc-body { display: grid; grid-template-columns: 1fr auto 1fr; gap: 12px; align-items: center; padding: 10px 4px 16px; }
+  .tc-poke { text-align: center; min-width: 0; }
+  .tc-poke img { width: 130px; height: 130px; object-fit: contain; display: block; margin: 0 auto 4px; }
+  .tc-poke .tc-pname { font-weight: 800; font-size: 0.92rem; }
+  .tc-poke .tc-ppoke { font-size: 0.74rem; color: var(--muted); }
+  .tc-center { display: flex; flex-direction: column; align-items: center; gap: 10px; }
+  .tc-center .torneo-cross-balls { gap: 8px; }
+  .tc-center .pokeball-btn { width: 32px; height: 32px; }
+  .tc-center .pokeball-btn::after { width: 10px; height: 10px; }
+  .tc-center .torneo-cross-winner-badge { font-size: 0.8rem; text-align: center; margin: 0; }
+  .torneo-bracket.ro .torneo-match-slot { cursor: default; }
+  .torneo-bracket.ro .torneo-match-slot:hover:not(.empty) { background: transparent; }
+  .torneo-bracket.ro .torneo-match-slot.winner:hover { background: rgba(76,175,80,0.25); }
+  @media (max-width: 560px) {
+    .tc-poke img { width: 92px; height: 92px; }
+    .tc-center .pokeball-btn { width: 26px; height: 26px; }
+    .tc-body { gap: 6px; }
+  }
   .torneo-crosses { margin-top: 10px; }
   .torneo-crosses summary {
     cursor: pointer; font-size: 0.72rem; color: var(--yellow); font-weight: 800;
@@ -3546,6 +3608,7 @@
       <div class="torneo-header">
         <button class="btn" style="background:#444;color:#fff" onclick="backToTorneoGameSelect()">◀ Cambiar juego</button>
         <div class="torneo-header-title" id="torneo-header-title"></div>
+        <button class="btn" id="torneo-admin-btn" style="margin-left:auto;padding:6px 12px;font-size:0.78rem" onclick="torneoAdminToggle()">🔑 Admin</button>
       </div>
 
       <div class="torneo-tabs">
@@ -3556,7 +3619,7 @@
 
       <!-- PARTICIPANTES -->
       <div class="torneo-panel active" id="torneo-panel-participantes">
-        <div class="torneo-toolbar">
+        <div class="torneo-toolbar torneo-admin-only" style="display:none">
           <button class="btn btn-yellow" onclick="showAddParticipant()">➕ Agregar participante</button>
         </div>
         <div class="torneo-participants-list" id="torneo-participants-list"></div>
@@ -3564,7 +3627,7 @@
 
       <!-- GRUPOS -->
       <div class="torneo-panel" id="torneo-panel-grupos">
-        <div class="torneo-toolbar">
+        <div class="torneo-toolbar torneo-admin-only" style="display:none">
           <label style="font-size:0.85rem">N° de grupos:</label>
           <input type="number" id="torneo-num-grupos" min="1" max="8" value="2" class="password-input" style="width:60px">
           <button class="btn btn-primary" onclick="generarGrupos()">🔀 Generar grupos</button>
@@ -3574,7 +3637,7 @@
 
       <!-- ELIMINATORIAS -->
       <div class="torneo-panel" id="torneo-panel-eliminatorias">
-        <div class="torneo-toolbar">
+        <div class="torneo-toolbar torneo-admin-only" style="display:none">
           <button class="btn btn-primary" onclick="generarBracket()">🔀 Generar eliminatorias</button>
         </div>
         <div class="torneo-bracket" id="torneo-bracket"></div>
@@ -10040,9 +10103,112 @@ function initTorneoLogos() {
 }
 initTorneoLogos();
 
+// ── MODO ADMINISTRADOR Y SINCRONIZACIÓN CON LA NUBE ───────────────────────
+// Solo el administrador puede editar el torneo (agregar o quitar participantes,
+// generar grupos y eliminatorias, cargar resultados). El resto solo lo ve.
+// Es administrador quien entró como admin, quien desbloqueó «Datos», o quien
+// pulsa «🔑 Admin» acá y escribe la contraseña (la misma de Firebase).
+// Los datos se guardan en este dispositivo y, si es el admin, también en
+// Firestore (appdata/torneos) para que los demás los vean desde su aparato.
+let torneoAdminUnlocked = false;
+let torneosNubeListo = false;      // ya llegó la primera respuesta de Firestore
+let torneosNubeExiste = false;     // el documento ya existe en la nube
+let torneosNubePendiente = false;  // el admin editó antes de que llegara la nube
+
+function torneoAdminPorSesion() {
+  return !!((typeof datosUnlocked !== 'undefined' && datosUnlocked) || (window.appSession && window.appSession.tipo === 'admin'));
+}
+function torneoEsAdmin() { return torneoAdminUnlocked || torneoAdminPorSesion(); }
+
+function torneoActualizarAdminUI() {
+  const admin = torneoEsAdmin();
+  document.querySelectorAll('.torneo-admin-only').forEach(e => { e.style.display = admin ? '' : 'none'; });
+  const btn = document.getElementById('torneo-admin-btn');
+  if (btn) {
+    btn.style.display = torneoAdminPorSesion() ? 'none' : '';
+    btn.textContent = torneoAdminUnlocked ? '🔓 Salir de modo admin' : '🔑 Admin';
+    btn.classList.toggle('btn-danger', torneoAdminUnlocked);
+  }
+}
+
+function torneoRefrescarVista() {
+  if (currentTorneoGame) showTorneoTab(currentTorneoTab);
+}
+
+function torneoAdminToggle() {
+  if (torneoAdminUnlocked) {
+    torneoAdminUnlocked = false;
+    torneoRefrescarVista();
+    showToast('🔒 Modo administrador desactivado');
+    return;
+  }
+  if (!window._fbAuth) { showToast('⚠️ Todavía no se conectó a la nube, espera un momento y vuelve a intentar.', true); return; }
+  const input = prompt('Contraseña de administrador:');
+  if (input == null) return;
+  window._fbAuth.signInWithEmailAndPassword(ADMIN_EMAIL, input)
+    .then(() => {
+      torneoAdminUnlocked = true;
+      torneoSubirSiNubeVacia();
+      torneoRefrescarVista();
+      showToast('🔓 Modo administrador activado: ya puedes editar el torneo');
+    })
+    .catch(() => { showToast('❌ Contraseña incorrecta', true); });
+}
+
+function torneoHayDatosLocales() {
+  return ['champions', 'go', 'tcg'].some(m => dataTorneos[m] && (dataTorneos[m].participants.length || dataTorneos[m].groups.length || dataTorneos[m].bracket.length));
+}
+
+function torneoSubirNube() {
+  if (!window._fbDb || !window._fbAuth || !window._fbAuth.currentUser || !torneoEsAdmin()) return;
+  if (!torneosNubeListo) { torneosNubePendiente = true; return; } // se sube cuando llegue la primera respuesta
+  window._fbDb.collection('appdata').doc('torneos').set({
+    data: JSON.stringify(dataTorneos),
+    actualizado: firebase.firestore.FieldValue.serverTimestamp()
+  }).then(() => { torneosNubeExiste = true; })
+    .catch(e => {
+      console.warn('No se pudo guardar el torneo en la nube', e);
+      showToast('⚠️ No se pudo sincronizar el torneo con la nube (reglas de Firestore para appdata/torneos). Se guardó solo en este dispositivo.', true);
+    });
+}
+
+// Si la nube todavía no tiene torneos y el admin tiene datos en este dispositivo, los sube.
+function torneoSubirSiNubeVacia() {
+  if (torneosNubeListo && !torneosNubeExiste && torneoHayDatosLocales()) torneoSubirNube();
+}
+
+function iniciarTorneosNube() {
+  if (!window._fbDb) { torneosNubeListo = true; return; }
+  window._fbDb.collection('appdata').doc('torneos').onSnapshot(doc => {
+    if (doc.metadata.hasPendingWrites) return; // es un eco de lo que acaba de guardar este mismo dispositivo
+    if (doc.exists) {
+      torneosNubeExiste = true;
+      try {
+        const parsed = JSON.parse(doc.data().data);
+        ['champions', 'go', 'tcg'].forEach(m => {
+          if (parsed[m]) dataTorneos[m] = Object.assign(EMPTY_TORNEO(), parsed[m]);
+        });
+        try { localStorage.setItem('torneosData', JSON.stringify(dataTorneos)); } catch (e) {}
+      } catch (e) { console.warn('Datos de torneos en la nube ilegibles', e); }
+      torneosNubePendiente = false; // gana lo que ya había en la nube
+      torneosNubeListo = true;
+      torneoRefrescarVista();
+    } else {
+      torneosNubeExiste = false;
+      torneosNubeListo = true;
+      if (torneosNubePendiente || torneoEsAdmin()) { torneosNubePendiente = false; torneoSubirSiNubeVacia(); }
+    }
+  }, err => {
+    console.log('No se pudo escuchar los torneos en la nube', err);
+    torneosNubeListo = true;
+  });
+}
+
 function persistTorneos() {
   try { localStorage.setItem('torneosData', JSON.stringify(dataTorneos)); } catch (e) {}
+  torneoSubirNube();
 }
+iniciarTorneosNube();
 
 // ── NAVEGACIÓN ───────────────────────────────────────────────────────────
 
@@ -10051,6 +10217,9 @@ function selectTorneoGame(mode) {
   document.getElementById('torneo-game-select').style.display = 'none';
   document.getElementById('torneo-body').style.display = '';
   document.getElementById('torneo-header-title').textContent = TORNEO_GAME_TITLES[mode] || '';
+  document.getElementById('torneo-groups-grid').innerHTML = ''; // no arrastrar desplegables abiertos de otro juego
+  torneoJugAbiertos.clear();
+  torneoSubirSiNubeVacia();
   showTorneoTab('participantes');
 }
 
@@ -10062,6 +10231,7 @@ function backToTorneoGameSelect() {
 
 function showTorneoTab(tab) {
   currentTorneoTab = tab;
+  torneoActualizarAdminUI();
   document.querySelectorAll('.torneo-tab-btn').forEach(b => b.classList.remove('active'));
   document.querySelectorAll('.torneo-panel').forEach(p => p.classList.remove('active'));
   const btn = document.getElementById('torneotab-' + tab);
@@ -10092,8 +10262,11 @@ function getParticipant(id) {
 function renderTorneoParticipants() {
   const list = document.getElementById('torneo-participants-list');
   const torneo = dataTorneos[currentTorneoGame];
+  const admin = torneoEsAdmin();
   if (!torneo || !torneo.participants.length) {
-    list.innerHTML = '<div class="mazo-empty-hint">Todavía no hay participantes. Agregá el primero con el botón de arriba.</div>';
+    list.innerHTML = '<div class="mazo-empty-hint">' + (admin
+      ? 'Todavía no hay participantes. Agregá el primero con el botón de arriba.'
+      : 'Todavía no hay participantes.') + '</div>';
     return;
   }
   list.innerHTML = torneo.participants.map(p => `
@@ -10103,13 +10276,13 @@ function renderTorneoParticipants() {
         <div class="torneo-participant-name">${esc(p.name)}</div>
         <div class="torneo-participant-pokemon">${esc(p.pokemon)}</div>
       </div>
-      <button class="torneo-participant-remove" onclick="removeParticipant('${p.id}')" title="Quitar del torneo">✖</button>
+      ${admin ? `<button class="torneo-participant-remove" onclick="removeParticipant('${p.id}')" title="Quitar del torneo">✖</button>` : ''}
     </div>
   `).join('');
 }
 
 function showAddParticipant() {
-  if (!currentTorneoGame) return;
+  if (!currentTorneoGame || !torneoEsAdmin()) return;
   document.getElementById('participant-name').value = '';
   document.getElementById('participant-pokemon').value = '';
   document.getElementById('participant-sprite-preview').innerHTML = '';
@@ -10140,6 +10313,7 @@ function showAddParticipant() {
 }
 
 async function confirmAddParticipant() {
+  if (!torneoEsAdmin()) return;
   const name = document.getElementById('participant-name').value.trim();
   const pokemon = document.getElementById('participant-pokemon').value.trim();
   if (!name) { showToast('❌ Ingresa el nombre del participante', true); return; }
@@ -10163,6 +10337,7 @@ async function confirmAddParticipant() {
 }
 
 function removeParticipant(id) {
+  if (!torneoEsAdmin()) return;
   const torneo = dataTorneos[currentTorneoGame];
   if (!torneo) return;
   torneo.participants = torneo.participants.filter(p => p.id !== id);
@@ -10181,6 +10356,7 @@ function removeParticipant(id) {
 // ── GRUPOS ─────────────────────────────────────────────────────────────────
 
 function generarGrupos() {
+  if (!torneoEsAdmin()) return;
   const torneo = dataTorneos[currentTorneoGame];
   if (!torneo || torneo.participants.length < 2) {
     showToast('❌ Necesitas al menos 2 participantes', true);
@@ -10241,85 +10417,170 @@ function computeGroupStandings(g) {
     .sort((x, y) => y.pts - x.pts || y.roundWins - x.roundWins);
 }
 
+// ── Ficha de un participante en la tabla de grupos (la ve cualquiera) ──
+const torneoJugAbiertos = new Set();
+const torneoSpriteCache = new Map(); // nombre del Pokémon -> Promise con la lista de imágenes ordenada
+
+function torneoSpritesGrandes(pokemon) {
+  if (!torneoSpriteCache.has(pokemon)) {
+    // Para verlo grande se prefiere el render HOME o el artwork oficial; los
+    // íconos pequeños (los que se guardan al agregar al participante) quedan de último recurso.
+    const pref = u => /\/other\/home\//.test(u) ? 0 : /official-artwork/.test(u) ? 1 : /pokemondb\.net\/sprites\/home/.test(u) ? 2 : 3;
+    torneoSpriteCache.set(pokemon, getSpriteCandidates(pokemon).then(cands =>
+      cands.map((u, i) => [u, i]).sort((x, y) => pref(x[0]) - pref(y[0]) || x[1] - y[1]).map(x => x[0])
+    ).catch(() => []));
+  }
+  return torneoSpriteCache.get(pokemon);
+}
+
+function torneoHidratarGrandes(cont) {
+  cont.querySelectorAll('img.tg-big[data-poke]').forEach(im => {
+    if (im.dataset.listo) return;
+    im.dataset.listo = '1';
+    torneoSpritesGrandes(im.dataset.poke).then(cands => {
+      if (cands.length) loadSpriteWithFallback(im, cands, null, () => { im.style.visibility = 'hidden'; });
+    });
+  });
+}
+
+function toggleJugadorGrupo(key) {
+  const abrir = !torneoJugAbiertos.has(key);
+  if (abrir) torneoJugAbiertos.add(key); else torneoJugAbiertos.delete(key);
+  document.querySelectorAll('[data-pkey]').forEach(el => {
+    if (el.dataset.pkey !== key) return;
+    el.classList.toggle('open', abrir);
+    if (abrir && el.classList.contains('tg-pdetail')) torneoHidratarGrandes(el);
+  });
+}
+
 function renderTorneoGroups() {
   const grid = document.getElementById('torneo-groups-grid');
   const torneo = dataTorneos[currentTorneoGame];
+  const admin = torneoEsAdmin();
   if (!torneo || !torneo.groups.length) {
-    grid.innerHTML = '<div class="mazo-empty-hint">Todavía no hay grupos generados. Elegí cuántos grupos querés y tocá "Generar grupos".</div>';
+    grid.innerHTML = '<div class="mazo-empty-hint">' + (admin
+      ? 'Todavía no hay grupos generados. Elegí cuántos grupos querés y tocá "Generar grupos".'
+      : 'Todavía no hay grupos.') + '</div>';
     return;
   }
 
-  // Recordamos qué desplegables de cruces estaban abiertos para no cerrarlos al re-renderizar
-  const openState = Array.from(grid.querySelectorAll('.torneo-crosses')).map(el => el.open);
+  // Recordamos qué desplegables (grupos y cruces) estaban abiertos para no cerrarlos al re-renderizar
+  const abiertos = new Set(Array.from(grid.querySelectorAll('details[data-key]')).filter(d => d.open).map(d => d.dataset.key));
 
   grid.innerHTML = torneo.groups.map((g, gi) => {
     const standings = computeGroupStandings(g);
-    const rows = standings.map(s => {
+    const hayJugados = standings.some(s => s.played > 0);
+    const lider = hayJugados ? getParticipant(standings[0].id) : null;
+    const rows = standings.map((s, pos) => {
       const p = getParticipant(s.id);
       if (!p) return '';
-      return `<tr>
-        <td><img src="${esc(p.sprite||'')}" onerror="this.style.visibility='hidden'">${esc(p.name)}</td>
+      const key = 'g' + gi + '-' + s.id;
+      const abierto = torneoJugAbiertos.has(key) ? ' open' : '';
+      return `<tr class="tg-prow${abierto}" data-pkey="${esc(key)}" onclick="toggleJugadorGrupo('${esc(key)}')" title="Ver ficha de ${esc(p.name)}">
+        <td class="pos">${pos + 1}</td>
+        <td><img src="${esc(p.sprite||'')}" onerror="this.style.visibility='hidden'">${esc(p.name)}<span class="tg-pchev">▾</span></td>
         <td>${s.played}</td>
         <td>${s.wins}</td>
         <td>${s.losses}</td>
         <td title="Rondas ganadas (desempate)">${s.roundWins}</td>
         <td><b>${s.pts}</b></td>
+      </tr>
+      <tr class="tg-pdetail${abierto}" data-pkey="${esc(key)}">
+        <td colspan="7">
+          <div class="tg-pcard">
+            <img class="tg-big" data-poke="${esc(p.pokemon)}" alt="${esc(p.pokemon)}">
+            <div class="tg-pinfo">
+              <div class="tg-pn">${esc(p.name)}</div>
+              <div class="tg-pp">${esc(p.pokemon)}</div>
+              <div class="tg-pos">${pos + 1}º en ${esc(g.name)}</div>
+              <div class="tg-stats">
+                <div class="tg-stat" title="Partidos jugados"><b>${s.played}</b><span>PJ</span></div>
+                <div class="tg-stat" title="Ganados"><b>${s.wins}</b><span>G</span></div>
+                <div class="tg-stat" title="Perdidos"><b>${s.losses}</b><span>P</span></div>
+                <div class="tg-stat" title="Rondas ganadas (desempate)"><b>${s.roundWins}</b><span>RG</span></div>
+                <div class="tg-stat total" title="Puntos totales"><b>${s.pts}</b><span>Pts</span></div>
+              </div>
+            </div>
+          </div>
+        </td>
       </tr>`;
     }).join('');
 
-    const matches = (g.matches || []).map((m, mi) => {
-      const pa = getParticipant(m.a);
-      const pb = getParticipant(m.b);
-      if (!pa || !pb) return '';
-      const aWins = m.rounds.filter(r => r === 1).length;
-      const bWins = m.rounds.filter(r => r === 2).length;
-      const decided = m.rounds.every(r => r !== 0);
-      const winnerName = decided ? (aWins > bWins ? pa.name : pb.name) : null;
-      const balls = [0, 1, 2].map(ri => {
-        const state = m.rounds[ri]; // 0=vacía, 1=gana A (blanco), 2=gana B (rojo)
-        const cls = state === 1 ? 'pb-a' : state === 2 ? 'pb-b' : 'pb-empty';
-        const title = state === 1 ? `Ronda ${ri+1}: ganó ${pa.name}` : state === 2 ? `Ronda ${ri+1}: ganó ${pb.name}` : `Ronda ${ri+1}: sin jugar`;
-        return `<button class="pokeball-btn ${cls}" title="${esc(title)}" onclick="togglePokeball(${gi},${mi},${ri})"></button>`;
-      }).join('');
-      return `<div class="torneo-cross-match">
-        <div class="torneo-cross-row">
-          <div class="torneo-cross-player">
-            <span class="torneo-color-dot dot-white" title="${esc(pa.name)}"></span>
+    // Cruces: solo los ve el administrador. Cada uno es una línea; al tocarla
+    // se abre el cuadro grande para cargar el resultado.
+    let crucesHtml = '';
+    if (admin) {
+      const matches = (g.matches || []).map((m, mi) => {
+        const pa = getParticipant(m.a);
+        const pb = getParticipant(m.b);
+        if (!pa || !pb) return '';
+        const aWins = m.rounds.filter(r => r === 1).length;
+        const bWins = m.rounds.filter(r => r === 2).length;
+        const jugadas = m.rounds.filter(r => r !== 0).length;
+        const decided = jugadas === m.rounds.length;
+        const winnerName = decided ? (aWins > bWins ? pa.name : pb.name) : null;
+        const resumen = decided ? `${aWins}-${bWins} · 🏆 ${esc(winnerName)}` : (jugadas ? `${aWins}-${bWins} · en juego` : 'Pendiente');
+        const balls = [0, 1, 2].map(ri => {
+          const state = m.rounds[ri]; // 0=vacía, 1=gana A (blanco), 2=gana B (rojo)
+          const cls = state === 1 ? 'pb-a' : state === 2 ? 'pb-b' : 'pb-empty';
+          const title = state === 1 ? `Ronda ${ri+1}: ganó ${pa.name}` : state === 2 ? `Ronda ${ri+1}: ganó ${pb.name}` : `Ronda ${ri+1}: sin jugar`;
+          return `<button class="pokeball-btn ${cls}" title="${esc(title)}" onclick="togglePokeball(${gi},${mi},${ri})"></button>`;
+        }).join('');
+        const poke = (p, dot) => `<div class="tc-poke">
+            <img src="${esc(p.sprite||'')}" alt="${esc(p.pokemon)}" onerror="this.style.visibility='hidden'">
+            <div class="tc-pname"><span class="torneo-color-dot ${dot}"></span> ${esc(p.name)}</div>
+            <div class="tc-ppoke">${esc(p.pokemon)}</div>
+          </div>`;
+        return `<details class="tc-match" data-key="m${gi}-${mi}">
+          <summary>
             <img src="${esc(pa.sprite||'')}" onerror="this.style.visibility='hidden'">
-            <span>${esc(pa.name)}</span>
-          </div>
-          <div class="torneo-cross-balls">${balls}</div>
-          <div class="torneo-cross-player" style="justify-content:flex-end;text-align:right">
-            <span>${esc(pb.name)}</span>
+            <span class="tc-name">${esc(pa.name)}</span>
+            <span class="tc-vs">vs</span>
+            <span class="tc-name">${esc(pb.name)}</span>
             <img src="${esc(pb.sprite||'')}" onerror="this.style.visibility='hidden'">
-            <span class="torneo-color-dot dot-red" title="${esc(pb.name)}"></span>
+            <span class="tc-score${decided || jugadas ? '' : ' pend'}">${resumen}</span>
+          </summary>
+          <div class="tc-body">
+            ${poke(pa, 'dot-white')}
+            <div class="tc-center">
+              <div class="torneo-cross-balls">${balls}</div>
+              ${decided ? `<div class="torneo-cross-winner-badge">🏆 ${esc(winnerName)} +3</div>` : ''}
+            </div>
+            ${poke(pb, 'dot-red')}
           </div>
-        </div>
-        ${decided ? `<div class="torneo-cross-winner-badge" style="text-align:center">🏆 ${esc(winnerName)} +3</div>` : ''}
-      </div>`;
-    }).join('');
-
-    return `<div class="torneo-group-card">
-      <div class="torneo-group-name">${esc(g.name)}</div>
-      <table class="torneo-group-table">
-        <thead><tr><th>Jugador</th><th>PJ</th><th>G</th><th>P</th><th>RG</th><th>Pts</th></tr></thead>
-        <tbody>${rows}</tbody>
-      </table>
-      <details class="torneo-crosses">
+        </details>`;
+      }).join('');
+      crucesHtml = `<details class="torneo-crosses" data-key="c${gi}">
         <summary>Ver cruces (${(g.matches||[]).length})</summary>
         ${matches || '<div style="font-size:0.75rem;color:var(--muted);padding:6px 0">Sin cruces</div>'}
-      </details>
-    </div>`;
+      </details>`;
+    }
+
+    return `<details class="torneo-group" data-key="g${gi}">
+      <summary>
+        <span class="tg-name">${esc(g.name)}</span>
+        <span class="tg-meta">${standings.length} jugadores${lider ? ' · 1º ' + esc(lider.name) : ''}</span>
+        <span class="tg-chev">▾</span>
+      </summary>
+      <div class="tg-body">
+        <table class="torneo-group-table">
+          <thead><tr><th>#</th><th>Jugador</th><th>PJ</th><th>G</th><th>P</th><th>RG</th><th>Pts</th></tr></thead>
+          <tbody>${rows}</tbody>
+        </table>
+        ${crucesHtml}
+      </div>
+    </details>`;
   }).join('');
 
   // Restauramos el estado abierto/cerrado que tenían los desplegables antes de renderizar
-  const details = grid.querySelectorAll('.torneo-crosses');
-  details.forEach((el, i) => { if (openState[i]) el.open = true; });
+  grid.querySelectorAll('details[data-key]').forEach(d => { if (abiertos.has(d.dataset.key)) d.open = true; });
+  grid.querySelectorAll('tr.tg-pdetail.open').forEach(torneoHidratarGrandes);
 }
 
 // Cicla el estado de una pokébola: vacía → gana el de la izquierda → gana el de la derecha → vacía
 // Al cambiar, la tabla de posiciones de arriba se recalcula sola (ver computeGroupStandings)
 function togglePokeball(groupIndex, matchIndex, roundIndex) {
+  if (!torneoEsAdmin()) return;
   const torneo = dataTorneos[currentTorneoGame];
   const g = torneo && torneo.groups[groupIndex];
   const m = g && g.matches && g.matches[matchIndex];
@@ -10332,6 +10593,7 @@ function togglePokeball(groupIndex, matchIndex, roundIndex) {
 // ── ELIMINATORIAS (cuadro de eliminación simple) ───────────────────────────
 
 function generarBracket() {
+  if (!torneoEsAdmin()) return;
   const torneo = dataTorneos[currentTorneoGame];
   if (!torneo || torneo.participants.length < 2) {
     showToast('❌ Necesitas al menos 2 participantes', true);
@@ -10388,6 +10650,7 @@ function setMatchWinner(torneo, roundIndex, matchIndex, winnerId, doRender) {
 }
 
 function pickWinner(roundIndex, matchIndex, side) {
+  if (!torneoEsAdmin()) return;
   const torneo = dataTorneos[currentTorneoGame];
   if (!torneo) return;
   const match = torneo.bracket[roundIndex][matchIndex];
@@ -10408,16 +10671,21 @@ function renderTorneoBracket() {
   const el = document.getElementById('torneo-bracket');
   const torneo = dataTorneos[currentTorneoGame];
   if (!torneo || !torneo.bracket.length) {
-    el.innerHTML = '<div class="mazo-empty-hint">Todavía no hay eliminatorias generadas. Tocá "Generar eliminatorias" para armar el cuadro con los participantes actuales.</div>';
+    el.classList.remove('ro');
+    el.innerHTML = '<div class="mazo-empty-hint">' + (torneoEsAdmin()
+      ? 'Todavía no hay eliminatorias generadas. Tocá "Generar eliminatorias" para armar el cuadro con los participantes actuales.'
+      : 'Todavía no hay eliminatorias.') + '</div>';
     return;
   }
+  const admin = torneoEsAdmin();
+  el.classList.toggle('ro', !admin);
   el.innerHTML = torneo.bracket.map((round, ri) => {
     const matches = round.map((m, mi) => {
       const slot = (id, side) => {
         const p = id ? getParticipant(id) : null;
         if (!p) return `<div class="torneo-match-slot empty">—</div>`;
         const isWinner = m.winner === id;
-        return `<div class="torneo-match-slot${isWinner ? ' winner' : ''}" onclick="pickWinner(${ri},${mi},'${side}')">
+        return `<div class="torneo-match-slot${isWinner ? ' winner' : ''}"${admin ? ` onclick="pickWinner(${ri},${mi},'${side}')"` : ''}>
           <img src="${esc(p.sprite||'')}" onerror="this.style.visibility='hidden'">
           <span>${esc(p.name)}${isWinner ? ' 🏆' : ''}</span>
         </div>`;
