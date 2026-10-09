@@ -7081,30 +7081,47 @@ function itemSlugFallback(itemName) {
 // Fuentes de imágenes de objetos, en el orden en que se prueban para cada
 // nombre de archivo (slug). La primera es la de siempre; las demás son el
 // repositorio msikma/pokesprite, que guarda los objetos en carpetas por categoría.
+// Carpeta propia (junto al index.html): se lee ANTES que cualquier repositorio externo.
+// Una imagen puede llamarse como el objeto en español (item-icons/baya-zonlan.png,
+// item-icons/charizardita-x.png) o en inglés (item-icons/lum-berry.png,
+// item-icons/charizardite-x.png): minúsculas, sin tildes y con guiones en vez de espacios.
+const ITEM_LOCAL_DIR = 'item-icons/';
 const ITEM_SPRITE_SOURCES = [
   slug => ITEM_SPRITE_BASE + slug + '.png',
-  // Carpeta propia: cualquier imagen guardada en item-icons/ (junto al index.html)
-  // con el nombre de archivo del objeto (ej. item-icons/raichunite-x.png) se
-  // detecta sola, sin tocar ningún JSON. Sirve para lo que no esté en ningún repositorio.
-  slug => 'item-icons/' + slug + '.png',
   // Carpetas reales de items/ en pokesprite, de más a menos probables para objetos de combate.
   ...['hold-item', 'mega-stone', 'berry', 'battle-item', 'plate', 'gem', 'memory', 'z-crystals', 'evo-item', 'medicine', 'other-item', 'etc', 'scarf', 'mint', 'ball', 'incense', 'valuable-item'].map(cat =>
     slug => `https://raw.githubusercontent.com/msikma/pokesprite/master/items/${cat}/${slug}.png`)
 ];
 const ITEM_ICON_CACHE = new Map(); // nombre -> URL que funcionó, o '' si ninguna sirvió
 
+// Nombres de archivo (sin extensión) aceptados en la carpeta propia para un objeto:
+// el nombre tal cual se ve (normalmente en español) y los nombres en inglés conocidos.
+function itemNombresArchivoPropios(itemName) {
+  if (!itemName) return [];
+  const clave = itemName.trim().toLowerCase();
+  const lista = [];
+  const add = x => { if (x && !lista.includes(x)) lista.push(x); };
+  add(itemNormName(itemName).replace(/['’`]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, ''));
+  add(ITEM_SLUG_RECORDADO[clave] || ITEM_SLUG_RECORDADO[itemNormName(itemName)]);
+  add(ITEM_SPRITE_SLUG_LOOKUP[clave]);
+  add(itemSlugFallback(itemName));
+  return lista;
+}
+
 // Lista ordenada de URLs a probar para un objeto:
 // 1) la que se puso a mano en item-sprite-urls.json,
-// 2) el nombre de archivo conocido (mapeos y megapiedras) en todas las fuentes,
-// 3) como último recurso, el propio nombre del objeto como nombre de archivo.
+// 2) la carpeta propia item-icons/ (nombre en español o en inglés),
+// 3) los repositorios externos con el nombre de archivo conocido (mapeos y megapiedras),
+// 4) como último recurso, el propio nombre del objeto en PokeAPI.
 function itemUrlCandidates(itemName) {
   if (!itemName) return [];
   const clave = itemName.trim().toLowerCase();
   const out = [];
   const manual = ITEM_URL_MANUAL[clave] || ITEM_URL_MANUAL[itemNormName(itemName)];
   if (manual) out.push(manual);
+  itemNombresArchivoPropios(itemName).forEach(n => out.push(ITEM_LOCAL_DIR + n + '.png'));
   const conocidos = [];
-  const add = (lista, s) => { if (s && !lista.includes(s)) lista.push(s); };
+  const add = (lista, x) => { if (x && !lista.includes(x)) lista.push(x); };
   add(conocidos, ITEM_SLUG_RECORDADO[clave] || ITEM_SLUG_RECORDADO[itemNormName(itemName)]);
   add(conocidos, ITEM_SPRITE_SLUG_LOOKUP[clave]);
   add(conocidos, itemSlugFallback(itemName));
@@ -7158,7 +7175,7 @@ async function diagnosticarObjetosChampions() {
     await Promise.all(lista.slice(i, i + 8).map(async n => {
       const cands = itemUrlCandidates(n);
       for (const u of cands) { if (await carga(u)) return; }
-      sinIcono.push({ objeto: n, archivoProbado: itemSlugFallback(n) || '(sin nombre de archivo)', intentos: cands.length });
+      sinIcono.push({ objeto: n, archivoProbado: itemNombresArchivoPropios(n).join(' | ') || '(sin nombre de archivo)', intentos: cands.length });
     }));
   }
   sinIcono.sort((a, b) => a.objeto.localeCompare(b.objeto, 'es'));
@@ -7226,14 +7243,14 @@ async function verificarObjetos() {
       const cands = itemUrlCandidates(n);
       let ok = '';
       for (const u of cands) { if (await carga(u)) { ok = u; break; } }
-      res[i + j] = { n, ok, intentos: cands.length, archivo: itemSlugFallback(n) || '' };
+      res[i + j] = { n, ok, intentos: cands.length, archivos: itemNombresArchivoPropios(n) };
     }));
   }
   const faltan = res.filter(r => !r.ok).length;
   out.innerHTML = `<div style="font-size:0.82rem;margin-bottom:6px"><b>${res.length - faltan}</b> con ícono · <b>${faltan}</b> sin ícono</div>` +
     res.map(r => r.ok
       ? `<div class="vo-row ok"><img class="vo-ico" src="${esc(r.ok)}" alt=""><b>${esc(r.n)}${translateItemIfEnglish(r.n) ? ' → ' + esc(translateItemIfEnglish(r.n)) : ''}</b><span class="vo-src">✅ ${esc(itemFuenteLabel(r.ok))}</span></div>`
-      : `<div class="vo-row fail"><span class="vo-ico vo-none">?</span><b>${esc(r.n)}${translateItemIfEnglish(r.n) ? ' → ' + esc(translateItemIfEnglish(r.n)) : ''}</b><span class="vo-src">❌ sin ícono (${r.intentos} dirección(es) probada(s)${r.archivo ? ', archivo «' + esc(r.archivo) + '»' : ''})</span>
+      : `<div class="vo-row fail"><span class="vo-ico vo-none">?</span><b>${esc(r.n)}${translateItemIfEnglish(r.n) ? ' → ' + esc(translateItemIfEnglish(r.n)) : ''}</b><span class="vo-src">❌ sin ícono (${r.intentos} dirección(es) probada(s)${r.archivos.length ? '. Nombre de archivo en item-icons: ' + r.archivos.map(a => '«' + esc(a) + '.png»').join(' o ') : ''})</span>
           <input class="password-input vo-url" data-nombre="${esc(r.n)}" placeholder="Pega aquí la dirección de una imagen (opcional)" onchange="voPrevisualizar(this)">
         </div>`).join('');
 }
