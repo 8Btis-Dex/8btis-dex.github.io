@@ -6883,10 +6883,14 @@ function construirItemEsPorSlug(data) {
   });
 }
 
+// Megapiedras cuyo nombre en español no sale de la regla «‑ite → ‑ita».
+const MEGA_STONE_ES_EXCEPCIONES = { 'crabominite': 'Crabominablita' };
+
 function itemNombreEsDesdeIngles(valor) {
   const slug = String(valor || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+    .replace(/['’`]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
   if (!slug) return null;
+  if (MEGA_STONE_ES_EXCEPCIONES[slug]) return MEGA_STONE_ES_EXCEPCIONES[slug];
   if (ITEM_ES_BY_SLUG[slug]) return ITEM_ES_BY_SLUG[slug];
   if (typeof MEGA_STONE_SLUGS !== 'undefined' && MEGA_STONE_SLUGS.has(slug)) {
     const m = /^([a-z]+)ite(?:-([xyz]))?$/.exec(slug);
@@ -6982,7 +6986,8 @@ const MEGA_STONES = [
   ['floette', 'floettite'], ['malamar', 'malamarite'], ['barbaracle', 'barbaracite'],
   ['dragalge', 'dragalgite'], ['hawlucha', 'hawluchanite'], ['zygarde', 'zygardite'],
   ['drampa', 'drampanite'], ['falinks', 'falinksite'], ['chimecho', 'chimechite'],
-  ['staraptor', 'staraptite']
+  ['staraptor', 'staraptite'], ['scovillain', 'scovillainite'], ['heatran', 'heatranite'],
+  ['darkrai', 'darkranite'], ['zeraora', 'zeraorite'], ['crabominable', 'crabominite']
 ];
 const MEGA_STONES_XY = { charizardite: true, mewtwonite: true, raichunite: true }; // las que tienen versión X e Y
 const MEGA_STONE_SLUGS = new Set();
@@ -6990,6 +6995,8 @@ MEGA_STONES.forEach(([, st]) => {
   if (MEGA_STONES_XY[st]) { MEGA_STONE_SLUGS.add(st + '-x'); MEGA_STONE_SLUGS.add(st + '-y'); }
   else MEGA_STONE_SLUGS.add(st);
 });
+// Megapiedras con versión Z (Leyendas Pokémon: Z-A)
+['absolite', 'lucarionite', 'garchompite'].forEach(st => MEGA_STONE_SLUGS.add(st + '-z'));
 
 function itemNormName(s) {
   return String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/\s+/g, ' ').trim();
@@ -7003,7 +7010,7 @@ function megaStoneSlug(itemName) {
   if (MEGA_STONE_SLUGS.has(directo)) return directo;
 
   let xy = '';
-  const mxy = /\s+([xy])$/.exec(n);
+  const mxy = /\s+([xyz])$/.exec(n);
   if (mxy) { xy = mxy[1]; n = n.slice(0, mxy.index); }
 
   let base;
@@ -7029,7 +7036,8 @@ function megaStoneSlug(itemName) {
   const minLen = Math.min(base.length, mejor[0].length);
   if (mejorLen < minLen - 1) return null;
   const stone = mejor[1];
-  if (MEGA_STONES_XY[stone]) return stone + '-' + (xy || 'x');
+  if (xy === 'z' && MEGA_STONE_SLUGS.has(stone + '-z')) return stone + '-z';
+  if (MEGA_STONES_XY[stone]) return stone + '-' + (xy === 'y' ? 'y' : 'x');
   return stone;
 }
 
@@ -7053,6 +7061,10 @@ function itemSlugFallback(itemName) {
 // repositorio msikma/pokesprite, que guarda los objetos en carpetas por categoría.
 const ITEM_SPRITE_SOURCES = [
   slug => ITEM_SPRITE_BASE + slug + '.png',
+  // Carpeta propia: cualquier imagen guardada en item-icons/ (junto al index.html)
+  // con el nombre de archivo del objeto (ej. item-icons/raichunite-x.png) se
+  // detecta sola, sin tocar ningún JSON. Sirve para lo que no esté en ningún repositorio.
+  slug => 'item-icons/' + slug + '.png',
   // Carpetas reales de items/ en pokesprite, de más a menos probables para objetos de combate.
   ...['hold-item', 'mega-stone', 'berry', 'battle-item', 'plate', 'gem', 'memory', 'z-crystals', 'evo-item', 'medicine', 'other-item', 'etc', 'scarf', 'mint', 'ball', 'incense', 'valuable-item'].map(cat =>
     slug => `https://raw.githubusercontent.com/msikma/pokesprite/master/items/${cat}/${slug}.png`)
@@ -7074,7 +7086,7 @@ function itemUrlCandidates(itemName) {
   add(conocidos, ITEM_SPRITE_SLUG_LOOKUP[clave]);
   add(conocidos, itemSlugFallback(itemName));
   conocidos.forEach(sl => ITEM_SPRITE_SOURCES.forEach(f => out.push(f(sl))));
-  const literal = itemNormName(itemName).replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+  const literal = itemNormName(itemName).replace(/['’`]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
   if (literal && !conocidos.includes(literal)) out.push(ITEM_SPRITE_SOURCES[0](literal));
   return [...new Set(out)];
 }
@@ -7173,6 +7185,7 @@ function verificarObjetosLlenarActuales() {
 
 function itemFuenteLabel(url) {
   if (url.includes('PokeAPI/sprites')) return 'PokeAPI';
+  if (url.startsWith('item-icons/')) return 'carpeta propia (item-icons)';
   const m = /pokesprite\/master\/items\/([^/]+)\//.exec(url);
   if (m) return 'pokesprite (' + m[1] + ')';
   return 'puesta a mano';
