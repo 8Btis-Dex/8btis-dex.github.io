@@ -3162,6 +3162,13 @@
     .x-cards .trade-mini, .x-gocard { width: 76px; }
     .x-gocard .tgo-sprite { width: 72px; height: 72px; }
   }
+  .vo-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 8px 4px; border-top: 1px solid rgba(255,255,255,0.08); font-size: 0.85rem; }
+  .vo-row .vo-ico { width: 32px; height: 32px; object-fit: contain; flex: 0 0 auto; }
+  .vo-row .vo-none { display: inline-flex; align-items: center; justify-content: center; border-radius: 6px; background: rgba(255,255,255,0.08); color: var(--muted); }
+  .vo-row.ok .vo-src { color: #4caf50; font-size: 0.74rem; }
+  .vo-row.fail .vo-src { color: #ff6b6b; font-size: 0.74rem; }
+  .vo-row .vo-url { flex: 1 1 100%; font-size: 0.78rem; padding: 6px 8px; }
+  .vo-row .vo-prev { width: 32px; height: 32px; object-fit: contain; }
   .owner-code { margin: 6px 0 2px; font-size: 0.78rem; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
   .owner-code b { font-family: 'Courier New', monospace; letter-spacing: 0.5px; }
   .owner-code.none { color: var(--muted); font-style: italic; }
@@ -3440,6 +3447,7 @@
         <button class="btn btn-yellow datos-only-data" onclick="showAddPokemon()">➕ Agregar Pokémon</button>
         <button class="btn btn-yellow datos-only-data" onclick="showAddPokemonVarios()">📋 Agregar varios</button>
         <button class="btn datos-only-data" style="background:var(--purple);color:#fff" onclick="openExpansionesModal()">🏷️ Expansiones</button>
+        <button class="btn datos-only-data" style="background:#16a085;color:#fff" onclick="openVerificarObjetos()">🔎 Verificar objetos</button>
         <button class="btn" style="background:#e67e22;color:#fff" onclick="openUsuariosModal()">➕ Crear usuario</button>
         <button class="btn btn-danger" id="btn-borrar-vacios" onclick="borrarVaciosModoActual()">🗑️ Borrar vacíos</button>
         <button class="btn btn-primary datos-only-data" onclick="saveAllData()">💾 Guardar cambios</button>
@@ -4040,6 +4048,30 @@
   </div>
 </div>
 
+<!-- MODAL VERIFICAR ÍCONOS DE OBJETOS -->
+<div class="modal-overlay" id="modal-verificar-objetos">
+  <div class="modal" style="max-width:660px;max-height:90vh;overflow:auto">
+    <h3>🔎 VERIFICAR ÍCONOS DE OBJETOS</h3>
+    <p>Escribe los objetos que quieres comprobar, uno por línea o separados por comas. Se prueba cada fuente y se muestra cuál tiene la imagen. A los que no tengan, puedes pegarles la dirección de una imagen y generar el archivo <b>item-sprite-urls.json</b>.</p>
+    <textarea id="vo-input" class="password-input" style="width:100%;min-height:110px" placeholder="Raichuita X&#10;Baya Zonlan&#10;Starminita&#10;Meganiumita&#10;Staraptita"></textarea>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin:8px 0 12px">
+      <button class="btn btn-primary" onclick="verificarObjetos()">🔎 Verificar</button>
+      <button class="btn" style="background:#444;color:#fff" onclick="verificarObjetosLlenarActuales()">📋 Usar los de mi tabla</button>
+      <button class="btn" style="background:#8e44ad;color:#fff" onclick="traducirObjetosGuardados()" title="Cambia al español los objetos de Champions que están escritos en inglés">🈂️ Traducir los ya escritos</button>
+    </div>
+    <div id="vo-result"></div>
+    <div id="vo-json-wrap" style="display:none;margin-top:12px">
+      <div style="font-size:0.78rem;color:var(--muted);margin-bottom:4px">Agrega estas líneas a <b>item-sprite-urls.json</b> (junto al index.html). Ya se aplican en esta sesión para que veas el resultado.</div>
+      <textarea id="vo-json" readonly class="password-input" style="width:100%;min-height:110px;font-family:monospace;font-size:0.78rem"></textarea>
+      <button class="btn btn-yellow" style="margin-top:6px" onclick="copiarJsonObjetos()">📋 Copiar</button>
+    </div>
+    <div class="modal-btns">
+      <button class="btn" style="background:#444;color:#fff" onclick="generarJsonObjetos()">📝 Generar item-sprite-urls.json</button>
+      <button class="btn btn-yellow" onclick="closeModal('modal-verificar-objetos')">Cerrar</button>
+    </div>
+  </div>
+</div>
+
 <!-- MODAL PAÍS Y CÓDIGOS DE UN USUARIO -->
 <div class="modal-overlay" id="modal-usuario-perfil">
   <div class="modal" style="max-width:520px">
@@ -4620,7 +4652,7 @@ function selectGoConsultaLiga(liga) {
       ? nombres.map(n => `
           <button class="btn go-liga-list-item" style="background:#222;color:#fff;text-align:left;display:flex;align-items:center;gap:10px" onclick="selectPokemon('${n.replace(/'/g,"\\'")}')">
             <img class="go-liga-list-icon" data-pokemon="${esc(n)}" style="width:28px;height:28px;object-fit:contain;flex-shrink:0;visibility:hidden;image-rendering:pixelated">
-            <span>${esc(n)}</span>
+            <span>${esc(traducirNombrePokemon(n))}</span>
           </button>`).join('')
       : '<div class="result-empty">Todavía no hay Pokémon asignados a esta liga.</div>';
     // Los sprites se cargan aparte (son async): cada botón sale sin ícono
@@ -4893,6 +4925,18 @@ function clearSearch() {
   showResult(null);
 }
 
+// Búsqueda sin distinguir mayúsculas ni tildes, tanto por el nombre guardado
+// («Arcanine Hisui») como por el que se muestra («Arcanine de Hisui»).
+function normBusqueda(s) {
+  return String(s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, ' ').trim();
+}
+function pokemonCoincide(p, q) {
+  return normBusqueda(p).includes(q) || normBusqueda(traducirNombrePokemon(p)).includes(q);
+}
+function pokemonIgualBusqueda(p, q) {
+  return normBusqueda(p) === q || normBusqueda(traducirNombrePokemon(p)) === q;
+}
+
 function handleSearch(val) {
   const clearBtn = document.getElementById('clear-btn');
   const icon = document.getElementById('search-icon-main');
@@ -4909,12 +4953,12 @@ function handleSearch(val) {
   }
 
   loadNamesFromStorage();
-  const q = val.toLowerCase();
+  const q = normBusqueda(val);
   let activeList = POKEMON_LISTS[currentMode] || [];
   if (currentMode === 'go' && currentGoConsultaLiga) {
     activeList = activeList.filter(p => (getGOData(p).ligas || []).includes(currentGoConsultaLiga));
   }
-  filteredList = activeList.filter(p => p.toLowerCase().includes(q)).slice(0, 8);
+  filteredList = activeList.filter(p => pokemonCoincide(p, q)).slice(0, 8);
 
   if (filteredList.length === 0) {
     list.classList.remove('open');
@@ -4925,7 +4969,7 @@ function handleSearch(val) {
     list.classList.add('open');
   }
 
-  const exact = activeList.find(p => p.toLowerCase() === q);
+  const exact = activeList.find(p => pokemonIgualBusqueda(p, q));
   if (exact) showResult(exact);
 }
 
@@ -4938,7 +4982,7 @@ function handleKey(e) {
   if (!items.length) {
     if (e.key === 'Enter') {
       const val = e.target.value.trim();
-      const match = activeList.find(p => p.toLowerCase() === val.toLowerCase());
+      const match = activeList.find(p => pokemonIgualBusqueda(p, normBusqueda(val)));
       if (match) selectPokemon(match);
     }
     return;
@@ -4956,7 +5000,7 @@ function handleKey(e) {
       return;
     }
     const val = e.target.value.trim();
-    const match = activeList.find(p => p.toLowerCase() === val.toLowerCase());
+    const match = activeList.find(p => pokemonIgualBusqueda(p, normBusqueda(val)));
     if (match) selectPokemon(match);
     return;
   } else {
@@ -4966,7 +5010,7 @@ function handleKey(e) {
 }
 
 function selectPokemon(name) {
-  document.getElementById('search-input').value = name;
+  document.getElementById('search-input').value = traducirNombrePokemon(name); // el mismo nombre que se ve en la ficha
   document.getElementById('autocomplete-list').classList.remove('open');
   document.getElementById('clear-btn').style.display = 'block';
   document.getElementById('search-icon-main').style.display = 'none';
@@ -6807,10 +6851,57 @@ function translateNatureIfEnglish(value) {
   const found = NATURE_NAME_ES[value.trim().toLowerCase()];
   return found && found !== value ? found : null;
 }
+// ── INGLÉS → ESPAÑOL PARA OBJETOS ────────────────────────────────────────────
+// Se puede escribir el objeto en inglés y, al salir del campo, se cambia por su
+// nombre en español. Orden de búsqueda:
+// 1) la tabla manual ITEM_NAME_ES (tiene prioridad: ahí se fija el nombre exacto),
+// 2) los nombres oficiales de PokeAPI (item-slugs-es.json, al revés: archivo → español),
+// 3) megapiedras: «Starminite» → «Starminita», «Raichunite X» → «Raichunita X».
+// Lo que no se reconoce se deja tal cual se escribió.
+let ITEM_ES_BY_SLUG = {};
+
+function itemTitulo(texto) {
+  const menores = new Set(['de', 'del', 'la', 'el', 'los', 'las', 'y', 'con', 'en', 'para']);
+  return String(texto).trim().split(/\s+/).map((w, i) =>
+    (i > 0 && menores.has(w.toLowerCase())) ? w.toLowerCase() : w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()
+  ).join(' ');
+}
+
+// Arma el diccionario «nombre de archivo → nombre en español» con item-slugs-es.json.
+// Si hay varios nombres para el mismo archivo se prefiere el que lleva tildes.
+function construirItemEsPorSlug(data) {
+  const conTilde = {};
+  Object.keys(data).forEach(k => {
+    if (k.startsWith('_')) return;
+    const slug = data[k];
+    if (typeof slug !== 'string') return;
+    const tiene = /[^\u0000-\u007f]/.test(k);
+    if (!ITEM_ES_BY_SLUG[slug] || (tiene && !conTilde[slug])) {
+      ITEM_ES_BY_SLUG[slug] = itemTitulo(k);
+      if (tiene) conTilde[slug] = true;
+    }
+  });
+}
+
+function itemNombreEsDesdeIngles(valor) {
+  const slug = String(valor || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+  if (!slug) return null;
+  if (ITEM_ES_BY_SLUG[slug]) return ITEM_ES_BY_SLUG[slug];
+  if (typeof MEGA_STONE_SLUGS !== 'undefined' && MEGA_STONE_SLUGS.has(slug)) {
+    const m = /^([a-z]+)ite(?:-([xyz]))?$/.exec(slug);
+    if (m) return m[1].charAt(0).toUpperCase() + m[1].slice(1) + 'ita' + (m[2] ? ' ' + m[2].toUpperCase() : '');
+  }
+  return null;
+}
+
 function translateItemIfEnglish(value) {
   if (!value) return null;
-  const found = ITEM_NAME_ES[value.trim().toLowerCase()];
-  return found && found !== value ? found : null;
+  const v = value.trim();
+  const manual = ITEM_NAME_ES[v.toLowerCase()];
+  if (manual && manual !== v) return manual;
+  const es = itemNombreEsDesdeIngles(v);
+  return es && es !== v ? es : null;
 }
 
 // ── ÍCONO DE OBJETOS (PokeAPI) ───────────────────────────────────────────────
@@ -6822,11 +6913,13 @@ let ITEM_SPRITE_SLUG_LOOKUP = {};
 // en español (España y Latinoamérica) -> archivo. Se usa donde el anterior no llega
 // o cuando el archivo del anterior no existe. Está guardado con y sin acentos.
 let ITEM_SLUGS_PX = {};
+// Imágenes puestas a mano: item-sprite-urls.json  {"nombre del objeto": "https://...png"}
+let ITEM_URL_MANUAL = {};
 // Diccionario cargado desde items-desc-es.json (datos de wikidex.net).
 let ITEM_DESC_LOOKUP_LOWER = {};
 
 async function loadItemSpriteSlugs() {
-  const cargar = async (archivo, destino, conSinAcentos) => {
+  const cargar = async (archivo, destino, conSinAcentos, alCargar) => {
     try {
       const res = await fetch(archivo);
       if (!res.ok) return;
@@ -6839,12 +6932,15 @@ async function loadItemSpriteSlugs() {
           if (!destino[nk]) destino[nk] = data[k];
         }
       });
+      if (alCargar) alCargar(data);
     } catch (e) {
       console.log('No se pudo cargar ' + archivo, e);
     }
   };
   await cargar('item-sprite-slugs.json', ITEM_SPRITE_SLUG_LOOKUP, false);
-  await cargar('item-slugs-es.json', ITEM_SLUGS_PX, true);
+  await cargar('item-slugs-es.json', ITEM_SLUGS_PX, true, construirItemEsPorSlug);
+  await cargar('item-sprite-urls.json', ITEM_URL_MANUAL, true);
+  ITEM_ICON_CACHE.clear(); // lo que falló antes de cargar estos mapas se vuelve a intentar
   if (typeof renderTableChampions === 'function' && document.getElementById('table-body-champions')) {
     renderTableChampions();
   }
@@ -6874,9 +6970,21 @@ const MEGA_STONES = [
   ['glalie', 'glalitite'], ['salamence', 'salamencite'], ['metagross', 'metagrossite'],
   ['latias', 'latiasite'], ['latios', 'latiosite'], ['lopunny', 'lopunnite'],
   ['garchomp', 'garchompite'], ['lucario', 'lucarionite'], ['abomasnow', 'abomasite'],
-  ['gallade', 'galladite'], ['audino', 'audinite'], ['diancie', 'diancite']
+  ['gallade', 'galladite'], ['audino', 'audinite'], ['diancie', 'diancite'],
+  // Leyendas Pokémon: Z-A (nombres de archivo supuestos; si alguno no coincide
+  // con la imagen real, se puede corregir en item-sprite-urls.json)
+  ['raichu', 'raichunite'], ['clefable', 'clefablite'], ['victreebel', 'victreebelite'],
+  ['starmie', 'starminite'], ['dragonite', 'dragoninite'], ['meganium', 'meganiumite'],
+  ['skarmory', 'skarmorite'], ['froslass', 'froslassite'], ['emboar', 'emboarite'],
+  ['excadrill', 'excadrite'], ['scolipede', 'scolipite'], ['scrafty', 'scraftinite'],
+  ['eelektross', 'eelektrossite'], ['chandelure', 'chandelurite'], ['chesnaught', 'chesnaughtite'],
+  ['delphox', 'delphoxite'], ['greninja', 'greninjite'], ['pyroar', 'pyroarite'],
+  ['floette', 'floettite'], ['malamar', 'malamarite'], ['barbaracle', 'barbaracite'],
+  ['dragalge', 'dragalgite'], ['hawlucha', 'hawluchanite'], ['zygarde', 'zygardite'],
+  ['drampa', 'drampanite'], ['falinks', 'falinksite'], ['chimecho', 'chimechite'],
+  ['staraptor', 'staraptite']
 ];
-const MEGA_STONES_XY = { charizardite: true, mewtwonite: true }; // las que tienen versión X e Y
+const MEGA_STONES_XY = { charizardite: true, mewtwonite: true, raichunite: true }; // las que tienen versión X e Y
 const MEGA_STONE_SLUGS = new Set();
 MEGA_STONES.forEach(([, st]) => {
   if (MEGA_STONES_XY[st]) { MEGA_STONE_SLUGS.add(st + '-x'); MEGA_STONE_SLUGS.add(st + '-y'); }
@@ -6940,28 +7048,194 @@ function itemSlugFallback(itemName) {
   return null;
 }
 
+// Fuentes de imágenes de objetos, en el orden en que se prueban para cada
+// nombre de archivo (slug). La primera es la de siempre; las demás son el
+// repositorio msikma/pokesprite, que guarda los objetos en carpetas por categoría.
+const ITEM_SPRITE_SOURCES = [
+  slug => ITEM_SPRITE_BASE + slug + '.png',
+  // Carpetas reales de items/ en pokesprite, de más a menos probables para objetos de combate.
+  ...['hold-item', 'mega-stone', 'berry', 'battle-item', 'plate', 'gem', 'memory', 'z-crystals', 'evo-item', 'medicine', 'other-item', 'etc', 'scarf', 'mint', 'ball', 'incense', 'valuable-item'].map(cat =>
+    slug => `https://raw.githubusercontent.com/msikma/pokesprite/master/items/${cat}/${slug}.png`)
+];
+const ITEM_ICON_CACHE = new Map(); // nombre -> URL que funcionó, o '' si ninguna sirvió
+
+// Lista ordenada de URLs a probar para un objeto:
+// 1) la que se puso a mano en item-sprite-urls.json,
+// 2) el nombre de archivo conocido (mapeos y megapiedras) en todas las fuentes,
+// 3) como último recurso, el propio nombre del objeto como nombre de archivo.
+function itemUrlCandidates(itemName) {
+  if (!itemName) return [];
+  const clave = itemName.trim().toLowerCase();
+  const out = [];
+  const manual = ITEM_URL_MANUAL[clave] || ITEM_URL_MANUAL[itemNormName(itemName)];
+  if (manual) out.push(manual);
+  const conocidos = [];
+  const add = (lista, s) => { if (s && !lista.includes(s)) lista.push(s); };
+  add(conocidos, ITEM_SPRITE_SLUG_LOOKUP[clave]);
+  add(conocidos, itemSlugFallback(itemName));
+  conocidos.forEach(sl => ITEM_SPRITE_SOURCES.forEach(f => out.push(f(sl))));
+  const literal = itemNormName(itemName).replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+  if (literal && !conocidos.includes(literal)) out.push(ITEM_SPRITE_SOURCES[0](literal));
+  return [...new Set(out)];
+}
+
 function getItemSpriteUrl(itemName) {
-  if (!itemName) return null;
-  const slug = ITEM_SPRITE_SLUG_LOOKUP[itemName.trim().toLowerCase()] || itemSlugFallback(itemName);
-  if (!slug) return null;
-  return ITEM_SPRITE_BASE + slug + '.png';
+  return itemUrlCandidates(itemName)[0] || null;
 }
 
 function itemIconHTML(itemName) {
-  const url = getItemSpriteUrl(itemName);
-  if (!url) return '<span class="item-icon item-icon-empty"></span>';
-  return `<img src="${url}" class="item-icon" alt="" data-item="${esc(itemName)}" onerror="itemIconFail(this)">`;
+  const vacio = '<span class="item-icon item-icon-empty"></span>';
+  if (!itemName) return vacio;
+  const k = itemName.trim().toLowerCase();
+  if (ITEM_ICON_CACHE.get(k) === '') return vacio;
+  const url = ITEM_ICON_CACHE.get(k) || getItemSpriteUrl(itemName);
+  if (!url) return vacio;
+  return `<img src="${esc(url)}" class="item-icon" alt="" data-item="${esc(itemName)}" data-n="0" onload="itemIconOk(this)" onerror="itemIconFail(this)">`;
 }
 
-// Si el archivo del mapeo no existe en PokeAPI, se prueba una vez con el respaldo.
+function itemIconOk(img) {
+  ITEM_ICON_CACHE.set((img.dataset.item || '').trim().toLowerCase(), img.src);
+}
+
+// Si una imagen no existe, se prueba con la siguiente fuente de la lista.
 function itemIconFail(img) {
-  if (!img.dataset.retried) {
-    img.dataset.retried = '1';
-    const alt = itemSlugFallback(img.dataset.item || '');
-    const url = alt ? ITEM_SPRITE_BASE + alt + '.png' : '';
-    if (url && img.src !== url) { img.src = url; return; }
-  }
+  const nombre = img.dataset.item || '';
+  const cands = itemUrlCandidates(nombre);
+  const n = (+img.dataset.n || 0) + 1;
+  if (n < cands.length) { img.dataset.n = n; img.src = cands[n]; return; }
+  ITEM_ICON_CACHE.set(nombre.trim().toLowerCase(), '');
   img.style.display = 'none';
+}
+
+// Revisa qué objetos de Champions se quedan sin ícono en ninguna fuente.
+// Se usa desde la consola del navegador (F12):  diagnosticarObjetosChampions()
+async function diagnosticarObjetosChampions() {
+  const nombres = new Set();
+  (POKEMON_LISTS.champions || []).forEach(p => {
+    [getChampionsData(p), getChampionsDataDoubles(p)].forEach(d => {
+      if (d && d.objeto && String(d.objeto).trim()) nombres.add(String(d.objeto).trim());
+    });
+  });
+  const carga = url => new Promise(res => { const im = new Image(); im.onload = () => res(true); im.onerror = () => res(false); im.src = url; });
+  const lista = [...nombres];
+  const sinIcono = [];
+  for (let i = 0; i < lista.length; i += 8) {
+    await Promise.all(lista.slice(i, i + 8).map(async n => {
+      const cands = itemUrlCandidates(n);
+      for (const u of cands) { if (await carga(u)) return; }
+      sinIcono.push({ objeto: n, archivoProbado: itemSlugFallback(n) || '(sin nombre de archivo)', intentos: cands.length });
+    }));
+  }
+  sinIcono.sort((a, b) => a.objeto.localeCompare(b.objeto, 'es'));
+  console.log('Objetos revisados: ' + lista.length + ' | sin ícono: ' + sinIcono.length);
+  console.table(sinIcono);
+  console.log('Lista para copiar:\n' + sinIcono.map(x => x.objeto).join('\n'));
+  showToast(sinIcono.length ? '⚠️ ' + sinIcono.length + ' objeto(s) sin ícono. Mira la consola (F12).' : '✅ Todos los objetos tienen ícono');
+  return sinIcono;
+}
+
+// ── VERIFICADOR DE ÍCONOS DE OBJETOS (modal de Datos) ──────────────────────
+// Traduce de una vez los objetos que ya están guardados en inglés (Singles y
+// Doubles de Champions). Antes de cambiar nada muestra la lista y pide confirmación.
+function traducirObjetosGuardados() {
+  const cambios = [];
+  [['Singles', dataChampions], ['Doubles', dataChampionsDoubles]].forEach(([etiqueta, store]) => {
+    Object.keys(store || {}).forEach(p => {
+      const d = store[p];
+      if (!d || typeof d.objeto !== 'string' || !d.objeto.trim()) return;
+      const es = translateItemIfEnglish(d.objeto);
+      if (es) cambios.push({ etiqueta, p, de: d.objeto, a: es, store });
+    });
+  });
+  if (!cambios.length) { showToast('✅ No hay objetos en inglés para traducir'); return; }
+  const muestra = cambios.slice(0, 25).map(c => `• ${c.p} (${c.etiqueta}): ${c.de} → ${c.a}`).join('\n');
+  const resto = cambios.length > 25 ? `\n…y ${cambios.length - 25} más` : '';
+  if (!confirm(`Se cambiarán ${cambios.length} objeto(s) al español:\n\n${muestra}${resto}\n\n¿Aplicar los cambios?`)) return;
+  cambios.forEach(c => { c.store[c.p].objeto = c.a; });
+  persistAll();
+  if (typeof renderTableChampions === 'function' && document.getElementById('table-body-champions')) renderTableChampions();
+  showToast('✅ ' + cambios.length + ' objeto(s) traducido(s)');
+}
+
+function openVerificarObjetos() {
+  document.getElementById('modal-verificar-objetos').classList.add('open');
+}
+
+function verificarObjetosLlenarActuales() {
+  const nombres = new Set();
+  (POKEMON_LISTS.champions || []).forEach(p => {
+    [getChampionsData(p), getChampionsDataDoubles(p)].forEach(d => {
+      if (d && d.objeto && String(d.objeto).trim()) nombres.add(String(d.objeto).trim());
+    });
+  });
+  document.getElementById('vo-input').value = [...nombres].sort((a, b) => a.localeCompare(b, 'es')).join('\n');
+}
+
+function itemFuenteLabel(url) {
+  if (url.includes('PokeAPI/sprites')) return 'PokeAPI';
+  const m = /pokesprite\/master\/items\/([^/]+)\//.exec(url);
+  if (m) return 'pokesprite (' + m[1] + ')';
+  return 'puesta a mano';
+}
+
+async function verificarObjetos() {
+  const nombres = [...new Set(document.getElementById('vo-input').value.split(/[\n,;]+/).map(x => x.trim()).filter(Boolean))];
+  const out = document.getElementById('vo-result');
+  if (!nombres.length) { out.innerHTML = '<div class="mazo-empty-hint">Escribe al menos un objeto.</div>'; return; }
+  out.innerHTML = '<div class="mazo-empty-hint">Verificando ' + nombres.length + ' objeto(s)…</div>';
+  const carga = url => new Promise(res => { const im = new Image(); im.onload = () => res(true); im.onerror = () => res(false); im.src = url; });
+  const res = new Array(nombres.length);
+  for (let i = 0; i < nombres.length; i += 6) {
+    await Promise.all(nombres.slice(i, i + 6).map(async (n, j) => {
+      const cands = itemUrlCandidates(n);
+      let ok = '';
+      for (const u of cands) { if (await carga(u)) { ok = u; break; } }
+      res[i + j] = { n, ok, intentos: cands.length, archivo: itemSlugFallback(n) || '' };
+    }));
+  }
+  const faltan = res.filter(r => !r.ok).length;
+  out.innerHTML = `<div style="font-size:0.82rem;margin-bottom:6px"><b>${res.length - faltan}</b> con ícono · <b>${faltan}</b> sin ícono</div>` +
+    res.map(r => r.ok
+      ? `<div class="vo-row ok"><img class="vo-ico" src="${esc(r.ok)}" alt=""><b>${esc(r.n)}${translateItemIfEnglish(r.n) ? ' → ' + esc(translateItemIfEnglish(r.n)) : ''}</b><span class="vo-src">✅ ${esc(itemFuenteLabel(r.ok))}</span></div>`
+      : `<div class="vo-row fail"><span class="vo-ico vo-none">?</span><b>${esc(r.n)}${translateItemIfEnglish(r.n) ? ' → ' + esc(translateItemIfEnglish(r.n)) : ''}</b><span class="vo-src">❌ sin ícono (${r.intentos} dirección(es) probada(s)${r.archivo ? ', archivo «' + esc(r.archivo) + '»' : ''})</span>
+          <input class="password-input vo-url" data-nombre="${esc(r.n)}" placeholder="Pega aquí la dirección de una imagen (opcional)" onchange="voPrevisualizar(this)">
+        </div>`).join('');
+}
+
+function voPrevisualizar(input) {
+  let prev = input.parentElement.querySelector('.vo-prev');
+  if (!prev) { prev = document.createElement('img'); prev.className = 'vo-prev'; input.parentElement.appendChild(prev); }
+  prev.onerror = () => { prev.style.display = 'none'; showToast('⚠️ Esa dirección no carga como imagen', true); };
+  prev.onload = () => { prev.style.display = ''; };
+  prev.src = input.value.trim();
+}
+
+function generarJsonObjetos() {
+  const mapa = {};
+  document.querySelectorAll('#vo-result .vo-url').forEach(inp => {
+    const url = inp.value.trim();
+    if (url) mapa[inp.dataset.nombre] = url;
+  });
+  const claves = Object.keys(mapa);
+  if (!claves.length) { showToast('⚠️ Primero pega la dirección de alguna imagen en los objetos sin ícono', true); return; }
+  // Se guardan las dos formas (inglés y español), porque en la tabla queda el nombre traducido.
+  claves.slice().forEach(n => {
+    const es = translateItemIfEnglish(n);
+    if (es && !(es in mapa)) mapa[es] = mapa[n];
+  });
+  Object.keys(mapa).forEach(n => { ITEM_URL_MANUAL[n.toLowerCase()] = mapa[n]; ITEM_URL_MANUAL[itemNormName(n)] = mapa[n]; });
+  ITEM_ICON_CACHE.clear();
+  if (typeof renderTableChampions === 'function' && document.getElementById('table-body-champions')) renderTableChampions();
+  document.getElementById('vo-json').value = Object.keys(mapa).map(n => '  ' + JSON.stringify(n) + ': ' + JSON.stringify(mapa[n])).join(',\n');
+  document.getElementById('vo-json-wrap').style.display = 'block';
+  showToast('✅ Listo: aplicado en esta sesión. Copia las líneas al archivo item-sprite-urls.json');
+}
+
+function copiarJsonObjetos() {
+  const t = document.getElementById('vo-json');
+  t.select();
+  if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(t.value).then(() => showToast('📋 Copiado')).catch(() => document.execCommand('copy'));
+  else document.execCommand('copy');
 }
 
 // Se engancha en el "blur" de Naturaleza/Objeto en la tabla de Champions.
