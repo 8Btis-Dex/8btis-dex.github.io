@@ -6886,24 +6886,46 @@ function construirItemEsPorSlug(data) {
 // Megapiedras cuyo nombre en español no sale de la regla «‑ite → ‑ita».
 const MEGA_STONE_ES_EXCEPCIONES = { 'crabominite': 'Crabominablita' };
 
-function itemNombreEsDesdeIngles(valor) {
-  const slug = String(valor || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
+// Nombre de archivo (slug) que corresponde a un nombre escrito en inglés.
+function itemSlugDeIngles(valor) {
+  return String(valor || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
     .replace(/['’`]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+}
+
+// Cuando un objeto se traduce, se recuerda con qué archivo se veía su ícono en
+// inglés. Así el nombre en español usa exactamente ese archivo y la imagen no
+// desaparece al traducir. Se guarda en este navegador para que sobreviva a recargar.
+let ITEM_SLUG_RECORDADO = (() => {
+  try { return JSON.parse(localStorage.getItem('itemSlugsRecordados') || '{}'); } catch (e) { return {}; }
+})();
+function itemRecordarSlug(nombreEs, slug) {
+  if (!nombreEs || !slug) return;
+  const k1 = nombreEs.trim().toLowerCase(), k2 = itemNormName(nombreEs);
+  ITEM_SLUG_RECORDADO[k1] = slug;
+  ITEM_SLUG_RECORDADO[k2] = slug;
+  if (typeof ITEM_ICON_CACHE !== 'undefined') { ITEM_ICON_CACHE.delete(k1); ITEM_ICON_CACHE.delete(k2); }
+  try { localStorage.setItem('itemSlugsRecordados', JSON.stringify(ITEM_SLUG_RECORDADO)); } catch (e) {}
+}
+
+function itemNombreEsDesdeIngles(valor) {
+  const slug = itemSlugDeIngles(valor);
   if (!slug) return null;
-  if (MEGA_STONE_ES_EXCEPCIONES[slug]) return MEGA_STONE_ES_EXCEPCIONES[slug];
-  if (ITEM_ES_BY_SLUG[slug]) return ITEM_ES_BY_SLUG[slug];
-  if (typeof MEGA_STONE_SLUGS !== 'undefined' && MEGA_STONE_SLUGS.has(slug)) {
+  let es = null;
+  if (MEGA_STONE_ES_EXCEPCIONES[slug]) es = MEGA_STONE_ES_EXCEPCIONES[slug];
+  else if (ITEM_ES_BY_SLUG[slug]) es = ITEM_ES_BY_SLUG[slug];
+  else if (typeof MEGA_STONE_SLUGS !== 'undefined' && MEGA_STONE_SLUGS.has(slug)) {
     const m = /^([a-z]+)ite(?:-([xyz]))?$/.exec(slug);
-    if (m) return m[1].charAt(0).toUpperCase() + m[1].slice(1) + 'ita' + (m[2] ? ' ' + m[2].toUpperCase() : '');
+    if (m) es = m[1].charAt(0).toUpperCase() + m[1].slice(1) + 'ita' + (m[2] ? ' ' + m[2].toUpperCase() : '');
   }
-  return null;
+  if (es) itemRecordarSlug(es, slug);
+  return es;
 }
 
 function translateItemIfEnglish(value) {
   if (!value) return null;
   const v = value.trim();
   const manual = ITEM_NAME_ES[v.toLowerCase()];
-  if (manual && manual !== v) return manual;
+  if (manual && manual !== v) { itemRecordarSlug(manual, itemSlugDeIngles(v)); return manual; }
   const es = itemNombreEsDesdeIngles(v);
   return es && es !== v ? es : null;
 }
@@ -7083,6 +7105,7 @@ function itemUrlCandidates(itemName) {
   if (manual) out.push(manual);
   const conocidos = [];
   const add = (lista, s) => { if (s && !lista.includes(s)) lista.push(s); };
+  add(conocidos, ITEM_SLUG_RECORDADO[clave] || ITEM_SLUG_RECORDADO[itemNormName(itemName)]);
   add(conocidos, ITEM_SPRITE_SLUG_LOOKUP[clave]);
   add(conocidos, itemSlugFallback(itemName));
   conocidos.forEach(sl => ITEM_SPRITE_SOURCES.forEach(f => out.push(f(sl))));
