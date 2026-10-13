@@ -2566,6 +2566,14 @@
   .btn-editar-ataque:hover { opacity: 1; }
   .btn-editar-ataque.btn-eliminar-ataque { margin-left: 0; }
   .carta-detalle-ataque-efecto { font-size: 0.8rem; color: var(--text); white-space: pre-wrap; }
+  .tcg-energy-inline { width: 1.15em; height: 1.15em; vertical-align: -0.2em; margin: 0 1px; }
+  .energia-paleta { display: flex; flex-wrap: wrap; gap: 4px; margin: 4px 0; }
+  .energia-paleta button { background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.2); border-radius: 6px; padding: 2px 4px; cursor: pointer; line-height: 0; }
+  .energia-paleta button:hover { background: rgba(255,255,255,0.22); }
+  .energia-paleta button img { width: 20px; height: 20px; }
+  .carta-detalle-descripcion { font-size: 0.82rem; background: rgba(255,255,255,0.05); border-radius: 8px; padding: 8px 10px; margin-bottom: 8px; white-space: pre-wrap; }
+  .tcg-desc-wrap { flex: 1 1 100%; }
+  .tcg-desc-input { width: 100%; min-height: 56px; background: var(--dark-card); color: var(--text); border: 1px solid rgba(255,255,255,0.15); border-radius: 6px; padding: 6px 8px; font-family: 'Nunito', sans-serif; font-size: 0.8rem; resize: vertical; }
   .carta-detalle-ataque-input {
     width: 100%;
     background: var(--black);
@@ -3986,6 +3994,7 @@
         <div id="carta-detalle-rareza-exp" style="font-size:0.78rem;color:var(--muted)"></div>
       </div>
     </div>
+    <div id="carta-detalle-descripcion"></div>
     <div id="carta-detalle-ataques"></div>
     <div id="carta-detalle-mazo-footer" class="carta-detalle-mazo-footer"></div>
     <div class="modal-btns" style="margin-top:14px">
@@ -5367,7 +5376,7 @@ async function showResult(name) {
             ? Array.from({length: r.count}).map(() =>
                 `<img src="${RAREZA_ICONS[r.icon]}" alt="" class="tcg-rareza-img">`).join('')
             : '';
-          return `<div class="tcg-card-chip">
+          return `<div class="tcg-card-chip"${c.id ? ` onclick="abrirCartaDetalle('${name.replace(/'/g, "\\'")}','${c.id}','',false)" style="cursor:pointer" title="Ver detalle de la carta"` : ''}>
             ${imgHTML}
             <span class="tcg-rareza-icons" title="${esc(r.label)}">${rarezaIconsHTML}</span>
             <span class="tcg-expansion-badge" style="background:${c.color || '#888'}">${esc(c.expansion || '—')}</span>
@@ -8598,6 +8607,64 @@ async function traducirConMyMemory(texto) {
 // ataques ya traducidos; el admin además puede corregir a mano el texto del
 // efecto de cada ataque (queda guardado para siempre, no es una traducción
 // que se recalcula cada vez).
+// ── SÍMBOLOS DE ENERGÍA EN LOS TEXTOS DE LAS CARTAS ────────────────────────
+// En cualquier texto de carta (descripción o efecto de un ataque) se escribe el
+// símbolo entre llaves y se dibuja como ícono: «Energía {D} unida a él» muestra
+// el ícono de Oscuridad. Se acepta la letra del juego (G R W L P F D M N C) o el
+// nombre en español o inglés ({Oscuridad}, {Darkness}…).
+const ENERGIAS_TCG = [
+  { cod: 'G', nombre: 'Planta',    key: 'Planta',    alias: ['grass', 'hierba'] },
+  { cod: 'R', nombre: 'Fuego',     key: 'Fuego',     alias: ['fire'] },
+  { cod: 'W', nombre: 'Agua',      key: 'Agua',      alias: ['water'] },
+  { cod: 'L', nombre: 'Rayo',      key: 'Electrico', alias: ['lightning', 'electrico'] },
+  { cod: 'P', nombre: 'Psíquico',  key: 'Psiquico',  alias: ['psychic', 'psiquico'] },
+  { cod: 'F', nombre: 'Lucha',     key: 'Lucha',     alias: ['fighting'] },
+  { cod: 'D', nombre: 'Oscuridad', key: 'Siniestro', alias: ['darkness', 'dark', 'siniestro'] },
+  { cod: 'M', nombre: 'Metálica',  key: 'Acero',     alias: ['metal', 'metalica', 'acero'] },
+  { cod: 'N', nombre: 'Dragón',    key: 'Dragon',    alias: ['dragon'] },
+  { cod: 'C', nombre: 'Incolora',  key: 'Normal',    alias: ['colorless', 'normal'] }
+];
+function energiaSinTildes(t) { return String(t || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim(); }
+function energiaPorToken(tok) {
+  const t = energiaSinTildes(tok);
+  return ENERGIAS_TCG.find(e => e.cod.toLowerCase() === t || energiaSinTildes(e.nombre) === t || e.alias.includes(t)) || null;
+}
+// Escapa el texto y cambia cada símbolo reconocido por su ícono (lo que no se
+// reconoce queda tal cual). Formas aceptadas, todas equivalentes:
+//   {D}  [D]  <D>   → con la letra del juego o con el nombre ({Oscuridad})
+//   +D   -D         → solo con la letra, y solo si va suelto (no pegado a otra
+//                     palabra y sin más letras detrás), para no confundirlo con
+//                     «+20», «Mega-D» o «+Fuerza».
+// Todo se resuelve en una sola pasada, así nunca se tocan los íconos ya insertados.
+function textoConSimbolos(texto) {
+  const icono = e => `<img class="tcg-energy-inline" src="${TIPO_ICONS[e.key]}" alt="${e.nombre}" title="${e.nombre}">`;
+  return esc(texto == null ? '' : String(texto)).replace(
+    /\{([^{}]{1,14})\}|\[([^\[\]]{1,14})\]|&lt;([^&]{1,14})&gt;|(?<![\wÁ-ú])[+\-]([GRWLPFDMNC])(?![\wÁ-ú])/g,
+    (m, llaves, corchetes, angulos, suelto) => {
+      const e = energiaPorToken(llaves || corchetes || angulos || suelto);
+      return e && TIPO_ICONS[e.key] ? icono(e) : m;
+    });
+}
+// Fila de botones con los íconos de energía: al pulsar uno se inserta su símbolo donde está el cursor.
+function paletaEnergiasHTML(textareaId) {
+  return `<div class="energia-paleta" title="Insertar símbolo de energía">` +
+    ENERGIAS_TCG.map(e => `<button type="button" title="${e.nombre}  {${e.cod}}" onclick="insertarEnergia('${textareaId}','${e.cod}')"><img src="${TIPO_ICONS[e.key]}" alt="${e.nombre}"></button>`).join('') +
+    `</div>`;
+}
+function insertarEnergia(id, cod) {
+  const ta = document.getElementById(id);
+  if (!ta) return;
+  const ini = ta.selectionStart != null ? ta.selectionStart : ta.value.length;
+  const fin = ta.selectionEnd != null ? ta.selectionEnd : ini;
+  const tok = '{' + cod + '}';
+  ta.value = ta.value.slice(0, ini) + tok + ta.value.slice(fin);
+  const pos = ini + tok.length;
+  ta.focus();
+  ta.setSelectionRange(pos, pos);
+  ta.dispatchEvent(new Event('input'));
+}
+let tcgDescSeq = 0;
+
 let cartaDetalleActual = null; // { pokemonInterno, cartaId, permitirEditar }
 
 function abrirCartaDetalle(pokemonInterno, cartaId, mazoNombre, permitirEditar) {
@@ -8627,6 +8694,7 @@ function abrirCartaDetalle(pokemonInterno, cartaId, mazoNombre, permitirEditar) 
     `<div class="tcg-rareza-icons" title="${esc(r.label)}">${rarezaIconsHTML}</div>
      <div class="carta-detalle-expansion-row">${expansionHTML}</div>`;
 
+  renderCartaDetalleDescripcion(carta);
   renderCartaDetalleAtaques(carta);
 
   const footer = document.getElementById('carta-detalle-mazo-footer');
@@ -8660,9 +8728,48 @@ function renderCartaDetalleAtaques(carta) {
         ${nombre ? `<strong>${esc(nombre)}</strong>` : ''}${dano}
         ${permitirEditar ? `<button type="button" class="btn-editar-ataque" title="Editar este ataque" onclick="editarAtaqueCarta(${i})">✏️</button><button type="button" class="btn-editar-ataque btn-eliminar-ataque" title="Eliminar este ataque" onclick="eliminarAtaqueCarta(${i})">🗑️</button>` : ''}
       </div>
-      ${efectoTexto ? `<div class="carta-detalle-ataque-efecto" id="carta-detalle-ataque-efecto-${i}">${esc(efectoTexto)}</div>` : ''}
+      ${efectoTexto ? `<div class="carta-detalle-ataque-efecto" id="carta-detalle-ataque-efecto-${i}">${textoConSimbolos(efectoTexto)}</div>` : ''}
     </div>`;
   }).join('') + botonAgregar;
+}
+
+// Texto de la carta (por ejemplo el efecto de una carta de Entrenador). Lo ve
+// cualquiera; solo desde Datos se puede agregar o editar.
+function renderCartaDetalleDescripcion(carta) {
+  const cont = document.getElementById('carta-detalle-descripcion');
+  if (!cont) return;
+  const permitirEditar = !!(cartaDetalleActual && cartaDetalleActual.permitirEditar);
+  const desc = (carta.descripcion || '').trim();
+  const boton = permitirEditar
+    ? `<button type="button" class="btn btn-primary" style="width:100%;margin:0 0 8px;padding:6px;font-size:0.75rem" onclick="editarDescripcionCarta()">${desc ? '✏️ Editar descripción' : '➕ Agregar descripción'}</button>`
+    : '';
+  cont.innerHTML = (desc ? `<div class="carta-detalle-descripcion">${textoConSimbolos(desc)}</div>` : '') + boton;
+}
+
+function editarDescripcionCarta() {
+  const carta = obtenerCartaDetalleActual();
+  const cont = document.getElementById('carta-detalle-descripcion');
+  if (!carta || !cont) return;
+  cont.innerHTML = `
+    ${paletaEnergiasHTML('carta-detalle-descripcion-ta')}
+    <textarea class="carta-detalle-ataque-textarea" id="carta-detalle-descripcion-ta" placeholder="Texto de la carta. Símbolos de energía: botones, o escribe {D}, [D], &lt;D&gt;, +D o -D.">${esc(carta.descripcion || '')}</textarea>
+    <div class="modal-btns" style="justify-content:flex-start;margin:6px 0 10px">
+      <button type="button" class="btn btn-yellow" style="padding:4px 10px;font-size:0.72rem" onclick="guardarDescripcionCarta()">💾 Guardar</button>
+      <button type="button" class="btn" style="padding:4px 10px;font-size:0.72rem;background:#444;color:#fff" onclick="renderCartaDetalleDescripcion(obtenerCartaDetalleActual())">Cancelar</button>
+    </div>`;
+  const ta = document.getElementById('carta-detalle-descripcion-ta');
+  if (ta) ta.focus();
+}
+
+function guardarDescripcionCarta() {
+  const carta = obtenerCartaDetalleActual();
+  const ta = document.getElementById('carta-detalle-descripcion-ta');
+  if (!carta || !ta) return;
+  const texto = ta.value.trim();
+  if (texto) carta.descripcion = texto; else delete carta.descripcion;
+  persistAll();
+  renderCartaDetalleDescripcion(carta);
+  showToast('✅ Descripción actualizada');
 }
 
 function obtenerCartaDetalleActual() {
@@ -8697,7 +8804,8 @@ function editarAtaqueCarta(i) {
   bloque.innerHTML = `
     <input type="text" class="carta-detalle-ataque-input" id="carta-detalle-ataque-nombre-${i}" placeholder="Nombre del ataque" value="${esc(nombreActual)}">
     <input type="text" class="carta-detalle-ataque-input" id="carta-detalle-ataque-dano-${i}" placeholder="Daño (opcional)" value="${esc(String(danoActual))}">
-    <textarea class="carta-detalle-ataque-textarea" id="carta-detalle-ataque-textarea-${i}" placeholder="Efecto del ataque (opcional)">${esc(efectoActual)}</textarea>
+    ${paletaEnergiasHTML('carta-detalle-ataque-textarea-' + i)}
+    <textarea class="carta-detalle-ataque-textarea" id="carta-detalle-ataque-textarea-${i}" placeholder="Efecto del ataque (opcional). Símbolos: {D}, {R}, {W}…">${esc(efectoActual)}</textarea>
     <div class="modal-btns" style="justify-content:flex-start;margin-top:6px">
       <button type="button" class="btn btn-yellow" style="padding:4px 10px;font-size:0.72rem" onclick="guardarAtaqueCarta(${i})">💾 Guardar</button>
       <button type="button" class="btn" style="padding:4px 10px;font-size:0.72rem;background:#444;color:#fff" onclick="renderCartaDetalleAtaques(obtenerCartaDetalleActual())">Cancelar</button>
@@ -8884,6 +8992,16 @@ function addTcgCardRow(carta) {
   row.appendChild(colorInput);
   row.appendChild(imagenInput);
   row.appendChild(removeBtn);
+
+  // Descripción de la carta (texto libre con símbolos de energía)
+  const descWrap = document.createElement('div');
+  descWrap.className = 'tcg-desc-wrap';
+  const descId = 'tcg-desc-' + (++tcgDescSeq);
+  descWrap.innerHTML = `<div style="font-size:0.7rem;color:var(--muted);margin-bottom:2px">Descripción de la carta (opcional). Símbolos de energía: usa los botones o escribe {D}, [D], &lt;D&gt;, +D o -D.</div>
+    ${paletaEnergiasHTML(descId)}
+    <textarea class="tcg-desc-input" id="${descId}" placeholder="Ej.: …cada uno de sus Pokémon que tenga alguna Energía {D} unida a él."></textarea>`;
+  descWrap.querySelector('textarea').value = carta.descripcion || '';
+  row.appendChild(descWrap);
   list.appendChild(row);
 
   rebuildExpansionesDatalist(tcgEditingMode);
@@ -8993,7 +9111,11 @@ function saveTcgCards() {
     const id = row.dataset.cartaId || genCartaId();
     let ataques = [];
     try { ataques = JSON.parse(row.dataset.ataques || '[]'); } catch (e) { ataques = []; }
-    if (expansion) cartas.push({ id, rareza, expansion, color, imagen, ataques });
+    const descEl = row.querySelector('.tcg-desc-input');
+    const descripcion = descEl ? descEl.value.trim() : '';
+    const cartaNueva = { id, rareza, expansion, color, imagen, ataques };
+    if (descripcion) cartaNueva.descripcion = descripcion;
+    if (expansion) cartas.push(cartaNueva);
   });
   if (!store[tcgEditingPokemon]) store[tcgEditingPokemon] = emptyFn();
   store[tcgEditingPokemon].cartas = cartas;
