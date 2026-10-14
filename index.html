@@ -2071,21 +2071,23 @@
     margin: 12px auto 0;
     padding: 14px 20px;
     border-radius: 12px;
-    background: #6E4895;
+    background: var(--tab-violeta, #2E1A5E);
     color: var(--white);
     text-decoration: none;
     font-family: 'Nunito', sans-serif;
     font-weight: 800;
     font-size: 0.95rem;
-    box-shadow: 0 4px 14px rgba(110, 72, 149, 0.35);
+    box-shadow: 0 4px 14px rgba(46, 26, 94, 0.55);
     transition: transform 0.15s ease, box-shadow 0.15s ease;
     cursor: pointer;
   }
   .whatsapp-support-btn:hover {
     transform: translateY(-2px);
-    box-shadow: 0 6px 18px rgba(110, 72, 149, 0.5);
+    box-shadow: 0 6px 18px rgba(46, 26, 94, 0.8);
   }
   .whatsapp-logo-img { height: 26px; width: auto; display: block; }
+  /* Banner de WhatsApp bajo el panel de acceso: del mismo ancho que la tarjeta */
+  #app-gate .whatsapp-support-btn.gate-whatsapp { width: 80%; max-width: 300px; margin: 14px auto auto; flex-shrink: 0; padding: 12px 18px; }
   .mode-card {
     background: var(--card);
     border: 2px solid rgba(255,255,255,0.1);
@@ -3017,8 +3019,10 @@
     inset: 0;
     z-index: 100000;
     display: flex;
+    flex-direction: column;
     align-items: center;
-    justify-content: center;
+    justify-content: flex-start;
+    overflow-y: auto;
     padding: 20px;
     background: var(--black);
     background-image:
@@ -3026,6 +3030,7 @@
       radial-gradient(ellipse at 80% 20%, rgba(227,53,13,0.12) 0%, transparent 60%);
   }
   .gate-box {
+    margin-top: auto;      /* con el banner de abajo, el conjunto queda centrado y con scroll si no cabe */
     width: 100%;
     max-width: 380px;
     background: var(--dark-card);
@@ -3250,6 +3255,10 @@
       </div>
     </div>
   </div>
+  <a href="https://chat.whatsapp.com/Bc3MymFtIJ60TOb6RPBqx1?s=cl&amp;p=a&amp;ilr=1" target="_blank" rel="noopener noreferrer" class="whatsapp-support-btn gate-whatsapp">
+        <span>Solicitar usuario nuevo</span>
+        <img src="data:image/svg+xml;base64,PHN2ZyB2aWV3Qm94PSIwIDAgMjQgMjQiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyIgZmlsbD0iI2ZmZmZmZiI+PHBhdGggZD0iTTE3LjQ3MiAxNC4zODJjLS4yOTctLjE0OS0xLjc1OC0uODY3LTIuMDMtLjk2Ny0uMjczLS4wOTktLjQ3MS0uMTQ4LS42Ny4xNS0uMTk3LjI5Ny0uNzY3Ljk2Ni0uOTQgMS4xNjQtLjE3My4xOTktLjM0Ny4yMjMtLjY0NC4wNzUtLjI5Ny0uMTUtMS4yNTUtLjQ2My0yLjM5LTEuNDc1LS44ODMtLjc4OC0xLjQ4LTEuNzYxLTEuNjUzLTIuMDU5LS4xNzMtLjI5Ny0uMDE4LS40NTguMTMtLjYwNi4xMzQtLjEzMy4yOTgtLjM0Ny40NDYtLjUyLjE0OS0uMTc0LjE5OC0uMjk4LjI5OC0uNDk3LjA5OS0uMTk4LjA1LS4zNzEtLjAyNS0uNTItLjA3NS0uMTQ5LS42NjktMS42MTItLjkxNi0yLjIwNy0uMjQyLS41NzktLjQ4Ny0uNS0uNjY5LS41MS0uMTczLS4wMDgtLjM3MS0uMDEtLjU3LS4wMS0uMTk4IDAtLjUyLjA3NC0uNzkyLjM3Mi0uMjcyLjI5Ny0xLjA0IDEuMDE2LTEuMDQgMi40NzkgMCAxLjQ2MiAxLjA2NSAyLjg3NSAxLjIxMyAzLjA3NC4xNDkuMTk4IDIuMDk2IDMuMiA1LjA3NyA0LjQ4Ny43MDkuMzA2IDEuMjYyLjQ4OSAxLjY5NC42MjUuNzEyLjIyNyAxLjM2LjE5NSAxLjg3MS4xMTguNTcxLS4wODUgMS43NTgtLjcxOSAyLjAwNi0xLjQxMy4yNDgtLjY5NC4yNDgtMS4yODkuMTczLTEuNDEzLS4wNzQtLjEyNC0uMjcyLS4xOTgtLjU3LS4zNDd6Ii8+PHBhdGggZD0iTTEyLjAwMSAyQzYuNDc4IDIgMiA2LjQ3OCAyIDEyYzAgMS44Ny41MDUgMy42MjIgMS4zODYgNS4xM0wyIDIybDQuOTk5LTEuMzUyQTkuOTM2IDkuOTM2IDAgMCAwIDEyLjAwMSAyMkMxNy41MjMgMjIgMjIgMTcuNTIzIDIyIDEyUzE3LjUyMyAyIDEyLjAwMSAyem0wIDE4LjE0YTguMTEgOC4xMSAwIDAgMS00LjE0LTEuMTM1bC0uMjk3LS4xNzYtMy4wOS44MzYuODI2LTMuMDE2LS4xOTQtLjMxQTguMTE2IDguMTE2IDAgMSAxIDIwLjEzIDEyYTguMTQgOC4xNCAwIDAgMS04LjEzIDguMTR6Ii8+PC9zdmc+Cg==" alt="WhatsApp" class="whatsapp-logo-img">
+      </a>
 </div>
 
 <!-- HEADER -->
