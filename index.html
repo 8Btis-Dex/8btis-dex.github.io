@@ -5175,29 +5175,38 @@ async function getSpriteCandidates(name, opts) {
   const slug = getSpriteSlug(nombreParaSprite);
   const candidates = [];
   const animados = [];
+  let showdownId = getShowdownAnimId(nombreParaSprite);
+  let esForma = form !== 'normal';
   try {
     const res = await fetch(`https://pokeapi.co/api/v2/pokemon/${slug}`);
     if (res.ok) {
       const data = await res.json();
+      // Con la especie que informa PokeAPI se sabe con certeza qué es forma
+      // (Hisui, Alola, Mega…) y cómo la nombra Showdown (arcanine-hisui, charizard-megax).
+      if (data.species && data.species.name) {
+        const sp = data.species.name;
+        esForma = slug !== sp;
+        const parteForma = esForma && slug.startsWith(sp + '-') ? slug.slice(sp.length + 1) : '';
+        showdownId = sp.replace(/[^a-z0-9]/g, '') + (parteForma ? '-' + parteForma.replace(/[^a-z0-9]/g, '') : '');
+      }
       if (animado && data.id) {
         // Fuente base: PokeAPI other/showdown (el campo de la API puede venir
         // vacío aunque el archivo exista, por eso también se arma por número).
         animados.push(data.sprites?.other?.showdown?.front_default
           || `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/showdown/${data.id}.gif`);
       }
-      // Solo aplica a la forma base: las formas regionales no existían en
-      // los juegos clásicos (no tienen sprite retro ni ícono) y usan
-      // sufijos propios de GO que no siempre coinciden con los que maneja
-      // PokeAPI, así que esas van directo a la cadena de abajo (HOME /
-      // artwork oficial / PokemonDB / Showdown).
-      if (form === 'normal' && !animado) {
-        // Estilo retro/ícono (8/16 bits), acorde al espíritu "8 Bits" de la
-        // app. Va primero porque el ícono de Pokémon GO (PokeMiners), que
-        // antes era la primera opción, viene con tamaños y recortes
-        // inconsistentes entre Pokémon.
+      // Cadena «8 bits» (se prueba en este orden y se salta lo que no exista):
+      // 1) íconos de menú de Gen 7/8 (también para formas regionales y megas, si PokeAPI los trae),
+      // 2) solo en la forma base: sprites retro de las generaciones I a V,
+      // 3) sprites estilo BW de Pokémon Showdown, que cubren las generaciones
+      //    nuevas y las formas (Alola, Hisui, Mega…), donde PokeAPI no tiene pixel art,
+      // 4) el ícono de Pokémon GO (más parecido al 3D), y recién después HOME/artwork en 3D.
+      // Así un Pokémon solo se ve en 3D cuando ninguna fuente tiene su versión pixelada.
+      if (!animado) {
         candidates.push(...getIconSpriteCandidates(data));
-        candidates.push(...getRetroSpriteCandidates(data));
-        if (data.id) {
+        if (!esForma) candidates.push(...getRetroSpriteCandidates(data));
+        candidates.push(`https://play.pokemonshowdown.com/sprites/gen5/${showdownId}.png`);
+        if (!esForma && data.id) {
           candidates.push(`https://raw.githubusercontent.com/PokeMiners/pogo_assets/master/Images/Pokemon/Addressable%20Assets/pm${data.id}.icon.png`);
         }
       }
@@ -5215,7 +5224,7 @@ async function getSpriteCandidates(name, opts) {
   if (animado) {
     // Respaldo con el mismo diseño: Showdown /ani/ por nombre (cubre los
     // números que PokeAPI no tiene y las formas regionales).
-    animados.push(`https://play.pokemonshowdown.com/sprites/ani/${getShowdownAnimId(nombreParaSprite)}.gif`);
+    animados.push(`https://play.pokemonshowdown.com/sprites/ani/${showdownId}.gif`);
   }
   return [...new Set([...animados, ...candidates])];
 }
@@ -6787,10 +6796,30 @@ const MOVE_FIELD_TO_TYPE_FIELD = {
 // autocompleta el tipo (solo si ese casillero de tipo todavía está vacío).
 function bindMoveTranslationBlur(tbody) {
   tbody.querySelectorAll('.move-name-input').forEach(input => {
+    // Si el ataque se borra, su tipo vuelve a «—» (antes se quedaba el que se
+    // había puesto solo). Devuelve true cuando el campo está vacío.
+    const vaciarTipoSiVacio = () => {
+      if (input.value.trim() !== '') return false;
+      const p = input.dataset.pokemon, f = input.dataset.field, game = input.dataset.game;
+      const store = game === 'champions' ? (champDatosModo === 'doubles' ? dataChampionsDoubles : dataChampions) : dataGO;
+      const typeField = MOVE_FIELD_TO_TYPE_FIELD[f];
+      if (!store[p] || !typeField || !store[p][typeField]) return true;
+      store[p][typeField] = '';
+      const row = input.closest('tr');
+      const select = row ? row.querySelector(`select[data-field="${typeField}"]`) : null;
+      if (select) {
+        select.value = '';
+        const wrap = select.nextElementSibling;
+        if (wrap) wrap.innerHTML = typeIconHTML('');
+      }
+      return true;
+    };
+    input.addEventListener('input', vaciarTipoSiVacio);
     input.addEventListener('blur', () => {
       const p = input.dataset.pokemon, f = input.dataset.field, game = input.dataset.game;
       const store = game === 'champions' ? (champDatosModo === 'doubles' ? dataChampionsDoubles : dataChampions) : dataGO;
       if (!store[p]) store[p] = game === 'champions' ? EMPTY_CHAMPIONS() : EMPTY_GO();
+      if (vaciarTipoSiVacio()) { store[p][f] = ''; persistAll(); return; }
 
       const translated = translateMoveIfEnglish(input.value);
       if (translated) {
@@ -7166,6 +7195,39 @@ function itemIconFail(img) {
   if (n < cands.length) { img.dataset.n = n; img.src = cands[n]; return; }
   ITEM_ICON_CACHE.set(nombre.trim().toLowerCase(), '');
   img.style.display = 'none';
+}
+
+// Revisa qué Pokémon se muestran hoy en 3D (no en pixel art) en Consulta.
+// Se usa desde la consola del navegador (F12):
+//   diagnosticarSprites('champions')            → todos los de esa lista ('champions', 'go' o 'tcg')
+//   diagnosticarSprites('go', 100)              → solo los primeros 100
+//   diagnosticarSprites(['Koraidon','Pikachu']) → solo esos nombres
+async function diagnosticarSprites(modoONombres, max) {
+  const lista = Array.isArray(modoONombres)
+    ? modoONombres
+    : (POKEMON_LISTS[modoONombres || 'champions'] || []).slice(0, max || 100000);
+  // Son pixel art las imágenes de versions/ (íconos y retro de PokeAPI) y las de Showdown gen5.
+  const esPixel = u => /\/versions\//.test(u) || /pokemonshowdown\.com\/sprites\/gen5\//.test(u);
+  const carga = url => new Promise(res => { const im = new Image(); im.onload = () => res(true); im.onerror = () => res(false); im.src = url; });
+  const en3D = [];
+  let hechos = 0;
+  for (let i = 0; i < lista.length; i += 5) {
+    await Promise.all(lista.slice(i, i + 5).map(async n => {
+      const cands = await getSpriteCandidates(n);
+      let usada = '';
+      for (const u of cands) { if (await carga(u)) { usada = u; break; } }
+      if (!usada) en3D.push({ pokemon: n, imagenUsada: '(ninguna imagen carga)' });
+      else if (!esPixel(usada)) en3D.push({ pokemon: n, imagenUsada: usada });
+    }));
+    hechos = Math.min(i + 5, lista.length);
+    if ((i / 5) % 10 === 0) console.log('Revisados ' + hechos + ' de ' + lista.length + '…');
+  }
+  en3D.sort((a, b) => a.pokemon.localeCompare(b.pokemon, 'es'));
+  console.log('Revisados: ' + lista.length + ' | en 3D o sin imagen: ' + en3D.length);
+  console.table(en3D);
+  console.log('Lista para copiar:\n' + en3D.map(x => x.pokemon).join('\n'));
+  showToast('🔎 ' + en3D.length + ' de ' + lista.length + ' no están en pixel art. Mira la consola (F12).');
+  return en3D;
 }
 
 // Revisa qué objetos de Champions se quedan sin ícono en ninguna fuente.
