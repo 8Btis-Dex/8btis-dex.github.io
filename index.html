@@ -6655,12 +6655,13 @@ async function championsSugerirUno(name) {
   try {
     showToast('🪄 Leyendo PokéBase para ' + name + '…');
     const { singles, doubles, aviso } = await championsObtenerSugerenciaPokebase(name);
-    if (aviso && !confirm(aviso + '\n\nSingles: ' + (singles ? [singles.naturaleza, singles.objeto, singles.ataque1].join(' · ') : '—') + '\nDoubles: ' + (doubles ? [doubles.naturaleza, doubles.objeto, doubles.ataque1].join(' · ') : '—') + '\n\n¿Aplicar de todas formas?')) return;
     if (singles) dataChampions[name] = { ...EMPTY_CHAMPIONS(), ...singles };
     if (doubles) dataChampionsDoubles[name] = { ...EMPTY_CHAMPIONS(), ...doubles };
     persistAll();
     renderTableChampions();
-    showToast('🪄 Sugerencia aplicada a ' + name + ' (Singles y Doubles, lo más usado en PokéBase)');
+    if (aviso) console.warn(name + ': ' + aviso);
+    showToast('🪄 Sugerencia aplicada a ' + name + ' (Singles y Doubles, lo más usado en PokéBase)'
+      + (aviso ? ' · ⚠️ no se pudo confirmar cuál es Singles y cuál Doubles, revísalo' : ''), !!aviso);
   } catch (e) {
     console.error(e);
     showToast('❌ ' + (e && e.message ? e.message : 'No se pudo generar una sugerencia para ' + name), true);
@@ -6687,7 +6688,7 @@ async function championsSugerirVacios() {
     if (status) status.textContent = `Sugiriendo... ${hechos + 1}/${pendientes.length} (${name}) — pokebase.app`;
     try {
       const { singles, doubles, aviso } = await championsObtenerSugerenciaPokebase(name);
-      if (aviso) { dudosos++; hechos++; await esperar(POKEBASE_PAUSA_MS); continue; } // no se aplica nada si no se pudo confirmar cuál es Singles y cuál Doubles
+      if (aviso) { dudosos++; console.warn(name + ': ' + aviso); } // se aplica igual, pero se cuenta para que lo revises
       const faltaSingles = championsEsVacio(dataChampions[name] || EMPTY_CHAMPIONS());
       const faltaDoubles = championsEsVacio(dataChampionsDoubles[name] || EMPTY_CHAMPIONS());
       if (faltaSingles && singles) { dataChampions[name] = { ...EMPTY_CHAMPIONS(), ...dataChampions[name], ...singles }; completados++; }
@@ -6701,7 +6702,7 @@ async function championsSugerirVacios() {
   }
   persistAll();
   renderTableChampions();
-  if (status) status.textContent = `Listo: se completaron ${completados} sets en ${hechos} Pokémon revisados (fuente: pokebase.app).` + (fallos ? ` ${fallos} no se encontraron (revisa la consola, F12).` : '') + (dudosos ? ` ${dudosos} se omitieron por no poder confirmar Singles/Doubles.` : '');
+  if (status) status.textContent = `Listo: se completaron ${completados} sets en ${hechos} Pokémon revisados (fuente: pokebase.app).` + (fallos ? ` ${fallos} no se encontraron (revisa la consola, F12).` : '') + (dudosos ? ` En ${dudosos} no se pudo confirmar cuál conjunto es Singles y cuál Doubles (se usó el orden de la página): revísalos.` : '');
   championsSugerirEnCurso = false;
 }
 
