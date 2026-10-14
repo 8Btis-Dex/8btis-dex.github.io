@@ -3346,7 +3346,8 @@
       <div id="go-liga-list-section" class="search-section" style="display:none">
         <span class="search-label" id="go-liga-list-label">Pokémon en esta liga</span>
         <div id="go-liga-list" style="display:flex;flex-direction:column;gap:8px;margin-top:10px"></div>
-        <button class="btn" style="background:#444;color:#fff;margin-top:12px" onclick="goLigaListaVolver()">← Elegir otra liga</button>
+        <button class="btn" id="go-liga-btn-otra-liga" style="background:#444;color:#fff;margin-top:12px" onclick="goLigaListaVolver()">← Elegir otra liga</button>
+        <button class="btn" id="go-liga-btn-otro-pokemon" style="background:#444;color:#fff;margin-top:12px;display:none" onclick="goLigaElegirOtroPokemon()">← Elegir otro Pokémon</button>
       </div>
 
       <!-- Lista de mazos (TCG Pocket / TCG Live): en estos modos no se busca
@@ -4643,6 +4644,7 @@ function traducirNombrePokemon(nombreOriginal) {
 let currentGoConsultaLiga = null;
 
 function selectGoConsultaLiga(liga) {
+  goLigaRestaurarTarjeta(); // la tarjeta puede estar dentro de la lista, que se vuelve a dibujar
   currentGoConsultaLiga = liga;
   LIGA_LIST.forEach(l => {
     const btn = document.getElementById('go-liga-btn-' + l);
@@ -4660,7 +4662,7 @@ function selectGoConsultaLiga(liga) {
   if (listEl) {
     listEl.innerHTML = nombres.length
       ? nombres.map(n => `
-          <button class="btn go-liga-list-item" style="background:#222;color:#fff;text-align:left;display:flex;align-items:center;gap:10px" onclick="selectPokemon('${n.replace(/'/g,"\\'")}')">
+          <button class="btn go-liga-list-item" data-pokemon="${esc(n)}" style="background:#222;color:#fff;text-align:left;display:flex;align-items:center;gap:10px" onclick="selectPokemon('${n.replace(/'/g,"\\'")}')">
             <img class="go-liga-list-icon" data-pokemon="${esc(n)}" style="width:28px;height:28px;object-fit:contain;flex-shrink:0;visibility:hidden;image-rendering:pixelated">
             <span>${esc(traducirNombrePokemon(n))}</span>
           </button>`).join('')
@@ -4681,9 +4683,64 @@ function selectGoConsultaLiga(liga) {
   document.getElementById('go-liga-list-section').style.display = 'block';
   document.getElementById('normal-search-section').style.display = 'none';
   showResult(null);
+  goLigaEstadoBotones(false);
+  const tarjeta = document.getElementById('consulta-result-card');
+  if (tarjeta) tarjeta.style.display = 'none'; // hasta que se elija un Pokémon no hay nada que mostrar
+}
+
+// ── POKÉMON ELEGIDO DENTRO DE UNA LIGA (GO) ─────────────────────────────────
+// Al tocar un Pokémon de la lista de una liga, su información se muestra justo
+// debajo de su nombre, el resto de la lista se oculta y abajo aparece
+// «← Elegir otro Pokémon» (igual que «← Elegir otra liga» con la lista completa).
+// Para eso la tarjeta de resultado se mueve dentro de la lista y, al salir, se
+// devuelve a su lugar original.
+let goLigaTarjetaOrigen = null; // { padre, siguiente } del lugar donde estaba la tarjeta
+
+function goLigaRestaurarTarjeta() {
+  const tarjeta = document.getElementById('consulta-result-card');
+  if (!tarjeta || !goLigaTarjetaOrigen) return;
+  const { padre, siguiente } = goLigaTarjetaOrigen;
+  if (siguiente && siguiente.parentNode === padre) padre.insertBefore(tarjeta, siguiente);
+  else padre.appendChild(tarjeta);
+  goLigaTarjetaOrigen = null;
+}
+
+function goLigaEstadoBotones(conPokemonElegido) {
+  const otraLiga = document.getElementById('go-liga-btn-otra-liga');
+  const otroPokemon = document.getElementById('go-liga-btn-otro-pokemon');
+  if (otraLiga) otraLiga.style.display = conPokemonElegido ? 'none' : '';
+  if (otroPokemon) otroPokemon.style.display = conPokemonElegido ? '' : 'none';
+}
+
+function goLigaMostrarSeleccion(name) {
+  const lista = document.getElementById('go-liga-list');
+  const tarjeta = document.getElementById('consulta-result-card');
+  if (!lista || !tarjeta) return;
+  const botones = Array.from(lista.querySelectorAll('.go-liga-list-item'));
+  const elegido = botones.find(b => b.dataset.pokemon === name);
+  if (!elegido) return;
+  botones.forEach(b => { b.style.display = b === elegido ? 'flex' : 'none'; });
+  if (!goLigaTarjetaOrigen) goLigaTarjetaOrigen = { padre: tarjeta.parentNode, siguiente: tarjeta.nextSibling };
+  elegido.insertAdjacentElement('afterend', tarjeta);
+  tarjeta.style.display = 'block';
+  goLigaEstadoBotones(true);
+  elegido.scrollIntoView({ block: 'start', behavior: 'smooth' });
+}
+
+function goLigaElegirOtroPokemon() {
+  const lista = document.getElementById('go-liga-list');
+  if (lista) lista.querySelectorAll('.go-liga-list-item').forEach(b => { b.style.display = 'flex'; });
+  goLigaRestaurarTarjeta();
+  const tarjeta = document.getElementById('consulta-result-card');
+  if (tarjeta) tarjeta.style.display = 'none';
+  clearSearch();
+  goLigaEstadoBotones(false);
 }
 
 function goLigaListaVolver() {
+  goLigaRestaurarTarjeta();
+  const tarjeta = document.getElementById('consulta-result-card');
+  if (tarjeta) tarjeta.style.display = 'block';
   currentGoConsultaLiga = null;
   document.getElementById('go-liga-list-section').style.display = 'none';
   document.getElementById('go-liga-selector').style.display = 'block';
@@ -4692,6 +4749,8 @@ function goLigaListaVolver() {
 }
 
 function selectMode(mode) {
+  goLigaRestaurarTarjeta();
+  goLigaEstadoBotones(false);
   currentMode = mode;
   document.getElementById('mode-select-screen').style.display = 'none';
   document.getElementById('consulta-content').style.display = 'block';
@@ -4881,6 +4940,8 @@ function toggleMazoDetail(idx, rowEl) {
 }
 
 function backToModeSelect() {
+  goLigaRestaurarTarjeta();
+  goLigaEstadoBotones(false);
   currentMode = null;
   currentGoConsultaLiga = null;
   document.getElementById('consulta-content').style.display = 'none';
@@ -5025,6 +5086,7 @@ function selectPokemon(name) {
   document.getElementById('clear-btn').style.display = 'block';
   document.getElementById('search-icon-main').style.display = 'none';
   showResult(name);
+  if (currentMode === 'go' && currentGoConsultaLiga) goLigaMostrarSeleccion(name);
 }
 
 document.addEventListener('click', e => {
