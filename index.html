@@ -9829,7 +9829,14 @@ async function saveAllData() {
   document.querySelectorAll(scopeSelector + '.editable-cell:not(.name-cell)').forEach(input => {
     const p = input.dataset.pokemon, f = input.dataset.field;
     if (!p || !f) return;
-    if (currentDatosMode === 'champions') { if (!dataChampions[p]) dataChampions[p] = EMPTY_CHAMPIONS(); dataChampions[p][f] = input.value; }
+    if (currentDatosMode === 'champions') {
+      // Cada formato tiene sus propios datos: lo que se ve en la tabla se guarda
+      // en el formato que se está mostrando (antes siempre iba a Singles, y al
+      // guardar viendo Doubles se pisaban los ataques y objetos de Singles).
+      const champStoreActual = champDatosModo === 'doubles' ? dataChampionsDoubles : dataChampions;
+      if (!champStoreActual[p]) champStoreActual[p] = EMPTY_CHAMPIONS();
+      champStoreActual[p][f] = input.value;
+    }
     else if (currentDatosMode === 'go') { if (!dataGO[p]) dataGO[p] = EMPTY_GO(); dataGO[p][f] = input.value; }
     else if (currentDatosMode === 'tcg') { if (!dataTCG[p]) dataTCG[p] = EMPTY_TCG(); dataTCG[p][f] = input.value; }
   });
