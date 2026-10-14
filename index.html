@@ -3471,6 +3471,7 @@
         Seleccionar todo
       </label>
       <button class="btn btn-danger" id="btn-bulk-delete" disabled onclick="confirmBulkDelete()">🗑️ Borrar seleccionados</button>
+      <button class="btn btn-yellow" id="btn-bulk-clear" disabled onclick="confirmBulkClear()" title="Deja en blanco el contenido de los Pokémon marcados, sin quitarlos de la lista">🧽 Vaciar seleccionados</button>
     </div>
 
     <!-- ===== CHAMPIONS ===== -->
@@ -7197,39 +7198,6 @@ function itemIconFail(img) {
   img.style.display = 'none';
 }
 
-// Revisa qué Pokémon se muestran hoy en 3D (no en pixel art) en Consulta.
-// Se usa desde la consola del navegador (F12):
-//   diagnosticarSprites('champions')            → todos los de esa lista ('champions', 'go' o 'tcg')
-//   diagnosticarSprites('go', 100)              → solo los primeros 100
-//   diagnosticarSprites(['Koraidon','Pikachu']) → solo esos nombres
-async function diagnosticarSprites(modoONombres, max) {
-  const lista = Array.isArray(modoONombres)
-    ? modoONombres
-    : (POKEMON_LISTS[modoONombres || 'champions'] || []).slice(0, max || 100000);
-  // Son pixel art las imágenes de versions/ (íconos y retro de PokeAPI) y las de Showdown gen5.
-  const esPixel = u => /\/versions\//.test(u) || /pokemonshowdown\.com\/sprites\/gen5\//.test(u);
-  const carga = url => new Promise(res => { const im = new Image(); im.onload = () => res(true); im.onerror = () => res(false); im.src = url; });
-  const en3D = [];
-  let hechos = 0;
-  for (let i = 0; i < lista.length; i += 5) {
-    await Promise.all(lista.slice(i, i + 5).map(async n => {
-      const cands = await getSpriteCandidates(n);
-      let usada = '';
-      for (const u of cands) { if (await carga(u)) { usada = u; break; } }
-      if (!usada) en3D.push({ pokemon: n, imagenUsada: '(ninguna imagen carga)' });
-      else if (!esPixel(usada)) en3D.push({ pokemon: n, imagenUsada: usada });
-    }));
-    hechos = Math.min(i + 5, lista.length);
-    if ((i / 5) % 10 === 0) console.log('Revisados ' + hechos + ' de ' + lista.length + '…');
-  }
-  en3D.sort((a, b) => a.pokemon.localeCompare(b.pokemon, 'es'));
-  console.log('Revisados: ' + lista.length + ' | en 3D o sin imagen: ' + en3D.length);
-  console.table(en3D);
-  console.log('Lista para copiar:\n' + en3D.map(x => x.pokemon).join('\n'));
-  showToast('🔎 ' + en3D.length + ' de ' + lista.length + ' no están en pixel art. Mira la consola (F12).');
-  return en3D;
-}
-
 // Revisa qué objetos de Champions se quedan sin ícono en ninguna fuente.
 // Se usa desde la consola del navegador (F12):  diagnosticarObjetosChampions()
 async function diagnosticarObjetosChampions() {
@@ -10042,6 +10010,12 @@ function updateBulkDeleteUI() {
 
   btn.textContent = totalChecked > 0 ? `🗑️ Borrar seleccionados (${totalChecked})` : '🗑️ Borrar seleccionados';
   btn.disabled = totalChecked === 0;
+  const btnClear = document.getElementById('btn-bulk-clear');
+  if (btnClear) {
+    btnClear.style.display = currentDatosMode === 'tcg' ? 'none' : ''; // solo Champions y GO
+    btnClear.textContent = totalChecked > 0 ? `🧽 Vaciar seleccionados (${totalChecked})` : '🧽 Vaciar seleccionados';
+    btnClear.disabled = totalChecked === 0;
+  }
 
   const allVisibleSelected = visibleRows.length > 0 && visibleChecked.length === visibleRows.length;
   const indeterminate = visibleChecked.length > 0 && visibleChecked.length < visibleRows.length;
@@ -10052,6 +10026,48 @@ function updateBulkDeleteUI() {
     if (th) selectAllCbs.push(th);
   }
   selectAllCbs.forEach(cb => { if (cb) { cb.checked = allVisibleSelected; cb.indeterminate = indeterminate; } });
+}
+
+// ── VACIAR SELECCIONADOS ────────────────────────────────────────────────────
+// Deja en blanco todo el contenido de los Pokémon marcados, sin quitarlos de la lista:
+//  · Champions: naturaleza, objeto, ataques y tipos, del formato que se está viendo (Singles o Doubles).
+//  · GO: CP, stats, movimientos y tipos. Las ligas marcadas se conservan, para que el Pokémon no
+//    desaparezca de las listas de Consulta.
+function confirmBulkClear() {
+  const tbodyId = currentDatosTbodyId();
+  if (!tbodyId || currentDatosMode === 'tcg') return;
+  const names = Array.from(document.querySelectorAll('#' + tbodyId + ' .row-select-cb:checked')).map(cb => cb.value);
+  if (!names.length) return;
+  const modeLabel = MODE_TITLES[currentDatosMode] || currentDatosMode;
+  const detalle = currentDatosMode === 'champions'
+    ? `naturaleza, objeto, ataques y tipos (formato ${champDatosModo === 'doubles' ? 'Doubles' : 'Singles'})`
+    : 'CP, stats, movimientos y tipos (las ligas marcadas se mantienen)';
+  if (!confirm(`¿Vaciar el contenido de ${names.length} Pokémon de ${modeLabel}?\n\nSe borrará: ${detalle}.\nLos Pokémon siguen en la lista. No se puede deshacer.`)) return;
+  ejecutarBulkClear(names);
+}
+
+async function ejecutarBulkClear(names) {
+  const mode = currentDatosMode;
+  names.forEach(name => {
+    if (mode === 'champions') {
+      const store = champDatosModo === 'doubles' ? dataChampionsDoubles : dataChampions;
+      if (store[name]) store[name] = EMPTY_CHAMPIONS();
+    } else if (mode === 'go') {
+      if (!dataGO[name]) return;
+      const ligas = Array.isArray(dataGO[name].ligas) ? dataGO[name].ligas : [];
+      dataGO[name] = Object.assign(EMPTY_GO(), { ligas });
+    }
+  });
+  renderCurrentTable();
+  updateBulkDeleteUI();
+  showToast('💾 Guardando...');
+  try {
+    await persistAll();
+    showToast(`🧽 ${names.length} Pokémon vaciados en ${MODE_TITLES[mode] || mode}`);
+  } catch (err) {
+    console.log('Error al vaciar', err);
+    showToast('⚠️ No se pudo confirmar en la nube. Revisa tu conexión y vuelve a intentar.', true);
+  }
 }
 
 function confirmBulkDelete() {
