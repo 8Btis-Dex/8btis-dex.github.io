@@ -6463,21 +6463,207 @@ async function championsObtenerSugerenciaGamewith(name) {
   return { singles, doubles };
 }
 
+// ── SUGERENCIAS DESDE POKÉBASE (solo «Season Stats») ───────────────────────
+// Lo usan el botón 🪄 de cada fila y «🪄 Sugerir para los vacíos». Lee la página
+// pública de un Pokémon en pokebase.app (a través del mismo lector r.jina.ai que usaba
+// gamewith) y toma lo MÁS USADO de la temporada: la naturaleza más popular, el objeto
+// más popular y los 4 ataques más populares, para Singles y para Doubles. Las
+// «Tournament Stats» no se usan. La página trae los dos formatos dentro de sus datos,
+// así que una sola lectura por Pokémon alcanza.
+// Estructura relevada a mano con Arboliva el 14/10/2026; si PokéBase la cambia, este
+// código puede dejar de encontrar los datos.
+const POKEBASE_PAUSA_MS = 4000; // espera entre un Pokémon y el siguiente en la sugerencia masiva
+const POKEBASE_SLUG_EXCEPCIONES = {}; // nombre en tu lista → nombre en la dirección de pokebase.app
+
+// PokéBase nombra las formas en inglés con el adjetivo delante: «Hisuian Arcanine»,
+// «Alolan Ninetales», «Mega Charizard X». En la lista pueden estar como «Arcanine Hisui».
+const POKEBASE_ADJETIVOS = { hisui: 'Hisuian', hisuian: 'Hisuian', alola: 'Alolan', alolan: 'Alolan', galar: 'Galarian', galarian: 'Galarian', paldea: 'Paldean', paldean: 'Paldean' };
+const POKEBASE_ADJ_CORTO = { hisuian: 'Hisui', alolan: 'Alola', galarian: 'Galar', paldean: 'Paldea' };
+
+function pokebaseNombreIngles(name) {
+  const partes = String(name).trim().split(/\s+/);
+  const idx = partes.findIndex((p, i) => i > 0 && POKEBASE_ADJETIVOS[p.toLowerCase()]);
+  if (idx > 0) {                       // «Arcanine Hisui» → «Hisuian Arcanine»
+    const resto = partes.filter((_, i) => i !== idx);
+    return [POKEBASE_ADJETIVOS[partes[idx].toLowerCase()], ...resto].join(' ');
+  }
+  const m = /^(.+?)\s+Mega(?:\s+([XY]))?$/i.exec(String(name).trim());
+  if (m) return 'Mega ' + m[1] + (m[2] ? ' ' + m[2].toUpperCase() : '');   // «Charizard Mega X» → «Mega Charizard X»
+  return String(name).trim();
+}
+
+function pokebaseASlug(texto) {
+  return String(texto).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .replace(/['’.]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+}
+
+// Direcciones a probar, en orden. La primera que funcione se recuerda en este navegador.
+let POKEBASE_SLUG_RECORDADO = (() => {
+  try { return JSON.parse(localStorage.getItem('pokebaseSlugs') || '{}'); } catch (e) { return {}; }
+})();
+function pokebaseSlugsCandidatos(name) {
+  if (POKEBASE_SLUG_EXCEPCIONES[name]) return [POKEBASE_SLUG_EXCEPCIONES[name]];
+  const lista = [];
+  if (POKEBASE_SLUG_RECORDADO[name]) lista.push(POKEBASE_SLUG_RECORDADO[name]);
+  const ingles = pokebaseNombreIngles(name);
+  lista.push(pokebaseASlug(ingles));                       // hisuian-arcanine
+  lista.push(pokebaseASlug(name));                         // tal como está en tu lista
+  const partes = ingles.split(/\s+/);
+  if (partes.length > 1 && POKEBASE_ADJ_CORTO[partes[0].toLowerCase()]) {
+    lista.push(pokebaseASlug(partes.slice(1).join(' ') + ' ' + POKEBASE_ADJ_CORTO[partes[0].toLowerCase()]));   // arcanine-hisui
+  }
+  return [...new Set(lista)];
+}
+
+async function pokebaseFetchHtml(slug) {
+  const url = 'https://pokebase.app/pokemon-champions/pokemon/' + slug;
+  let ultimoError = null;
+  for (let intento = 0; intento < 2; intento++) {
+    try {
+      const res = await fetch(GAMEWITH_READER_BASE + url, { headers: { 'X-Return-Format': 'html' } });
+      if (res.status === 404) { const e = new Error('no existe (404)'); e.noReintentar = true; throw e; }
+      if (!res.ok) throw new Error('respuesta ' + res.status);
+      const html = await res.text();
+      if (!html || html.length < 5000) throw new Error('respuesta vacía');
+      return { html, url };
+    } catch (e) {
+      ultimoError = e;
+      if (e.noReintentar) break;
+      await esperar(600 + intento * 600);
+    }
+  }
+  throw new Error('No se pudo leer ' + url + (ultimoError ? ' (' + ultimoError.message + ')' : ''));
+}
+
+// Devuelve los dos conjuntos de datos de la página ({moves, items, natures}) en el
+// orden en que aparecen, más una pista de cuál es el que la página muestra por defecto.
+function pokebaseLeerConjuntos(htmlCrudo) {
+  // Une los trozos del flujo de datos de Next.js y des-escapa las comillas.
+  const h = htmlCrudo.replace(/\\"/g, '"').replace(/"\]\)<\/script><script>self\.__next_f\.push\(\[1,"/g, '');
+
+  const leerLista = (clave, desde, hasta) => {
+    const marca = '"' + clave + '":[';
+    const i = h.indexOf(marca, desde);
+    if (i < 0 || i >= hasta) return null;
+    let d = 0, fin = -1;
+    for (let j = i + marca.length - 1; j < h.length; j++) {
+      const c = h[j];
+      if (c === '[') d++;
+      else if (c === ']') { d--; if (d === 0) { fin = j; break; } }
+    }
+    if (fin < 0) return null;
+    try { return JSON.parse(h.slice(i + marca.length - 1, fin + 1)); } catch (e) { return null; }
+  };
+
+  const inicios = [];
+  let pos = -1;
+  while ((pos = h.indexOf('"moves":[', pos + 1)) >= 0) inicios.push(pos);
+  const conjuntos = [];
+  inicios.forEach((ini, n) => {
+    const hasta = n + 1 < inicios.length ? inicios[n + 1] : h.length;
+    const moves = leerLista('moves', ini, hasta);
+    const items = leerLista('items', ini, hasta);
+    const natures = leerLista('natures', ini, hasta);
+    const valida = l => Array.isArray(l) && l.length && l.every(x => x && typeof x.percent === 'number' && x.name);
+    if (valida(moves) && valida(items) && valida(natures)) conjuntos.push({ moves, items, natures });
+  });
+
+  // ¿Cuál de los dos formatos muestra la página por defecto? Se lee del selector
+  // «Ranked format» (el botón con aria-selected="true") y se compara el primer objeto
+  // que se dibuja con el primer objeto de cada conjunto.
+  let formatoPorDefecto = null, conjuntoPorDefecto = -1;
+  const t = htmlCrudo.indexOf('aria-label="Ranked format"');
+  if (t >= 0) {
+    const zona = htmlCrudo.slice(t, t + 2500);
+    const botones = [...zona.matchAll(/<button[^>]*aria-selected="(true|false)"[^>]*>([^<]*)<\/button>/g)];
+    const sel = botones.find(b => b[1] === 'true');
+    if (sel) formatoPorDefecto = sel[2].trim().toLowerCase().startsWith('d') ? 'doubles' : 'singles';
+    const link = /href="\/pokemon-champions\/items\/([a-z0-9-]+)"/.exec(htmlCrudo.slice(t));
+    if (link) {
+      const coinciden = conjuntos.map((c, i) => ({ i, ok: c.items[0] && c.items[0].slug === link[1] })).filter(x => x.ok);
+      if (coinciden.length === 1) conjuntoPorDefecto = coinciden[0].i;
+    }
+  }
+  return { conjuntos, formatoPorDefecto, conjuntoPorDefecto };
+}
+
+function pokebaseConstruirBuild(conjunto) {
+  const masUsados = lista => lista.slice().sort((a, b) => b.percent - a.percent);
+  const nat = masUsados(conjunto.natures)[0];
+  const obj = masUsados(conjunto.items)[0];
+  const ataques = masUsados(conjunto.moves).slice(0, 4);
+  const resultado = {
+    naturaleza: nat ? (translateNatureIfEnglish(nat.name) || nat.name) : '',
+    objeto: obj ? (translateItemIfEnglish(obj.name) || obj.name) : ''
+  };
+  [1, 2, 3, 4].forEach(i => {
+    const a = ataques[i - 1];
+    if (a) {
+      const { nombre, tipo } = championsSpanishMoveAndType(a.name);
+      resultado['ataque' + i] = nombre;
+      resultado['tipo' + i] = tipo || MOVE_TYPE_TO_INTERNAL_KEY[String(a.moveTypeName || '').toLowerCase()] || '';
+    } else {
+      resultado['ataque' + i] = '';
+      resultado['tipo' + i] = '';
+    }
+  });
+  return resultado;
+}
+
+async function championsObtenerSugerenciaPokebase(name) {
+  const candidatos = pokebaseSlugsCandidatos(name);
+  const probadas = [];
+  let lectura = null, urlUsada = '';
+  for (const slug of candidatos) {
+    try {
+      const { html, url } = await pokebaseFetchHtml(slug);
+      const r = pokebaseLeerConjuntos(html);
+      probadas.push(url);
+      if (r.conjuntos.length >= 1) { lectura = r; urlUsada = url; POKEBASE_SLUG_RECORDADO[name] = slug; break; }
+    } catch (e) {
+      probadas.push('https://pokebase.app/pokemon-champions/pokemon/' + slug);
+    }
+  }
+  if (!lectura) throw new Error('No se encontró «' + name + '» en PokéBase. Direcciones probadas: ' + probadas.join(' , '));
+  try { localStorage.setItem('pokebaseSlugs', JSON.stringify(POKEBASE_SLUG_RECORDADO)); } catch (e) {}
+
+  const { conjuntos, formatoPorDefecto, conjuntoPorDefecto } = lectura;
+  let singles = null, doubles = null, aviso = '';
+  if (conjuntos.length === 1) {
+    if (formatoPorDefecto === 'singles') singles = pokebaseConstruirBuild(conjuntos[0]);
+    else if (formatoPorDefecto === 'doubles') doubles = pokebaseConstruirBuild(conjuntos[0]);
+    else throw new Error('Solo se encontró un conjunto de datos y no se pudo saber de qué formato es');
+  } else if (formatoPorDefecto && conjuntoPorDefecto >= 0) {
+    const otro = conjuntoPorDefecto === 0 ? 1 : 0;
+    const a = pokebaseConstruirBuild(conjuntos[conjuntoPorDefecto]);
+    const b = pokebaseConstruirBuild(conjuntos[otro]);
+    if (formatoPorDefecto === 'doubles') { doubles = a; singles = b; } else { singles = a; doubles = b; }
+  } else {
+    // No se pudo confirmar cuál es cuál: se asume el orden de la página (Singles, Doubles).
+    singles = pokebaseConstruirBuild(conjuntos[0]);
+    doubles = pokebaseConstruirBuild(conjuntos[1]);
+    aviso = 'No se pudo confirmar cuál conjunto es Singles y cuál Doubles; se asumió el orden de la página.';
+  }
+  return { singles, doubles, url: urlUsada, aviso };
+}
+
 function championsEsVacio(d) {
   return !d.naturaleza && !d.objeto && !d.ataque1 && !d.ataque2 && !d.ataque3 && !d.ataque4;
 }
 
 async function championsSugerirUno(name) {
   try {
-    const { singles, doubles } = await championsObtenerSugerenciaGamewith(name);
-    if (singles) dataChampions[name] = { ...EMPTY_CHAMPIONS(), ...dataChampions[name], ...singles };
-    if (doubles) dataChampionsDoubles[name] = { ...EMPTY_CHAMPIONS(), ...dataChampionsDoubles[name], ...doubles };
+    showToast('🪄 Leyendo PokéBase para ' + name + '…');
+    const { singles, doubles, aviso } = await championsObtenerSugerenciaPokebase(name);
+    if (aviso && !confirm(aviso + '\n\nSingles: ' + (singles ? [singles.naturaleza, singles.objeto, singles.ataque1].join(' · ') : '—') + '\nDoubles: ' + (doubles ? [doubles.naturaleza, doubles.objeto, doubles.ataque1].join(' · ') : '—') + '\n\n¿Aplicar de todas formas?')) return;
+    if (singles) dataChampions[name] = { ...EMPTY_CHAMPIONS(), ...singles };
+    if (doubles) dataChampionsDoubles[name] = { ...EMPTY_CHAMPIONS(), ...doubles };
     persistAll();
     renderTableChampions();
-    showToast('🪄 Sugerencia aplicada a ' + name + ' (Singles y Doubles, fuente: gamewith.ai)');
+    showToast('🪄 Sugerencia aplicada a ' + name + ' (Singles y Doubles, lo más usado en PokéBase)');
   } catch (e) {
     console.error(e);
-    showToast('❌ No se pudo generar una sugerencia para ' + name, true);
+    showToast('❌ ' + (e && e.message ? e.message : 'No se pudo generar una sugerencia para ' + name), true);
   }
 }
 
@@ -6496,24 +6682,26 @@ async function championsSugerirVacios() {
     championsSugerirEnCurso = false;
     return;
   }
-  let hechos = 0, completados = 0;
+  let hechos = 0, completados = 0, fallos = 0, dudosos = 0;
   for (const name of pendientes) {
-    if (status) status.textContent = `Sugiriendo... ${hechos + 1}/${pendientes.length} (${name}) — gamewith.ai`;
+    if (status) status.textContent = `Sugiriendo... ${hechos + 1}/${pendientes.length} (${name}) — pokebase.app`;
     try {
-      const { singles, doubles } = await championsObtenerSugerenciaGamewith(name);
+      const { singles, doubles, aviso } = await championsObtenerSugerenciaPokebase(name);
+      if (aviso) { dudosos++; hechos++; await esperar(POKEBASE_PAUSA_MS); continue; } // no se aplica nada si no se pudo confirmar cuál es Singles y cuál Doubles
       const faltaSingles = championsEsVacio(dataChampions[name] || EMPTY_CHAMPIONS());
       const faltaDoubles = championsEsVacio(dataChampionsDoubles[name] || EMPTY_CHAMPIONS());
       if (faltaSingles && singles) { dataChampions[name] = { ...EMPTY_CHAMPIONS(), ...dataChampions[name], ...singles }; completados++; }
       if (faltaDoubles && doubles) { dataChampionsDoubles[name] = { ...EMPTY_CHAMPIONS(), ...dataChampionsDoubles[name], ...doubles }; completados++; }
     } catch (e) {
+      fallos++;
       console.log('Sin sugerencia para', name, e);
     }
     hechos++;
-    await esperar(300); // pausa breve para no saturar el proxy con pedidos seguidos
+    await esperar(POKEBASE_PAUSA_MS); // pausa larga: cada página pesa unos 800 KB y no conviene sobrecargar a PokéBase ni al lector
   }
   persistAll();
   renderTableChampions();
-  if (status) status.textContent = `Listo: se completaron ${completados} sets en ${hechos} Pokémon revisados (fuente: gamewith.ai).`;
+  if (status) status.textContent = `Listo: se completaron ${completados} sets en ${hechos} Pokémon revisados (fuente: pokebase.app).` + (fallos ? ` ${fallos} no se encontraron (revisa la consola, F12).` : '') + (dudosos ? ` ${dudosos} se omitieron por no poder confirmar Singles/Doubles.` : '');
   championsSugerirEnCurso = false;
 }
 
