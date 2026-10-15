@@ -4114,7 +4114,7 @@
 <div class="modal-overlay" id="modal-lista-gif">
   <div class="modal" style="max-width:760px;max-height:92vh;overflow:auto">
     <h3>📋 LISTA DE GIF ANIMADOS</h3>
-    <p>La página busca cada GIF en la carpeta <b>sprites-animados</b> con el nombre que ves en la columna «Archivo». Aquí se comprueba <b>por nombre</b>: si un GIF lo subiste con el número de la Pokédex (por ejemplo <b>25.gif</b>), la página lo usa igual, pero esta lista lo mostrará como que falta.</p>
+    <p>La página busca cada GIF (o WebP animado) en la carpeta <b>sprites-animados</b> con el nombre que ves en la columna «Archivo» (también vale la extensión .webp). Aquí se comprueba <b>por nombre</b>: si un GIF lo subiste con el número de la Pokédex (por ejemplo <b>25.gif</b>), la página lo usa igual, pero esta lista lo mostrará como que falta.</p>
     <div class="lg-barra">
       <button class="btn" id="lg-btn-champions" onclick="listaGifCambiar('champions')">Champions</button>
       <button class="btn" id="lg-btn-go" onclick="listaGifCambiar('go')">GO (por liga)</button>
@@ -5283,8 +5283,9 @@ function getShowdownAnimId(name) {
 // sigue la cadena de siempre (HOME, artwork oficial, etc.).
 // Carpeta propia con GIF pixelados y animados, junto al index.html. Cada archivo se
 // puede llamar por el número de la Pokédex (25.gif) o por el nombre en inglés con
-// guiones (pikachu.gif, mr-mime.gif, arcanine-hisui.gif). Si un Pokémon no tiene GIF
-// ahí, se sigue con la cadena de siempre (sprites 8 bits quietos).
+// guiones (pikachu.gif, mr-mime.gif, arcanine-hisui.gif). También se aceptan archivos
+// WebP animados con el mismo nombre (pikachu.webp, 25.webp). Si un Pokémon no tiene
+// archivo ahí, se sigue con la cadena de siempre (sprites 8 bits quietos).
 const SPRITES_LOCALES_DIR = 'sprites-animados/';
 
 async function getSpriteCandidates(name, opts) {
@@ -5298,7 +5299,7 @@ async function getSpriteCandidates(name, opts) {
   const slug = getSpriteSlug(nombreParaSprite);
   const candidates = [];
   const animados = [];
-  const locales = local ? [SPRITES_LOCALES_DIR + slug + '.gif'] : [];
+  const locales = local ? [SPRITES_LOCALES_DIR + slug + '.gif', SPRITES_LOCALES_DIR + slug + '.webp'] : [];
   let showdownId = getShowdownAnimId(nombreParaSprite);
   let esForma = form !== 'normal';
   try {
@@ -5313,7 +5314,7 @@ async function getSpriteCandidates(name, opts) {
         const parteForma = esForma && slug.startsWith(sp + '-') ? slug.slice(sp.length + 1) : '';
         showdownId = sp.replace(/[^a-z0-9]/g, '') + (parteForma ? '-' + parteForma.replace(/[^a-z0-9]/g, '') : '');
       }
-      if (local && data.id && !esForma) locales.push(SPRITES_LOCALES_DIR + data.id + '.gif');
+      if (local && data.id && !esForma) locales.push(SPRITES_LOCALES_DIR + data.id + '.gif', SPRITES_LOCALES_DIR + data.id + '.webp');
       if (animado && data.id) {
         // Fuente base: PokeAPI other/showdown (el campo de la API puede venir
         // vacío aunque el archivo exista, por eso también se arma por número).
@@ -5370,7 +5371,7 @@ async function calcularBBoxGifLocal(url) {
     if (typeof ImageDecoder === 'undefined') throw new Error('sin ImageDecoder');
     const res = await fetch(url);
     if (!res.ok) throw new Error('no se pudo leer ' + url);
-    dec = new ImageDecoder({ data: await res.arrayBuffer(), type: 'image/gif' });
+    dec = new ImageDecoder({ data: await res.arrayBuffer(), type: /\.webp(\?|$)/i.test(url) ? 'image/webp' : 'image/gif' });
     await dec.tracks.ready;
     const total = Math.min(dec.tracks.selectedTrack.frameCount || 1, 150);
     let w = 0, h = 0, minX = Infinity, minY = Infinity, maxX = -1, maxY = -1, canvas = null, ctx = null;
@@ -7669,13 +7670,19 @@ function listaGifCambiar(modo) {
   listaGifPintar();
 }
 
-function listaGifExiste(slug) {
+function listaGifExisteExt(slug, ext) {
   return new Promise(res => {
     const im = new Image();
     im.onload = () => res(true);
     im.onerror = () => res(false);
-    im.src = SPRITES_LOCALES_DIR + slug + '.gif?c=' + Date.now();   // el ?c= evita que el navegador recuerde un «no existe» anterior
+    im.src = SPRITES_LOCALES_DIR + slug + '.' + ext + '?c=' + Date.now();   // el ?c= evita que el navegador recuerde un «no existe» anterior
   });
+}
+// Devuelve 'gif', 'webp' o false según el archivo que exista en la carpeta.
+async function listaGifExiste(slug) {
+  if (await listaGifExisteExt(slug, 'gif')) return 'gif';
+  if (await listaGifExisteExt(slug, 'webp')) return 'webp';
+  return false;
 }
 
 async function listaGifComprobar() {
@@ -7696,7 +7703,7 @@ function listaGifFilasVisibles() {
   return listaGifDatos[listaGifModo].filter(f => {
     const e = listaGifEstado[f.slug];
     if (filtro === 'faltan') return e === false;
-    if (filtro === 'subidos') return e === true;
+    if (filtro === 'subidos') return !!e;
     return true;
   });
 }
@@ -7706,7 +7713,7 @@ function listaGifPintar() {
   document.getElementById('lg-btn-champions').classList.toggle('activo', listaGifModo === 'champions');
   document.getElementById('lg-btn-go').classList.toggle('activo', listaGifModo === 'go');
   const comprobados = filas.filter(f => listaGifEstado[f.slug] !== undefined);
-  const subidos = filas.filter(f => listaGifEstado[f.slug] === true).length;
+  const subidos = filas.filter(f => !!listaGifEstado[f.slug]).length;
   const faltan = filas.filter(f => listaGifEstado[f.slug] === false).length;
   const todosSlugs = [...new Set([...listaGifDatos.champions, ...listaGifDatos.go].map(f => f.slug))];
   const faltanTotal = todosSlugs.filter(sl => listaGifEstado[sl] === false).length;
@@ -7716,7 +7723,7 @@ function listaGifPintar() {
     `<br>Entre Champions y GO se necesitan <b>${todosSlugs.length}</b> archivos distintos (un Pokémon repetido usa el mismo archivo) · faltan <b>${faltanTotal}</b> en total.`;
   const visibles = listaGifFilasVisibles();
   const esGo = listaGifModo === 'go';
-  const estado = sl => listaGifEstado[sl] === true ? '<span class="lg-ok">✅ subido</span>' : listaGifEstado[sl] === false ? '<span class="lg-no">❌ falta</span>' : '<span class="lg-pend">…</span>';
+  const estado = sl => listaGifEstado[sl] ? '<span class="lg-ok">✅ subido' + (listaGifEstado[sl] === 'webp' ? ' (webp)' : '') + '</span>' : listaGifEstado[sl] === false ? '<span class="lg-no">❌ falta</span>' : '<span class="lg-pend">…</span>';
   document.getElementById('lg-tabla').innerHTML = visibles.length
     ? `<table class="lg-table"><thead><tr><th>#</th><th>Pokémon</th><th>Archivo</th>${esGo ? '<th>Ligas</th>' : ''}<th>Estado</th></tr></thead><tbody>` +
       visibles.map((f, i) => `<tr><td>${i + 1}</td><td>${esc(f.nombre)}</td><td class="arch">${esc(f.slug)}.gif</td>${esGo ? `<td>${f.ligas.map(l => esc(l.replace('Liga ', ''))).join(', ')}</td>` : ''}<td>${estado(f.slug)}</td></tr>`).join('') +
@@ -7733,7 +7740,7 @@ function listaGifCopiarFaltan() {
 }
 
 function listaGifDescargar() {
-  const celdas = f => [f.nombre, f.slug + '.gif', f.ligas.map(l => l.replace('Liga ', '')).join(' / '), listaGifEstado[f.slug] === true ? 'subido' : listaGifEstado[f.slug] === false ? 'falta' : 'sin comprobar'];
+  const celdas = f => [f.nombre, f.slug + '.gif', f.ligas.map(l => l.replace('Liga ', '')).join(' / '), listaGifEstado[f.slug] ? 'subido' + (listaGifEstado[f.slug] === 'webp' ? ' (webp)' : '') : listaGifEstado[f.slug] === false ? 'falta' : 'sin comprobar'];
   const csv = '\ufeff' + [['Pokémon', 'Archivo', 'Ligas', 'Estado'], ...listaGifDatos[listaGifModo].map(celdas)]
     .map(r => r.map(c => '"' + String(c).replace(/"/g, '""') + '"').join(';')).join('\r\n');
   const a = document.createElement('a');
