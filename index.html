@@ -3188,6 +3188,17 @@
   .vo-row.fail .vo-src { color: #ff6b6b; font-size: 0.74rem; }
   .vo-row .vo-url { flex: 1 1 100%; font-size: 0.78rem; padding: 6px 8px; }
   .vo-row .vo-prev { width: 32px; height: 32px; object-fit: contain; }
+  .lg-barra { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin: 8px 0; }
+  .lg-barra .btn.activo { background: var(--tab-violeta, #2E1A5E); color: #fff; }
+  .lg-resumen { font-size: 0.82rem; margin: 6px 0 8px; color: var(--muted); }
+  .lg-resumen b { color: var(--yellow); }
+  .lg-table { width: 100%; border-collapse: collapse; font-size: 0.8rem; }
+  .lg-table th { text-align: left; padding: 6px 8px; color: var(--muted); font-weight: 700; border-bottom: 1px solid rgba(255,255,255,0.15); position: sticky; top: 0; background: var(--dark-card, #111); }
+  .lg-table td { padding: 5px 8px; border-bottom: 1px solid rgba(255,255,255,0.06); }
+  .lg-table td.arch { font-family: 'Courier New', monospace; }
+  .lg-ok { color: #4caf50; font-weight: 700; }
+  .lg-no { color: #ff6b6b; font-weight: 700; }
+  .lg-pend { color: var(--muted); }
   .owner-code { margin: 6px 0 2px; font-size: 0.78rem; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
   .owner-code b { font-family: 'Courier New', monospace; letter-spacing: 0.5px; }
   .owner-code.none { color: var(--muted); font-style: italic; }
@@ -3472,6 +3483,7 @@
         <button class="btn btn-yellow datos-only-data" onclick="showAddPokemonVarios()">📋 Agregar varios</button>
         <button class="btn datos-only-data" style="background:var(--purple);color:#fff" onclick="openExpansionesModal()">🏷️ Expansiones</button>
         <button class="btn datos-only-data" style="background:#16a085;color:#fff" onclick="openVerificarObjetos()">🔎 Verificar objetos</button>
+        <button class="btn datos-only-data" style="background:#2E1A5E;color:#fff" onclick="openListaGif()" title="Qué GIF animados faltan por subir a la carpeta sprites-animados">📋 Lista de GIF</button>
         <button class="btn" style="background:#e67e22;color:#fff" onclick="openUsuariosModal()">➕ Crear usuario</button>
         <button class="btn btn-danger" id="btn-borrar-vacios" onclick="borrarVaciosModoActual()">🗑️ Borrar vacíos</button>
         <button class="btn btn-primary datos-only-data" onclick="saveAllData()">💾 Guardar cambios</button>
@@ -4098,6 +4110,29 @@
   </div>
 </div>
 
+<!-- MODAL LISTA DE GIF ANIMADOS -->
+<div class="modal-overlay" id="modal-lista-gif">
+  <div class="modal" style="max-width:760px;max-height:92vh;overflow:auto">
+    <h3>📋 LISTA DE GIF ANIMADOS</h3>
+    <p>La página busca cada GIF en la carpeta <b>sprites-animados</b> con el nombre que ves en la columna «Archivo». Aquí se comprueba <b>por nombre</b>: si un GIF lo subiste con el número de la Pokédex (por ejemplo <b>25.gif</b>), la página lo usa igual, pero esta lista lo mostrará como que falta.</p>
+    <div class="lg-barra">
+      <button class="btn" id="lg-btn-champions" onclick="listaGifCambiar('champions')">Champions</button>
+      <button class="btn" id="lg-btn-go" onclick="listaGifCambiar('go')">GO (por liga)</button>
+      <select class="gate-input" id="lg-filtro" style="width:auto;padding:6px 10px" onchange="listaGifPintar()">
+        <option value="todos">Todos</option><option value="faltan">Solo los que faltan</option><option value="subidos">Solo los subidos</option>
+      </select>
+    </div>
+    <div id="lg-resumen" class="lg-resumen"></div>
+    <div id="lg-tabla"></div>
+    <div class="modal-btns" style="flex-wrap:wrap">
+      <button class="btn btn-primary" onclick="listaGifComprobar()">🔄 Comprobar de nuevo</button>
+      <button class="btn" style="background:#444;color:#fff" onclick="listaGifCopiarFaltan()">📋 Copiar los que faltan</button>
+      <button class="btn" style="background:#444;color:#fff" onclick="listaGifDescargar()">⬇️ Descargar CSV</button>
+      <button class="btn btn-yellow" onclick="closeModal('modal-lista-gif')">Cerrar</button>
+    </div>
+  </div>
+</div>
+
 <!-- MODAL PAÍS Y CÓDIGOS DE UN USUARIO -->
 <div class="modal-overlay" id="modal-usuario-perfil">
   <div class="modal" style="max-width:520px">
@@ -4687,7 +4722,7 @@ function selectGoConsultaLiga(liga) {
     // se prueban las fuentes alternativas.
     nombres.forEach(async n => {
       try {
-        const candidates = await getSpriteCandidates(n);
+        const candidates = await getSpriteCandidates(n, { local: true });
         const img = listEl.querySelector(`.go-liga-list-icon[data-pokemon="${CSS.escape(n)}"]`);
         if (img) loadSpriteWithFallback(img, candidates, () => { img.style.visibility = 'visible'; }, null);
       } catch (e) { /* sin conexión, se queda sin ícono */ }
@@ -5246,8 +5281,15 @@ function getShowdownAnimId(name) {
 // 3D en dos fuentes: 1) PokeAPI other/showdown (por número) y, si ese número
 // no tiene GIF, 2) Pokémon Showdown /ani/ (por nombre). Si ninguna existe,
 // sigue la cadena de siempre (HOME, artwork oficial, etc.).
+// Carpeta propia con GIF pixelados y animados, junto al index.html. Cada archivo se
+// puede llamar por el número de la Pokédex (25.gif) o por el nombre en inglés con
+// guiones (pikachu.gif, mr-mime.gif, arcanine-hisui.gif). Si un Pokémon no tiene GIF
+// ahí, se sigue con la cadena de siempre (sprites 8 bits quietos).
+const SPRITES_LOCALES_DIR = 'sprites-animados/';
+
 async function getSpriteCandidates(name, opts) {
   const animado = !!(opts && opts.animado);
+  const local = !!(opts && opts.local);
   // La variante "Oscuro" (Pokémon Sombra) usa el mismo sprite que su forma
   // base: solo cambia el nombre/registro, no el Pokémon en sí. Se le quita
   // la palabra antes de resolver el sprite para que no rompa la búsqueda.
@@ -5256,6 +5298,7 @@ async function getSpriteCandidates(name, opts) {
   const slug = getSpriteSlug(nombreParaSprite);
   const candidates = [];
   const animados = [];
+  const locales = local ? [SPRITES_LOCALES_DIR + slug + '.gif'] : [];
   let showdownId = getShowdownAnimId(nombreParaSprite);
   let esForma = form !== 'normal';
   try {
@@ -5270,6 +5313,7 @@ async function getSpriteCandidates(name, opts) {
         const parteForma = esForma && slug.startsWith(sp + '-') ? slug.slice(sp.length + 1) : '';
         showdownId = sp.replace(/[^a-z0-9]/g, '') + (parteForma ? '-' + parteForma.replace(/[^a-z0-9]/g, '') : '');
       }
+      if (local && data.id && !esForma) locales.push(SPRITES_LOCALES_DIR + data.id + '.gif');
       if (animado && data.id) {
         // Fuente base: PokeAPI other/showdown (el campo de la API puede venir
         // vacío aunque el archivo exista, por eso también se arma por número).
@@ -5307,7 +5351,7 @@ async function getSpriteCandidates(name, opts) {
     // números que PokeAPI no tiene y las formas regionales).
     animados.push(`https://play.pokemonshowdown.com/sprites/ani/${showdownId}.gif`);
   }
-  return [...new Set([...animados, ...candidates])];
+  return [...new Set([...locales, ...animados, ...candidates])];
 }
 
 function loadSpriteWithFallback(imgEl, candidates, onSuccess, onFail) {
@@ -5326,8 +5370,10 @@ function loadSpriteWithFallback(imgEl, candidates, onSuccess, onFail) {
     // con el primer cuadro) y se suavizan en vez de pixelarse, porque son
     // renders 3D y no pixel art. Para el resto se restaura el estilo original.
     const esGif = /\.gif(\?|$)/i.test(url);
+    const esLocal = url.startsWith(SPRITES_LOCALES_DIR); // GIF pixelado propio: se deja pixelado y sin deformar
     if (imgEl._irOriginal === undefined) imgEl._irOriginal = imgEl.style.imageRendering || '';
-    imgEl.style.imageRendering = esGif ? 'auto' : imgEl._irOriginal;
+    imgEl.style.imageRendering = (esGif && !esLocal) ? 'auto' : imgEl._irOriginal;
+    imgEl.style.objectFit = esLocal ? 'contain' : '';
     imgEl.onerror = tryNext;
     imgEl.onload = () => {
       if (!esGif) trimTransparentPadding(imgEl);
@@ -5532,7 +5578,7 @@ async function showResult(name) {
   const img = document.getElementById('poke-sprite');
   if (img) {
     img.style.display = 'none';
-    const candidates = await getSpriteCandidates(name);
+    const candidates = await getSpriteCandidates(name, { local: true });
     loadSpriteWithFallback(
       img,
       candidates,
@@ -7515,6 +7561,121 @@ function traducirObjetosGuardados() {
   persistAll();
   if (typeof renderTableChampions === 'function' && document.getElementById('table-body-champions')) renderTableChampions();
   showToast('✅ ' + cambios.length + ' objeto(s) traducido(s)');
+}
+
+// ── LISTA DE GIF ANIMADOS (qué falta subir a sprites-animados/) ─────────────
+// Muestra los Pokémon de Champions y los de cada liga de GO, con el nombre de archivo
+// que la página buscaría (el mismo cálculo que usa para los sprites) y si ese archivo
+// ya existe en la carpeta. La comprobación es por nombre; un GIF subido con número
+// (25.gif) funciona en la página pero aquí figurará como faltante.
+let listaGifModo = 'champions';
+let listaGifDatos = { champions: [], go: [] };
+let listaGifEstado = {};   // slug -> true (existe) | false (falta) | undefined (sin comprobar)
+let listaGifEnCurso = false;
+
+function listaGifSlug(name) {
+  const base = (name || '').replace(/\s*\boscuro\b\s*/gi, ' ').trim() || name;
+  return getSpriteSlug(base);
+}
+
+function listaGifConstruir() {
+  loadNamesFromStorage();
+  const champions = (POKEMON_LISTS.champions || []).map(n => ({ nombre: n, slug: listaGifSlug(n), ligas: [] }));
+  const go = [];
+  (POKEMON_LISTS.go || []).forEach(n => {
+    const ligas = (getGOData(n).ligas || []).filter(l => LIGA_LIST.includes(l));
+    if (ligas.length) go.push({ nombre: n, slug: listaGifSlug(n), ligas });
+  });
+  go.sort((a, b) => a.nombre.localeCompare(b.nombre, 'es'));
+  champions.sort((a, b) => a.nombre.localeCompare(b.nombre, 'es'));
+  listaGifDatos = { champions, go };
+}
+
+function openListaGif() {
+  listaGifModo = 'champions';
+  listaGifConstruir();
+  document.getElementById('modal-lista-gif').classList.add('open');
+  listaGifPintar();
+  listaGifComprobar();
+}
+
+function listaGifCambiar(modo) {
+  listaGifModo = modo;
+  listaGifPintar();
+}
+
+function listaGifExiste(slug) {
+  return new Promise(res => {
+    const im = new Image();
+    im.onload = () => res(true);
+    im.onerror = () => res(false);
+    im.src = SPRITES_LOCALES_DIR + slug + '.gif?c=' + Date.now();   // el ?c= evita que el navegador recuerde un «no existe» anterior
+  });
+}
+
+async function listaGifComprobar() {
+  if (listaGifEnCurso) return;
+  listaGifEnCurso = true;
+  listaGifEstado = {};
+  const slugs = [...new Set([...listaGifDatos.champions, ...listaGifDatos.go].map(f => f.slug))];
+  for (let i = 0; i < slugs.length; i += 12) {
+    await Promise.all(slugs.slice(i, i + 12).map(async sl => { listaGifEstado[sl] = await listaGifExiste(sl); }));
+    listaGifPintar();
+  }
+  listaGifEnCurso = false;
+  listaGifPintar();
+}
+
+function listaGifFilasVisibles() {
+  const filtro = document.getElementById('lg-filtro') ? document.getElementById('lg-filtro').value : 'todos';
+  return listaGifDatos[listaGifModo].filter(f => {
+    const e = listaGifEstado[f.slug];
+    if (filtro === 'faltan') return e === false;
+    if (filtro === 'subidos') return e === true;
+    return true;
+  });
+}
+
+function listaGifPintar() {
+  const filas = listaGifDatos[listaGifModo];
+  document.getElementById('lg-btn-champions').classList.toggle('activo', listaGifModo === 'champions');
+  document.getElementById('lg-btn-go').classList.toggle('activo', listaGifModo === 'go');
+  const comprobados = filas.filter(f => listaGifEstado[f.slug] !== undefined);
+  const subidos = filas.filter(f => listaGifEstado[f.slug] === true).length;
+  const faltan = filas.filter(f => listaGifEstado[f.slug] === false).length;
+  const todosSlugs = [...new Set([...listaGifDatos.champions, ...listaGifDatos.go].map(f => f.slug))];
+  const faltanTotal = todosSlugs.filter(sl => listaGifEstado[sl] === false).length;
+  document.getElementById('lg-resumen').innerHTML =
+    `${listaGifModo === 'champions' ? 'Champions' : 'GO'}: <b>${subidos}</b> de <b>${filas.length}</b> con GIF · faltan <b>${faltan}</b>` +
+    (comprobados.length < filas.length ? ` · comprobando… (${comprobados.length}/${filas.length})` : '') +
+    `<br>Entre Champions y GO se necesitan <b>${todosSlugs.length}</b> archivos distintos (un Pokémon repetido usa el mismo archivo) · faltan <b>${faltanTotal}</b> en total.`;
+  const visibles = listaGifFilasVisibles();
+  const esGo = listaGifModo === 'go';
+  const estado = sl => listaGifEstado[sl] === true ? '<span class="lg-ok">✅ subido</span>' : listaGifEstado[sl] === false ? '<span class="lg-no">❌ falta</span>' : '<span class="lg-pend">…</span>';
+  document.getElementById('lg-tabla').innerHTML = visibles.length
+    ? `<table class="lg-table"><thead><tr><th>#</th><th>Pokémon</th><th>Archivo</th>${esGo ? '<th>Ligas</th>' : ''}<th>Estado</th></tr></thead><tbody>` +
+      visibles.map((f, i) => `<tr><td>${i + 1}</td><td>${esc(f.nombre)}</td><td class="arch">${esc(f.slug)}.gif</td>${esGo ? `<td>${f.ligas.map(l => esc(l.replace('Liga ', ''))).join(', ')}</td>` : ''}<td>${estado(f.slug)}</td></tr>`).join('') +
+      '</tbody></table>'
+    : '<div class="mazo-empty-hint">No hay Pokémon para mostrar con este filtro.</div>';
+}
+
+function listaGifCopiarFaltan() {
+  const faltan = [...new Set(listaGifDatos[listaGifModo].filter(f => listaGifEstado[f.slug] === false).map(f => f.slug + '.gif'))];
+  if (!faltan.length) { showToast('✅ No falta ningún GIF en esta lista'); return; }
+  const texto = faltan.join('\n');
+  if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(texto).then(() => showToast('📋 Copiados ' + faltan.length + ' nombres de archivo')).catch(() => prompt('Copia los nombres:', texto));
+  else prompt('Copia los nombres:', texto);
+}
+
+function listaGifDescargar() {
+  const celdas = f => [f.nombre, f.slug + '.gif', f.ligas.map(l => l.replace('Liga ', '')).join(' / '), listaGifEstado[f.slug] === true ? 'subido' : listaGifEstado[f.slug] === false ? 'falta' : 'sin comprobar'];
+  const csv = '\ufeff' + [['Pokémon', 'Archivo', 'Ligas', 'Estado'], ...listaGifDatos[listaGifModo].map(celdas)]
+    .map(r => r.map(c => '"' + String(c).replace(/"/g, '""') + '"').join(';')).join('\r\n');
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
+  a.download = 'lista-gif-' + listaGifModo + '.csv';
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 2000);
 }
 
 function openVerificarObjetos() {
