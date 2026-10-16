@@ -3998,6 +3998,7 @@
     <h3>🃏 CARTAS DE <span id="tcg-cards-pokemon-name"></span></h3>
     <div id="tcg-search-box" style="display:none;margin-bottom:10px;padding:8px;border:1px solid #333;border-radius:8px;background:#1c1c1c">
       <button class="btn btn-primary" style="width:100%" onclick="buscarCartasOficialesTcg()">🔍 Buscar cartas oficiales (TCG Pocket)</button>
+      <button class="btn" style="width:100%;margin-top:8px;background:#2E1A5E;color:#fff" onclick="completarDescripcionesFilasTcg()" title="Rellena la descripción de las cartas de este Pokémon que la tengan vacía">📝 Completar descripciones de estas cartas</button>
       <div id="tcg-search-status" style="font-size:0.78rem;color:var(--muted);margin-top:6px"></div>
       <div id="tcg-search-results" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:8px"></div>
     </div>
@@ -9262,6 +9263,7 @@ function renderCartaDetalleAtaques(carta) {
     const nombre = a.nombreEs || a.name || '';
     const dano = (a.damage !== undefined && a.damage !== null && a.damage !== '') ? ` — ${esc(String(a.damage))} de daño` : '';
     const efectoTexto = a.effectEs || (a.effect ? traducirTextoAtaqueTcg(a.effect) : '');
+    if (!permitirEditar && !nombre && !dano && !efectoTexto) return '';   // ataque vacío: no se muestra a quien solo mira
     return `<div class="carta-detalle-ataque" id="carta-detalle-ataque-${i}">
       <div class="carta-detalle-ataque-header">
         ${nombre ? `<strong>${esc(nombre)}</strong>` : ''}${dano}
@@ -9399,6 +9401,39 @@ function claveCartaTcg(carta) {
   return a ? (a[1] + '-' + String(a[2]).padStart(3, '0')).toLowerCase() : '';
 }
 
+// Igual que el botón de Datos, pero solo para las cartas de la ventana abierta. Escribe el
+// texto en la casilla «Descripción» de cada fila vacía; luego hay que pulsar «💾 Guardar cartas».
+async function completarDescripcionesFilasTcg() {
+  const estado = document.getElementById('tcg-search-status');
+  const filas = Array.from(document.querySelectorAll('#tcg-cards-list .tcg-card-row')).map(row => ({
+    ta: row.querySelector('.tcg-desc-input'),
+    imagen: (row.querySelector('.tcg-imagen-input') || {}).value || ''
+  })).filter(f => f.ta && !f.ta.value.trim());
+  if (!filas.length) { estado.textContent = 'Todas las cartas de este Pokémon ya tienen descripción.'; return; }
+  let dataset;
+  try {
+    estado.textContent = '⏳ Descargando el dataset de cartas…';
+    dataset = await cargarCartasPocketDecks();
+  } catch (e) { estado.textContent = '❌ No se pudo descargar el dataset de cartas. Revisa tu conexión.'; return; }
+  const porId = {};
+  dataset.forEach(c => { porId[String(c.id).toLowerCase()] = c; });
+  const cache = {};
+  let hechas = 0, sinTexto = 0, sinCoincidencia = 0, fallidas = 0, seguidas = 0;
+  for (let i = 0; i < filas.length; i++) {
+    const ref = porId[claveCartaTcg({ imagen: filas[i].imagen })];
+    if (!ref) { sinCoincidencia++; continue; }
+    if (!((ref.type === 'Trainer' && ref.card_text) || (ref.ability && ref.ability.exists))) { sinTexto++; continue; }
+    estado.textContent = `⏳ Traduciendo… ${i + 1}/${filas.length}`;
+    let texto = cache[ref.id];
+    if (texto === undefined) { texto = await descripcionDesdePocketDecks(ref, true); cache[ref.id] = texto; await esperar(400); }
+    if (texto) { filas[i].ta.value = texto; hechas++; seguidas = 0; }
+    else { fallidas++; if (++seguidas >= 3) break; }
+  }
+  estado.textContent = `✅ ${hechas} completada(s)` + (sinTexto ? ` · ${sinTexto} sin habilidad ni efecto` : '') +
+    (sinCoincidencia ? ` · ${sinCoincidencia} que no se pudieron emparejar` : '') + (fallidas ? ` · ${fallidas} sin traducir (el traductor gratuito puede haber llegado a su límite)` : '') +
+    (hechas ? '. Revisa el texto y pulsa «💾 Guardar cartas».' : '');
+}
+
 let descAutoEnCurso = false;
 async function completarDescripcionesTcg() {
   if (descAutoEnCurso) return;
@@ -9528,7 +9563,8 @@ async function agregarCartaDesdePocketDecks(c, img) {
 
   // Respaldo sin español nativo: traducimos con MyMemory, con la heurística
   // por patrones como red de contención si la API falla.
-  const attacksArr = attacksObjetoAArray(c.attacks);
+  // La fuente trae siempre dos casillas de ataque; si la segunda viene vacía no se guarda.
+  const attacksArr = attacksObjetoAArray(c.attacks).filter(a => a && (a.name || a.effect || (a.damage !== null && a.damage !== undefined && a.damage !== '')));
   const ataques = [];
   for (const a of attacksArr) {
     const nombreEs = a.name ? (await traducirConMyMemory(a.name)) || a.name : '';
