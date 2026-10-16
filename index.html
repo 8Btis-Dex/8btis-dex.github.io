@@ -1532,6 +1532,18 @@
   .result-item.pokemon-name { border-left-color: var(--yellow); }
   .result-item.attack { border-left-color: var(--yellow); }
 
+  /* Ficha de Champions y GO: el Pokémon en un cuadro a la izquierda (su nombre arriba y el sprite al centro)
+     y los datos a su derecha, en una sola columna. En pantallas angostas el cuadro va arriba y los datos debajo.
+     Los tamaños salen de variables (--lat-*) para poder ajustarlos desde el HTML de prueba. */
+  .result-lateral { display: grid; grid-template-columns: minmax(200px, var(--lat-izq, 50%)) 1fr; gap: var(--lat-gap, 10px); align-items: stretch; }
+  .result-lateral .pokemon-panel { display: flex; flex-direction: column; padding: 14px 14px 12px; overflow: hidden; }
+  .pokemon-panel-titulo { text-align: center; font-size: var(--lat-nombre, 1.8rem); font-weight: 800; font-style: italic; color: var(--white); line-height: 1.2; padding-bottom: 10px; border-bottom: 1px solid rgba(255,255,255,0.12); overflow-wrap: anywhere; }
+  .pokemon-panel-body { flex: 1; display: flex; align-items: center; justify-content: center; padding: 10px 0 4px; }
+  .result-lateral .pokemon-sprite { width: var(--lat-sprite, 260px); height: var(--lat-sprite, 260px); object-fit: contain; }
+  .result-datos { display: grid; grid-template-columns: 1fr; gap: var(--lat-gap, 10px); }
+  .result-datos .result-item { display: flex; flex-direction: column; justify-content: center; }
+  .result-datos .result-item .ri-value { font-size: var(--lat-dato, 1rem); }
+
   /* DATOS SECTION */
   /* Lock screen */
   .lock-screen {
@@ -1765,6 +1777,8 @@
   @media (max-width: 600px) {
     .site-title-8bits { font-size: 0.9rem; }
     .result-grid { grid-template-columns: 1fr; }
+    .result-lateral { grid-template-columns: 1fr; }
+    .result-lateral .pokemon-sprite { width: var(--lat-sprite-m, 150px); height: var(--lat-sprite-m, 150px); }
     .section { padding: 16px; }
   }
 
@@ -2391,6 +2405,18 @@
   .result-item.pokemon-name { border-left-color: var(--yellow); }
   .result-item.attack { border-left-color: var(--yellow); }
 
+  /* Ficha de Champions y GO: el Pokémon en un cuadro a la izquierda (su nombre arriba y el sprite al centro)
+     y los datos a su derecha, en una sola columna. En pantallas angostas el cuadro va arriba y los datos debajo.
+     Los tamaños salen de variables (--lat-*) para poder ajustarlos desde el HTML de prueba. */
+  .result-lateral { display: grid; grid-template-columns: minmax(200px, var(--lat-izq, 50%)) 1fr; gap: var(--lat-gap, 10px); align-items: stretch; }
+  .result-lateral .pokemon-panel { display: flex; flex-direction: column; padding: 14px 14px 12px; overflow: hidden; }
+  .pokemon-panel-titulo { text-align: center; font-size: var(--lat-nombre, 1.8rem); font-weight: 800; font-style: italic; color: var(--white); line-height: 1.2; padding-bottom: 10px; border-bottom: 1px solid rgba(255,255,255,0.12); overflow-wrap: anywhere; }
+  .pokemon-panel-body { flex: 1; display: flex; align-items: center; justify-content: center; padding: 10px 0 4px; }
+  .result-lateral .pokemon-sprite { width: var(--lat-sprite, 260px); height: var(--lat-sprite, 260px); object-fit: contain; }
+  .result-datos { display: grid; grid-template-columns: 1fr; gap: var(--lat-gap, 10px); }
+  .result-datos .result-item { display: flex; flex-direction: column; justify-content: center; }
+  .result-datos .result-item .ri-value { font-size: var(--lat-dato, 1rem); }
+
   /* DATOS SECTION */
   /* Lock screen */
   .lock-screen {
@@ -2682,6 +2708,8 @@
   @media (max-width: 600px) {
     .site-title-8bits { font-size: 0.9rem; }
     .result-grid { grid-template-columns: 1fr; }
+    .result-lateral { grid-template-columns: 1fr; }
+    .result-lateral .pokemon-sprite { width: var(--lat-sprite-m, 150px); height: var(--lat-sprite-m, 150px); }
     .section { padding: 16px; }
   }
 
@@ -5676,7 +5704,21 @@ async function showResult(name) {
       </div>`;
   }
 
-  el.innerHTML = `
+  const lateral = currentMode === 'champions' || currentMode === 'go';
+  el.innerHTML = lateral ? `
+    <div class="result-lateral">
+      <div class="result-item pokemon-name pokemon-panel">
+        <div class="pokemon-panel-titulo">${esc(traducirNombrePokemon(name))}</div>
+        <div class="pokemon-panel-body">
+          <span class="pokemon-sprite-wrap" style="position:relative;display:inline-flex;align-items:center">
+            <img id="poke-sprite" class="pokemon-sprite" src="" alt="" style="display:none">
+            ${esVarianteOscura(name) ? svgFlameOscuroHTML() : ''}
+          </span>
+        </div>
+      </div>
+      <div class="result-datos">${bodyHTML}</div>
+    </div>
+  ` : `
     <div class="result-grid">
       <div class="result-item pokemon-name" style="grid-column:1/-1">
         <div class="ri-label">Pokémon</div>
