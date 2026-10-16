@@ -3229,6 +3229,14 @@
   .lg-table th { text-align: left; padding: 6px 8px; color: var(--muted); font-weight: 700; border-bottom: 1px solid rgba(255,255,255,0.15); position: sticky; top: 0; background: var(--dark-card, #111); }
   .lg-table td { padding: 5px 8px; border-bottom: 1px solid rgba(255,255,255,0.06); }
   .lg-table td.arch { font-family: 'Courier New', monospace; }
+  /* Marco del mismo tamaño que el sprite de Consulta (72 px): si un tamaño grande se sale del marco, se ve recortado */
+  .lg-prev { width: 72px; height: 72px; display: flex; align-items: center; justify-content: center; overflow: hidden; border-radius: 8px; background: rgba(255,255,255,0.05); border: 1px dashed rgba(255,255,255,0.18); }
+  .lg-prev img { width: 72px; height: 72px; flex-shrink: 0; }
+  .lg-table td { vertical-align: middle; }
+  .lg-tam { display: inline-flex; align-items: center; gap: 4px; }
+  .lg-tam button { width: 26px; height: 26px; padding: 0; border-radius: 6px; border: 1px solid rgba(255,255,255,0.25); background: rgba(255,255,255,0.08); color: #fff; cursor: pointer; font-weight: 700; }
+  .lg-tam button:hover { background: var(--tab-violeta, #2E1A5E); }
+  .lg-tam input { width: 58px; padding: 4px 4px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.25); background: rgba(0,0,0,0.3); color: #fff; text-align: center; }
   .lg-ok { color: #4caf50; font-weight: 700; }
   .lg-no { color: #ff6b6b; font-weight: 700; }
   .lg-pend { color: var(--muted); }
@@ -4143,9 +4151,9 @@
 
 <!-- MODAL LISTA DE GIF ANIMADOS -->
 <div class="modal-overlay" id="modal-lista-gif">
-  <div class="modal" style="max-width:760px;max-height:92vh;overflow:auto">
+  <div class="modal" style="max-width:900px;max-height:92vh;overflow:auto">
     <h3>📋 LISTA DE GIF ANIMADOS</h3>
-    <p>La página busca cada GIF (o WebP animado) en la carpeta <b>sprites-animados</b> con el nombre que ves en la columna «Archivo» (también vale la extensión .webp). Aquí se comprueba <b>por nombre</b>: si un GIF lo subiste con el número de la Pokédex (por ejemplo <b>25.gif</b>), la página lo usa igual, pero esta lista lo mostrará como que falta.</p>
+    <p>La página busca cada GIF (o WebP animado) en la carpeta <b>sprites-animados</b> con el nombre que ves en la columna «Archivo» (también vale la extensión .webp). En «Tamaño» puedes agrandar o achicar cómo se ve cada GIF en Consulta (de 30 % a 200 %); se ve igual para todos. Aquí se comprueba <b>por nombre</b>: si un GIF lo subiste con el número de la Pokédex (por ejemplo <b>25.gif</b>), la página lo usa igual, pero esta lista lo mostrará como que falta.</p>
     <div class="lg-barra">
       <button class="btn" id="lg-btn-champions" onclick="listaGifCambiar('champions')">Champions</button>
       <button class="btn" id="lg-btn-go" onclick="listaGifCambiar('go')">GO (por liga)</button>
@@ -4609,6 +4617,9 @@ const TRADUCCIONES_NOMBRES = {
 // nombre. Se guarda acá, en localStorage y Firestore, y tiene la prioridad
 // más alta de las tres formas de traducción.
 let NOMBRES_MOSTRAR = {};
+// Tamaño con que se muestra cada GIF propio: { 'pikachu': 1.2, ... } (1 = 100 %). Se edita desde
+// Datos → «📋 Lista de GIF» y se sincroniza con la nube para que todos lo vean igual.
+let GIF_ESCALAS = {};
 
 function claveNombre(n) {
   return (n || '').trim().toLowerCase().replace(/\s+/g, ' ');
@@ -5473,12 +5484,14 @@ function loadSpriteWithFallback(imgEl, candidates, onSuccess, onFail) {
     imgEl.style.imageRendering = (esGif && !esLocal) ? 'auto' : imgEl._irOriginal;
     imgEl.style.objectFit = esLocal ? 'contain' : '';
     imgEl.style.objectViewBox = '';                         // quita el recorte de un GIF anterior
+    imgEl.style.scale = '';                                 // y el tamaño de uno anterior
     const tok = (imgEl._lsTok = (imgEl._lsTok || 0) + 1);
     imgEl.onerror = tryNext;
     imgEl.onload = async () => {
       if (esLocal) {
         await recortarGifLocal(imgEl, url);
         if (imgEl._lsTok !== tok) return;                   // llegó otra carga para esta imagen
+        aplicarEscalaGif(imgEl);                            // tamaño elegido a mano (si lo hay)
       } else if (!esGif) {
         trimTransparentPadding(imgEl);
       }
@@ -5684,6 +5697,7 @@ async function showResult(name) {
   if (img) {
     img.style.display = 'none';
     const candidates = await getSpriteCandidates(name, { local: true });
+    img.dataset.gifSlug = listaGifSlug(name);              // para aplicar el tamaño elegido en «Lista de GIF»
     loadSpriteWithFallback(
       img,
       candidates,
@@ -6227,6 +6241,9 @@ try {
 } catch (e) {}
 try {
   Object.assign(NOMBRES_MOSTRAR, JSON.parse(localStorage.getItem('nombresMostrar') || '{}'));
+} catch (e) {}
+try {
+  Object.assign(GIF_ESCALAS, JSON.parse(localStorage.getItem('gifEscalas') || '{}'));
 } catch (e) {}
 
 // Orden manual de Pokémon dentro de cada liga de Pokémon GO (Super/Ultra/
@@ -7668,6 +7685,35 @@ function traducirObjetosGuardados() {
   showToast('✅ ' + cambios.length + ' objeto(s) traducido(s)');
 }
 
+// ── TAMAÑO DE CADA GIF (editable desde «📋 Lista de GIF») ────────────────────
+function gifEscalaDe(slug) { const f = Number(GIF_ESCALAS[slug]); return f > 0 ? f : 1; }
+
+// Aplica a una imagen el tamaño guardado para su Pokémon (el atributo data-gif-slug).
+function aplicarEscalaGif(imgEl) {
+  const sl = imgEl && imgEl.dataset ? imgEl.dataset.gifSlug : '';
+  const f = sl ? gifEscalaDe(sl) : 1;
+  imgEl.style.scale = f === 1 ? '' : String(f);
+}
+
+function gifEscalaRefrescar(slug) {
+  const pct = Math.round(gifEscalaDe(slug) * 100);
+  document.querySelectorAll('#lg-tabla [data-gif-slug="' + slug + '"]').forEach(el => {
+    if (el.tagName === 'IMG') aplicarEscalaGif(el);
+    else if (el.tagName === 'INPUT') el.value = pct;
+    else if (el.classList.contains('lg-reset')) el.style.visibility = pct === 100 ? 'hidden' : 'visible';
+  });
+}
+
+function gifEscalaFijar(slug, porcentaje) {
+  let p = Math.round(Number(porcentaje));
+  if (!isFinite(p)) { gifEscalaRefrescar(slug); return; }
+  p = Math.max(30, Math.min(200, p));
+  if (p === 100) delete GIF_ESCALAS[slug]; else GIF_ESCALAS[slug] = p / 100;
+  persistAll();
+  gifEscalaRefrescar(slug);
+}
+function gifEscalaAjustar(slug, delta) { gifEscalaFijar(slug, Math.round(gifEscalaDe(slug) * 100) + delta); }
+
 // ── LISTA DE GIF ANIMADOS (qué falta subir a sprites-animados/) ─────────────
 // Muestra los Pokémon de Champions y los de cada liga de GO, con el nombre de archivo
 // que la página buscaría (el mismo cálculo que usa para los sprites) y si ese archivo
@@ -7763,11 +7809,40 @@ function listaGifPintar() {
   const visibles = listaGifFilasVisibles();
   const esGo = listaGifModo === 'go';
   const estado = sl => listaGifEstado[sl] ? '<span class="lg-ok">✅ subido' + (listaGifEstado[sl] === 'webp' ? ' (webp)' : '') + '</span>' : listaGifEstado[sl] === false ? '<span class="lg-no">❌ falta</span>' : '<span class="lg-pend">…</span>';
+  const listo = !listaGifEnCurso;   // las vistas previas se dibujan al terminar de comprobar, no en cada tanda
+  const celdaTamano = sl => {
+    if (!listaGifEstado[sl]) return '<span class="lg-pend">—</span>';
+    const pct = Math.round(gifEscalaDe(sl) * 100);
+    return `<div class="lg-tam"><button type="button" onclick="gifEscalaAjustar('${sl}',-5)" title="Más chico">−</button>` +
+      `<input type="number" min="30" max="200" step="5" value="${pct}" data-gif-slug="${sl}" onchange="gifEscalaFijar('${sl}', this.value)"><span>%</span>` +
+      `<button type="button" onclick="gifEscalaAjustar('${sl}',5)" title="Más grande">+</button>` +
+      `<button type="button" class="lg-reset" data-gif-slug="${sl}" style="visibility:${pct === 100 ? 'hidden' : 'visible'}" onclick="gifEscalaFijar('${sl}',100)" title="Volver al 100 %">↺</button></div>`;
+  };
+  const celdaPrevia = sl => (listaGifEstado[sl] && listo)
+    ? `<div class="lg-prev"><img class="lg-prev-img" data-gif-slug="${sl}" alt="" style="image-rendering:pixelated"></div>`
+    : '<span class="lg-pend">' + (listaGifEstado[sl] ? '…' : '—') + '</span>';
   document.getElementById('lg-tabla').innerHTML = visibles.length
-    ? `<table class="lg-table"><thead><tr><th>#</th><th>Pokémon</th><th>Archivo</th>${esGo ? '<th>Ligas</th>' : ''}<th>Estado</th></tr></thead><tbody>` +
-      visibles.map((f, i) => `<tr><td>${i + 1}</td><td>${esc(f.nombre)}</td><td class="arch">${esc(f.slug)}.gif</td>${esGo ? `<td>${f.ligas.map(l => esc(l.replace('Liga ', ''))).join(', ')}</td>` : ''}<td>${estado(f.slug)}</td></tr>`).join('') +
+    ? `<table class="lg-table"><thead><tr><th>#</th><th>Pokémon</th><th>Archivo</th>${esGo ? '<th>Ligas</th>' : ''}<th>Estado</th><th>Vista previa</th><th>Tamaño</th></tr></thead><tbody>` +
+      visibles.map((f, i) => `<tr><td>${i + 1}</td><td>${esc(f.nombre)}</td><td class="arch">${esc(f.slug)}.gif</td>${esGo ? `<td>${f.ligas.map(l => esc(l.replace('Liga ', ''))).join(', ')}</td>` : ''}<td>${estado(f.slug)}</td><td>${celdaPrevia(f.slug)}</td><td>${celdaTamano(f.slug)}</td></tr>`).join('') +
       '</tbody></table>'
     : '<div class="mazo-empty-hint">No hay Pokémon para mostrar con este filtro.</div>';
+  if (listo) listaGifCargarPrevias();
+}
+
+// Las vistas previas se cargan solo cuando entran en pantalla (hay hasta 200 filas y cada GIF se analiza para recortarlo).
+let listaGifObservador = null;
+function listaGifCargarPrevias() {
+  if (listaGifObservador) listaGifObservador.disconnect();
+  const imgs = Array.from(document.querySelectorAll('#lg-tabla img.lg-prev-img'));
+  const cargar = im => {
+    const sl = im.dataset.gifSlug;
+    loadSpriteWithFallback(im, [SPRITES_LOCALES_DIR + sl + '.gif', SPRITES_LOCALES_DIR + sl + '.webp'], null, null);
+  };
+  if (typeof IntersectionObserver === 'undefined') { imgs.forEach(cargar); return; }
+  listaGifObservador = new IntersectionObserver(entradas => {
+    entradas.forEach(e => { if (e.isIntersecting) { listaGifObservador.unobserve(e.target); cargar(e.target); } });
+  }, { rootMargin: '150px' });
+  imgs.forEach(im => listaGifObservador.observe(im));
 }
 
 function listaGifCopiarFaltan() {
@@ -7779,8 +7854,8 @@ function listaGifCopiarFaltan() {
 }
 
 function listaGifDescargar() {
-  const celdas = f => [f.nombre, f.slug + '.gif', f.ligas.map(l => l.replace('Liga ', '')).join(' / '), listaGifEstado[f.slug] ? 'subido' + (listaGifEstado[f.slug] === 'webp' ? ' (webp)' : '') : listaGifEstado[f.slug] === false ? 'falta' : 'sin comprobar'];
-  const csv = '\ufeff' + [['Pokémon', 'Archivo', 'Ligas', 'Estado'], ...listaGifDatos[listaGifModo].map(celdas)]
+  const celdas = f => [f.nombre, f.slug + '.gif', f.ligas.map(l => l.replace('Liga ', '')).join(' / '), listaGifEstado[f.slug] ? 'subido' + (listaGifEstado[f.slug] === 'webp' ? ' (webp)' : '') : listaGifEstado[f.slug] === false ? 'falta' : 'sin comprobar', Math.round(gifEscalaDe(f.slug) * 100) + '%'];
+  const csv = '\ufeff' + [['Pokémon', 'Archivo', 'Ligas', 'Estado', 'Tamaño'], ...listaGifDatos[listaGifModo].map(celdas)]
     .map(r => r.map(c => '"' + String(c).replace(/"/g, '""') + '"').join(';')).join('\r\n');
   const a = document.createElement('a');
   a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
@@ -8107,6 +8182,7 @@ function persistLocalOnly() {
   localStorage.setItem('pokemonDataExpansiones', JSON.stringify(EXPANSIONES_SUGERIDAS.tcg));
   localStorage.setItem('modosEnReparacion', JSON.stringify(modosEnReparacion));
   localStorage.setItem('nombresMostrar', JSON.stringify(NOMBRES_MOSTRAR));
+  localStorage.setItem('gifEscalas', JSON.stringify(GIF_ESCALAS));
   localStorage.setItem('pokemonLigaOrderGO', JSON.stringify(ligaOrder));
 }
 
@@ -8181,6 +8257,8 @@ function applyConfigDoc(doc) {
   if (typeof doc.truequesEnReparacion === 'boolean') modosEnReparacion.trueques = doc.truequesEnReparacion;
   const nombresMostrar = parseSnapField(doc.nombresMostrar);
   if (nombresMostrar && typeof nombresMostrar === 'object') NOMBRES_MOSTRAR = nombresMostrar;
+  const gifEscalas = parseSnapField(doc.gifEscalas);
+  if (gifEscalas && typeof gifEscalas === 'object' && !Array.isArray(gifEscalas)) GIF_ESCALAS = gifEscalas;
 }
 
 function applyExpansionesDoc(doc) {
@@ -8216,7 +8294,7 @@ function pushToFirestore() {
     ['tcg', { list: JSON.stringify(POKEMON_LISTS.tcg), tcg: JSON.stringify(dataTCG), enReparacion: !!modosEnReparacion.tcg }],
     ['mazos', { mazos: JSON.stringify(dataMazos) }],
     ['expansiones', { expansiones: JSON.stringify(EXPANSIONES_SUGERIDAS.tcg) }],
-    ['config', { torneosEnReparacion: !!modosEnReparacion.torneos, truequesEnReparacion: !!modosEnReparacion.trueques, nombresMostrar: JSON.stringify(NOMBRES_MOSTRAR) }]
+    ['config', { torneosEnReparacion: !!modosEnReparacion.torneos, truequesEnReparacion: !!modosEnReparacion.trueques, nombresMostrar: JSON.stringify(NOMBRES_MOSTRAR), gifEscalas: JSON.stringify(GIF_ESCALAS) }]
   ];
   return Promise.all(writes.map(([id, payload]) =>
     col.doc(id).set(payload).catch(err => ({ id, err }))
