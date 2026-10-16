@@ -3549,7 +3549,7 @@
         <button class="btn datos-only-data" style="background:var(--purple);color:#fff" onclick="openExpansionesModal()">🏷️ Expansiones</button>
         <button class="btn datos-only-data" style="background:#16a085;color:#fff" onclick="openVerificarObjetos()">🔎 Verificar objetos</button>
         <button class="btn datos-only-data" id="btn-desc-auto" style="background:#2E1A5E;color:#fff;display:none" onclick="completarDescripcionesTcg()" title="Agrega la habilidad y los ataques que les falten a las cartas ya guardadas (y el efecto de las de Entrenador)">📝 Completar habilidad y ataques</button>
-        <button class="btn datos-only-data" style="background:#2E1A5E;color:#fff" onclick="openListaGif()" title="Qué sprites (PNG, GIF o WebP) faltan por subir a la carpeta sprites-animados">📋 Lista de sprites</button>
+        <button class="btn datos-only-data" style="background:#2E1A5E;color:#fff" onclick="openListaGif()" title="Qué sprites (SVG, GIF, PNG o WebP) faltan por subir a la carpeta sprites-animados">📋 Lista de sprites</button>
         <button class="btn" style="background:#e67e22;color:#fff" onclick="openUsuariosModal()">➕ Crear usuario</button>
         <button class="btn btn-danger" id="btn-borrar-vacios" onclick="borrarVaciosModoActual()">🗑️ Borrar vacíos</button>
         <button class="btn btn-primary datos-only-data" onclick="saveAllData()">💾 Guardar cambios</button>
@@ -4181,7 +4181,7 @@
 <div class="modal-overlay" id="modal-lista-gif">
   <div class="modal" style="max-width:900px;max-height:92vh;overflow:auto">
     <h3>📋 LISTA DE SPRITES</h3>
-    <p>La página busca el sprite de cada Pokémon (PNG, GIF o WebP) en la carpeta <b>sprites-animados</b> con el nombre que ves en la columna «Archivo». Si existe más de uno, se usa primero el PNG, luego el GIF y por último el WebP. En «Tamaño» puedes agrandar o achicar cómo se ve cada sprite en Consulta (de 30 % a 200 %); se ve igual para todos. Aquí se comprueba <b>por nombre</b>: si un GIF lo subiste con el número de la Pokédex (por ejemplo <b>25.png</b>), la página lo usa igual, pero esta lista lo mostrará como que falta.</p>
+    <p>La página busca el sprite de cada Pokémon (SVG, GIF, PNG o WebP) en la carpeta <b>sprites-animados</b> con el nombre que ves en la columna «Archivo». Si existe más de uno, se usa primero el SVG, luego el PNG, el GIF y por último el WebP. En «Tamaño» puedes agrandar o achicar cómo se ve cada sprite en Consulta (de 30 % a 200 %); se ve igual para todos. Aquí se comprueba <b>por nombre</b>: si un GIF lo subiste con el número de la Pokédex (por ejemplo <b>25.svg</b>), la página lo usa igual, pero esta lista lo mostrará como que falta.</p>
     <div class="lg-barra">
       <button class="btn" id="lg-btn-champions" onclick="listaGifCambiar('champions')">Champions</button>
       <button class="btn" id="lg-btn-go" onclick="listaGifCambiar('go')">GO (por liga)</button>
@@ -5361,11 +5361,11 @@ function getShowdownAnimId(name) {
 // sigue la cadena de siempre (HOME, artwork oficial, etc.).
 // Carpeta propia con GIF pixelados y animados, junto al index.html. Cada archivo se
 // puede llamar por el número de la Pokédex (25.gif) o por el nombre en inglés con
-// guiones (pikachu.png, mr-mime.png, arcanine-hisui.png). Se aceptan PNG, GIF y WebP
-// (animados o no), por ejemplo pikachu.png o 25.png. Si un Pokémon no tiene
+// guiones (pikachu.svg, mr-mime.gif, arcanine-hisui.svg). Se aceptan SVG, PNG, GIF y WebP
+// (animados o no), por ejemplo pikachu.svg o 25.gif. Si un Pokémon no tiene
 // archivo ahí, se sigue con la cadena de siempre (sprites 8 bits quietos).
 const SPRITES_LOCALES_DIR = 'sprites-animados/';
-const SPRITES_LOCALES_EXT = ['png', 'gif', 'webp'];   // en este orden: si existen varios para el mismo Pokémon, se usa el primero
+const SPRITES_LOCALES_EXT = ['svg', 'png', 'gif', 'webp'];   // en este orden: si existen varios para el mismo Pokémon, se usa el primero
 
 async function getSpriteCandidates(name, opts) {
   const animado = !!(opts && opts.animado);
@@ -5453,7 +5453,7 @@ async function calcularBBoxGifLocal(url) {
     dec = new ImageDecoder({ data: await res.arrayBuffer(), type: /\.webp(\?|$)/i.test(url) ? 'image/webp' : /\.png(\?|$)/i.test(url) ? 'image/png' : 'image/gif' });
     await dec.tracks.ready;
     const total = Math.min(dec.tracks.selectedTrack.frameCount || 1, 150);
-    let w = 0, h = 0, minX = Infinity, minY = Infinity, maxX = -1, maxY = -1, canvas = null, ctx = null;
+    let w = 0, h = 0, minX = Infinity, minY = Infinity, maxX = -1, maxY = -1, canvas = null, ctx = null, colores = 0;
     for (let i = 0; i < total; i++) {
       const { image } = await dec.decode({ frameIndex: i });
       if (!canvas) {
@@ -5463,6 +5463,11 @@ async function calcularBBoxGifLocal(url) {
       }
       ctx.clearRect(0, 0, w, h); ctx.drawImage(image, 0, 0); image.close();
       const d = ctx.getImageData(0, 0, w, h).data;
+      if (i === 0) {   // colores distintos del primer cuadro (se corta en 400: basta para distinguir)
+        const vistos = new Set();
+        for (let p = 0; p < d.length && vistos.size <= 400; p += 4) { if (d[p + 3] > 15) vistos.add((d[p] << 16) | (d[p + 1] << 8) | d[p + 2]); }
+        colores = vistos.size;
+      }
       for (let y = 0; y < h; y++) {
         for (let x = 0; x < w; x++) {
           if (d[(y * w + x) * 4 + 3] > 15) {
@@ -5472,10 +5477,71 @@ async function calcularBBoxGifLocal(url) {
         }
       }
     }
-    if (maxX >= 0) resultado = { w, h, minX, minY, maxX, maxY };
+    if (maxX >= 0) resultado = { w, h, minX, minY, maxX, maxY, colores };
   } catch (e) { resultado = null; }
   finally { try { if (dec) dec.close(); } catch (e) {} }
   _gifLocalBBoxCache.set(url, resultado);
+  return resultado;
+}
+
+// SVG: no lo lee ImageDecoder, y un SVG puede no tener tamaño propio, así que object-view-box no
+// sirve. En su lugar se lee el archivo, se mide en un canvas el rectángulo que ocupa el dibujo y se
+// genera una copia del SVG con el viewBox ajustado a ese rectángulo (el archivo original no se toca).
+// Esa copia es la que se muestra; al ser vectorial, se ve nítida a cualquier tamaño.
+const _svgLocalCache = new Map();   // dirección -> dirección «blob:» del SVG ajustado (o null si no existe)
+
+async function ajustarSvgLocal(txt) {
+  const raiz = /<svg\b[^>]*>/i.exec(txt);
+  if (!raiz) return null;
+  const tag = raiz[0];
+  const vb = /viewBox\s*=\s*["']\s*([-\d.eE]+)[\s,]+([-\d.eE]+)[\s,]+([-\d.eE]+)[\s,]+([-\d.eE]+)\s*["']/i.exec(tag);
+  let vx = 0, vy = 0, vw, vh;
+  if (vb && parseFloat(vb[3]) > 0 && parseFloat(vb[4]) > 0) { vx = parseFloat(vb[1]); vy = parseFloat(vb[2]); vw = parseFloat(vb[3]); vh = parseFloat(vb[4]); }
+  else {
+    const aw = /\swidth\s*=\s*["']\s*([\d.]+)/i.exec(tag), ah = /\sheight\s*=\s*["']\s*([\d.]+)/i.exec(tag);
+    if (!aw || !ah) return null;
+    vw = parseFloat(aw[1]); vh = parseFloat(ah[1]);
+  }
+  // tamaño de medición: 512 px en el lado mayor
+  const ancho = vw >= vh ? 512 : Math.max(1, Math.round(512 * vw / vh));
+  const alto = vw >= vh ? Math.max(1, Math.round(512 * vh / vw)) : 512;
+  const sinTamano = tag.replace(/\s(width|height|viewBox)\s*=\s*("[^"]*"|'[^']*')/gi, '');
+  const medicion = txt.replace(tag, sinTamano.replace(/>$/, ` viewBox="${vx} ${vy} ${vw} ${vh}" width="${ancho}" height="${alto}">`));
+  const blobMedida = URL.createObjectURL(new Blob([medicion], { type: 'image/svg+xml' }));
+  let minX = Infinity, minY = Infinity, maxX = -1, maxY = -1;
+  try {
+    const im = new Image(); im.src = blobMedida; await im.decode();
+    const canvas = document.createElement('canvas'); canvas.width = ancho; canvas.height = alto;
+    const ctx = canvas.getContext('2d', { willReadFrequently: true });
+    ctx.drawImage(im, 0, 0, ancho, alto);
+    const d = ctx.getImageData(0, 0, ancho, alto).data;
+    for (let y = 0; y < alto; y++) for (let x = 0; x < ancho; x++) {
+      if (d[(y * ancho + x) * 4 + 3] > 15) { if (x < minX) minX = x; if (x > maxX) maxX = x; if (y < minY) minY = y; if (y > maxY) maxY = y; }
+    }
+  } finally { URL.revokeObjectURL(blobMedida); }
+  let nx = vx, ny = vy, nw = vw, nh = vh;
+  if (maxX >= 0) {                                   // se encontró dibujo: se ajusta el área visible (con 2 px de aire)
+    const m = 2, ux = vw / ancho, uy = vh / alto;
+    const x0 = Math.max(0, minX - m), y0 = Math.max(0, minY - m), x1 = Math.min(ancho, maxX + 1 + m), y1 = Math.min(alto, maxY + 1 + m);
+    nx = vx + x0 * ux; ny = vy + y0 * uy; nw = (x1 - x0) * ux; nh = (y1 - y0) * uy;
+  }
+  const escala = 512 / Math.max(nw, nh);
+  const final = txt.replace(tag, sinTamano.replace(/>$/, ` viewBox="${nx} ${ny} ${nw} ${nh}" width="${Math.max(1, Math.round(nw * escala))}" height="${Math.max(1, Math.round(nh * escala))}">`));
+  return URL.createObjectURL(new Blob([final], { type: 'image/svg+xml' }));
+}
+
+async function prepararSvgLocal(url) {
+  if (_svgLocalCache.has(url)) return _svgLocalCache.get(url);
+  let resultado = null;
+  try {
+    const res = await fetch(url);
+    if (res.ok) {
+      const txt = await res.text();
+      try { resultado = await ajustarSvgLocal(txt); } catch (e) { resultado = null; }
+      if (!resultado) resultado = URL.createObjectURL(new Blob([txt], { type: 'image/svg+xml' }));   // no se pudo medir: se muestra tal cual
+    }
+  } catch (e) { resultado = null; }
+  _svgLocalCache.set(url, resultado);
   return resultado;
 }
 
@@ -5484,6 +5550,8 @@ async function recortarGifLocal(imgEl, url) {
     if (!(window.CSS && CSS.supports && CSS.supports('object-view-box', 'inset(0px)'))) return;
     const b = await calcularBBoxGifLocal(url);
     if (!b) return;
+    // Una ilustración (muchos colores por los bordes suavizados) se amplía suavizada; el pixel art (pocos colores) se deja pixelado.
+    if (b.colores > 200) imgEl.style.imageRendering = 'auto';
     const cw = b.maxX - b.minX + 1, ch = b.maxY - b.minY + 1;
     if (cw >= b.w * 0.94 && ch >= b.h * 0.94) return;     // ya ocupa casi todo el lienzo
     const m = 1;                                           // 1 px de aire alrededor
@@ -5510,11 +5578,23 @@ function loadSpriteWithFallback(imgEl, candidates, onSuccess, onFail) {
     const esGif = /\.gif(\?|$)/i.test(url);
     const esLocal = url.startsWith(SPRITES_LOCALES_DIR); // GIF pixelado propio: se deja pixelado y sin deformar
     if (imgEl._irOriginal === undefined) imgEl._irOriginal = imgEl.style.imageRendering || '';
-    imgEl.style.imageRendering = (esGif && !esLocal) ? 'auto' : imgEl._irOriginal;
+    const esSvg = /\.svg(\?|$)/i.test(url);
+    imgEl.style.imageRendering = ((esGif && !esLocal) || esSvg) ? 'auto' : imgEl._irOriginal;   // el SVG es vectorial: no se pixela
     imgEl.style.objectFit = esLocal ? 'contain' : '';
     imgEl.style.objectViewBox = '';                         // quita el recorte de un GIF anterior
     imgEl.style.scale = '';                                 // y el tamaño de uno anterior
     const tok = (imgEl._lsTok = (imgEl._lsTok || 0) + 1);
+    if (esLocal && esSvg) {                                 // SVG propio: se muestra una copia con el área visible ajustada
+      imgEl.onerror = null; imgEl.onload = null;
+      prepararSvgLocal(url).then(blobUrl => {
+        if (imgEl._lsTok !== tok) return;                   // llegó otra carga para esta imagen
+        if (!blobUrl) { tryNext(); return; }                // ese archivo no existe: se prueba el siguiente
+        imgEl.onerror = tryNext;
+        imgEl.onload = () => { if (imgEl._lsTok !== tok) return; aplicarEscalaGif(imgEl); if (onSuccess) onSuccess(url); };
+        imgEl.src = blobUrl;
+      });
+      return;
+    }
     imgEl.onerror = tryNext;
     imgEl.onload = async () => {
       if (esLocal) {
@@ -7850,7 +7930,7 @@ function listaGifPintar() {
     `<br>Entre Champions y GO se necesitan <b>${todosSlugs.length}</b> archivos distintos (un Pokémon repetido usa el mismo archivo) · faltan <b>${faltanTotal}</b> en total.`;
   const visibles = listaGifFilasVisibles();
   const esGo = listaGifModo === 'go';
-  const estado = sl => listaGifEstado[sl] ? '<span class="lg-ok">✅ subido' + (listaGifEstado[sl] !== 'png' ? ' (' + listaGifEstado[sl] + ')' : '') + '</span>' : listaGifEstado[sl] === false ? '<span class="lg-no">❌ falta</span>' : '<span class="lg-pend">…</span>';
+  const estado = sl => listaGifEstado[sl] ? '<span class="lg-ok">✅ subido' + ' (' + listaGifEstado[sl] + ')' + '</span>' : listaGifEstado[sl] === false ? '<span class="lg-no">❌ falta</span>' : '<span class="lg-pend">…</span>';
   const listo = !listaGifEnCurso;   // las vistas previas se dibujan al terminar de comprobar, no en cada tanda
   const celdaTamano = sl => {
     if (!listaGifEstado[sl]) return '<span class="lg-pend">—</span>';
@@ -7865,7 +7945,7 @@ function listaGifPintar() {
     : '<span class="lg-pend">' + (listaGifEstado[sl] ? '…' : '—') + '</span>';
   document.getElementById('lg-tabla').innerHTML = visibles.length
     ? `<table class="lg-table"><thead><tr><th>#</th><th>Pokémon</th><th>Archivo</th>${esGo ? '<th>Ligas</th>' : ''}<th>Estado</th><th>Vista previa</th><th>Tamaño</th></tr></thead><tbody>` +
-      visibles.map((f, i) => `<tr><td>${i + 1}</td><td>${esc(f.nombre)}</td><td class="arch">${esc(f.slug)}.${listaGifEstado[f.slug] || 'png'}</td>${esGo ? `<td>${f.ligas.map(l => esc(l.replace('Liga ', ''))).join(', ')}</td>` : ''}<td>${estado(f.slug)}</td><td>${celdaPrevia(f.slug)}</td><td>${celdaTamano(f.slug)}</td></tr>`).join('') +
+      visibles.map((f, i) => `<tr><td>${i + 1}</td><td>${esc(f.nombre)}</td><td class="arch">${esc(f.slug)}.${listaGifEstado[f.slug] || 'svg'}${listaGifEstado[f.slug] ? '' : ' <span class="lg-pend">(o .gif)</span>'}</td>${esGo ? `<td>${f.ligas.map(l => esc(l.replace('Liga ', ''))).join(', ')}</td>` : ''}<td>${estado(f.slug)}</td><td>${celdaPrevia(f.slug)}</td><td>${celdaTamano(f.slug)}</td></tr>`).join('') +
       '</tbody></table>'
     : '<div class="mazo-empty-hint">No hay Pokémon para mostrar con este filtro.</div>';
   if (listo) listaGifCargarPrevias();
@@ -7888,7 +7968,7 @@ function listaGifCargarPrevias() {
 }
 
 function listaGifCopiarFaltan() {
-  const faltan = [...new Set(listaGifDatos[listaGifModo].filter(f => listaGifEstado[f.slug] === false).map(f => f.slug + '.png'))];
+  const faltan = [...new Set(listaGifDatos[listaGifModo].filter(f => listaGifEstado[f.slug] === false).map(f => f.slug + '.svg'))];
   if (!faltan.length) { showToast('✅ No falta ningún GIF en esta lista'); return; }
   const texto = faltan.join('\n');
   if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(texto).then(() => showToast('📋 Copiados ' + faltan.length + ' nombres de archivo')).catch(() => prompt('Copia los nombres:', texto));
@@ -7896,7 +7976,7 @@ function listaGifCopiarFaltan() {
 }
 
 function listaGifDescargar() {
-  const celdas = f => [f.nombre, f.slug + '.' + (listaGifEstado[f.slug] || 'png'), f.ligas.map(l => l.replace('Liga ', '')).join(' / '), listaGifEstado[f.slug] ? 'subido' + (listaGifEstado[f.slug] !== 'png' ? ' (' + listaGifEstado[f.slug] + ')' : '') : listaGifEstado[f.slug] === false ? 'falta' : 'sin comprobar', Math.round(gifEscalaDe(f.slug) * 100) + '%'];
+  const celdas = f => [f.nombre, f.slug + '.' + (listaGifEstado[f.slug] || 'svg'), f.ligas.map(l => l.replace('Liga ', '')).join(' / '), listaGifEstado[f.slug] ? 'subido (' + listaGifEstado[f.slug] + ')' : listaGifEstado[f.slug] === false ? 'falta' : 'sin comprobar', Math.round(gifEscalaDe(f.slug) * 100) + '%'];
   const csv = '\ufeff' + [['Pokémon', 'Archivo', 'Ligas', 'Estado', 'Tamaño'], ...listaGifDatos[listaGifModo].map(celdas)]
     .map(r => r.map(c => '"' + String(c).replace(/"/g, '""') + '"').join(';')).join('\r\n');
   const a = document.createElement('a');
