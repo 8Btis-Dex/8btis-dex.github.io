@@ -3483,7 +3483,7 @@
         <button class="btn btn-yellow datos-only-data" onclick="showAddPokemonVarios()">📋 Agregar varios</button>
         <button class="btn datos-only-data" style="background:var(--purple);color:#fff" onclick="openExpansionesModal()">🏷️ Expansiones</button>
         <button class="btn datos-only-data" style="background:#16a085;color:#fff" onclick="openVerificarObjetos()">🔎 Verificar objetos</button>
-        <button class="btn datos-only-data" id="btn-desc-auto" style="background:#2E1A5E;color:#fff;display:none" onclick="completarDescripcionesTcg()" title="Rellena la descripción de las cartas ya guardadas que no la tengan (efecto de Entrenador o habilidad)">📝 Completar descripciones</button>
+        <button class="btn datos-only-data" id="btn-desc-auto" style="background:#2E1A5E;color:#fff;display:none" onclick="completarDescripcionesTcg()" title="Agrega la habilidad y los ataques que les falten a las cartas ya guardadas (y el efecto de las de Entrenador)">📝 Completar habilidad y ataques</button>
         <button class="btn datos-only-data" style="background:#2E1A5E;color:#fff" onclick="openListaGif()" title="Qué GIF animados faltan por subir a la carpeta sprites-animados">📋 Lista de GIF</button>
         <button class="btn" style="background:#e67e22;color:#fff" onclick="openUsuariosModal()">➕ Crear usuario</button>
         <button class="btn btn-danger" id="btn-borrar-vacios" onclick="borrarVaciosModoActual()">🗑️ Borrar vacíos</button>
@@ -3998,7 +3998,7 @@
     <h3>🃏 CARTAS DE <span id="tcg-cards-pokemon-name"></span></h3>
     <div id="tcg-search-box" style="display:none;margin-bottom:10px;padding:8px;border:1px solid #333;border-radius:8px;background:#1c1c1c">
       <button class="btn btn-primary" style="width:100%" onclick="buscarCartasOficialesTcg()">🔍 Buscar cartas oficiales (TCG Pocket)</button>
-      <button class="btn" style="width:100%;margin-top:8px;background:#2E1A5E;color:#fff" onclick="completarDescripcionesFilasTcg()" title="Rellena la descripción de las cartas de este Pokémon que la tengan vacía">📝 Completar descripciones de estas cartas</button>
+      <button class="btn" style="width:100%;margin-top:8px;background:#2E1A5E;color:#fff" onclick="completarDescripcionesFilasTcg()" title="Agrega la habilidad y los ataques que les falten a las cartas de este Pokémon">📝 Completar habilidad y ataques de estas cartas</button>
       <div id="tcg-search-status" style="font-size:0.78rem;color:var(--muted);margin-top:6px"></div>
       <div id="tcg-search-results" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:8px"></div>
     </div>
@@ -9388,11 +9388,82 @@ function guardarAtaqueCarta(i) {
   showToast('✅ Ataque actualizado');
 }
 
-// ── COMPLETAR LA DESCRIPCIÓN DE LAS CARTAS YA GUARDADAS ─────────────────────
-// Recorre las cartas de TCG Pocket que todavía no tienen descripción, busca cada una en el
-// dataset de respaldo (PocketDecks) y, si es de Entrenador o tiene habilidad, escribe su
-// texto traducido. Nunca pisa una descripción que ya exista. La carta se empareja por
-// expansión y número, que salen de la dirección de su imagen (o de su apiId).
+// ── HABILIDAD Y ATAQUES AUTOMÁTICOS DE LAS CARTAS ───────────────────────────
+// La habilidad y los ataques de una carta se guardan como bloques de la lista de ataques
+// (la habilidad con el título «Habilidad», los ataques con su nombre y su daño). Aquí se
+// completan solos desde el dataset de respaldo (PocketDecks), traducidos al español.
+// El cuadro «Descripción» se usa solo para las cartas de Entrenador (su efecto).
+// En PocketDecks los símbolos de energía vienen como «[ W ]»; se pasan a {W}, que la
+// página dibuja como ícono, y se protegen mientras se traduce.
+function simbolosATokens(texto) {
+  return String(texto || '').replace(/\[\s*([A-Za-z])\s*\]/g, (m, l) => '{' + l.toUpperCase() + '}');
+}
+
+// Traduce un texto del inglés al español cuidando que no se pierdan los símbolos de energía.
+// En modo «estricto» (proceso masivo) devuelve null si no se pudo traducir bien, en vez de
+// dejar un texto a medias en inglés.
+async function traducirTextoCartaEn(texto, estricto) {
+  if (!texto) return '';
+  const conTokens = simbolosATokens(texto);
+  let cantidad = 0;
+  const protegido = conTokens.replace(/\{([A-Za-z])\}/g, (m, l) => { cantidad++; return 'QQ' + l.toUpperCase() + 'QQ'; });
+  const es = await traducirConMyMemory(protegido);
+  if (es) {
+    const quedaron = (es.match(/QQ\s*[A-Za-z]\s*QQ/gi) || []).length;
+    if (quedaron === cantidad) return es.replace(/QQ\s*([A-Za-z])\s*QQ/gi, (m, l) => '{' + l.toUpperCase() + '}');
+  }
+  if (estricto) return null;
+  return traducirTextoAtaqueTcg(conTokens);
+}
+
+function normalizaTcg(t) { return String(t || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, ' ').trim(); }
+function esAtaqueReal(a) { return !!(a && (a.name || a.nombreEs || a.effect || a.effectEs || (a.damage !== null && a.damage !== undefined && a.damage !== ''))); }
+function esEntradaHabilidad(a) { return /^habilidad/i.test(String((a && (a.nombreEs || a.name)) || '').trim()); }
+
+// Arma la lista de bloques (habilidad primero y luego los ataques) a partir de una carta del dataset.
+// Devuelve null si el modo estricto no logró traducir algo.
+async function ataquesDesdePocketDecks(ref, estricto, conHabilidad, conAtaques) {
+  const lista = [];
+  if (conHabilidad && ref.ability && ref.ability.exists && ref.ability.effect) {
+    const efectoEs = await traducirTextoCartaEn(ref.ability.effect, estricto);
+    if (estricto && !efectoEs) return null;
+    lista.push({ name: 'Habilidad', nombreEs: 'Habilidad', damage: '', effect: ref.ability.effect, effectEs: efectoEs || '' });
+  }
+  if (conAtaques) {
+    for (const a of attacksObjetoAArray(ref.attacks).filter(esAtaqueReal)) {
+      let nombreEs = a.name || '';
+      if (a.name) {
+        const t = await traducirConMyMemory(a.name);
+        if (!t && estricto) return null;
+        nombreEs = t || a.name;
+      }
+      let effectEs = '';
+      if (a.effect) {
+        effectEs = await traducirTextoCartaEn(a.effect, estricto);
+        if (estricto && !effectEs) return null;
+      }
+      lista.push({ name: a.name, nombreEs, damage: a.damage, effect: a.effect, effectEs: effectEs || '' });
+    }
+  }
+  return lista;
+}
+
+// Efecto de una carta de Entrenador (único caso en que se usa el cuadro «Descripción»).
+async function descripcionDesdePocketDecks(c, estricto) {
+  if (c && c.type === 'Trainer' && c.card_text) return (await traducirTextoCartaEn(c.card_text, estricto)) || '';
+  return '';
+}
+
+// TCGdex ya trae el texto en español. Solo se usa para el efecto de las cartas de Entrenador.
+function descripcionDesdeTcgdex(d) {
+  if (!d) return '';
+  if (/trainer|entrenador/i.test(String(d.category || '')) && d.effect) return simbolosATokens(d.effect).trim();
+  return '';
+}
+
+// ¿A qué carta del dataset corresponde una carta guardada? Primero por expansión y número
+// (salen de la dirección de la imagen o del apiId) comprobando que el nombre coincida; si
+// no, por nombre exacto y expansión, siempre que no haya dudas entre varias cartas distintas.
 function claveCartaTcg(carta) {
   const url = String(carta.imagen || '');
   const m = /\/tcgp\/([A-Za-z0-9]+)\/(\d+)\//.exec(url) || /\/cards\/([A-Za-z0-9]+)\/(\d+)\.[A-Za-z]+/.exec(url);
@@ -9401,38 +9472,67 @@ function claveCartaTcg(carta) {
   return a ? (a[1] + '-' + String(a[2]).padStart(3, '0')).toLowerCase() : '';
 }
 
-// Igual que el botón de Datos, pero solo para las cartas de la ventana abierta. Escribe el
-// texto en la casilla «Descripción» de cada fila vacía; luego hay que pulsar «💾 Guardar cartas».
-async function completarDescripcionesFilasTcg() {
-  const estado = document.getElementById('tcg-search-status');
-  const filas = Array.from(document.querySelectorAll('#tcg-cards-list .tcg-card-row')).map(row => ({
-    ta: row.querySelector('.tcg-desc-input'),
-    imagen: (row.querySelector('.tcg-imagen-input') || {}).value || ''
-  })).filter(f => f.ta && !f.ta.value.trim());
-  if (!filas.length) { estado.textContent = 'Todas las cartas de este Pokémon ya tienen descripción.'; return; }
-  let dataset;
-  try {
-    estado.textContent = '⏳ Descargando el dataset de cartas…';
-    dataset = await cargarCartasPocketDecks();
-  } catch (e) { estado.textContent = '❌ No se pudo descargar el dataset de cartas. Revisa tu conexión.'; return; }
-  const porId = {};
-  dataset.forEach(c => { porId[String(c.id).toLowerCase()] = c; });
-  const cache = {};
-  let hechas = 0, sinTexto = 0, sinCoincidencia = 0, fallidas = 0, seguidas = 0;
-  for (let i = 0; i < filas.length; i++) {
-    const ref = porId[claveCartaTcg({ imagen: filas[i].imagen })];
-    if (!ref) { sinCoincidencia++; continue; }
-    if (!((ref.type === 'Trainer' && ref.card_text) || (ref.ability && ref.ability.exists))) { sinTexto++; continue; }
-    estado.textContent = `⏳ Traduciendo… ${i + 1}/${filas.length}`;
-    let texto = cache[ref.id];
-    if (texto === undefined) { texto = await descripcionDesdePocketDecks(ref, true); cache[ref.id] = texto; await esperar(400); }
-    if (texto) { filas[i].ta.value = texto; hechas++; seguidas = 0; }
-    else { fallidas++; if (++seguidas >= 3) break; }
-  }
-  estado.textContent = `✅ ${hechas} completada(s)` + (sinTexto ? ` · ${sinTexto} sin habilidad ni efecto` : '') +
-    (sinCoincidencia ? ` · ${sinCoincidencia} que no se pudieron emparejar` : '') + (fallidas ? ` · ${fallidas} sin traducir (el traductor gratuito puede haber llegado a su límite)` : '') +
-    (hechas ? '. Revisa el texto y pulsa «💾 Guardar cartas».' : '');
+function firmaJuegoCarta(c) {
+  return JSON.stringify([c.type, c.card_text || '', c.ability && c.ability.exists ? [c.ability.name, c.ability.effect] : null,
+    attacksObjetoAArray(c.attacks).filter(esAtaqueReal).map(a => [a.name, a.damage, a.effect])]);
 }
+
+function buscarRefTcg(dataset, porId, nombrePokemon, carta) {
+  const n = normalizaTcg(nombrePokemon);
+  const ref = porId[claveCartaTcg(carta)];
+  if (ref) {
+    const rn = normalizaTcg(ref.name);
+    if (rn === n || rn.startsWith(n + ' ')) return ref;
+  }
+  const exp = normalizaTcg(carta.expansion);
+  const exp2 = normalizaTcg(traducirExpansionTcgApi(carta.expansion));
+  if (!exp) return null;
+  const candidatas = dataset.filter(c => {
+    if (normalizaTcg(c.name) !== n) return false;
+    const e = normalizaTcg(traducirExpansionTcgApi(c.set_name));
+    return e === exp || e === exp2 || normalizaTcg(c.set_name) === exp;
+  });
+  if (!candidatas.length) return null;
+  return new Set(candidatas.map(firmaJuegoCarta)).size === 1 ? candidatas[0] : null;
+}
+
+// Qué le falta a una carta guardada respecto de su carta del dataset.
+function necesidadesCartaTcg(carta, ref, descripcionActual) {
+  const ataques = Array.isArray(carta.ataques) ? carta.ataques : [];
+  const refAtaques = attacksObjetoAArray(ref.attacks).filter(esAtaqueReal);
+  const refTieneHabilidad = !!(ref.ability && ref.ability.exists && ref.ability.effect);
+  return {
+    habilidad: refTieneHabilidad && !ataques.some(esEntradaHabilidad),
+    ataques: refAtaques.length > 0 && !ataques.some(a => esAtaqueReal(a) && !esEntradaHabilidad(a)),
+    efecto: ref.type === 'Trainer' && !!ref.card_text && !String(descripcionActual || '').trim()
+  };
+}
+
+// Aplica lo que falta. Devuelve { ataques, descripcion } nuevos o null si no se pudo traducir.
+async function completarCartaTcg(carta, ref, nec, descripcionActual, cache) {
+  const clave = ref.id + '|' + nec.habilidad + '|' + nec.ataques + '|' + nec.efecto;
+  let res = cache[clave];
+  if (res === undefined) {
+    const nuevos = (nec.habilidad || nec.ataques) ? await ataquesDesdePocketDecks(ref, true, nec.habilidad, nec.ataques) : [];
+    const efecto = nec.efecto ? await descripcionDesdePocketDecks(ref, true) : '';
+    res = (nuevos === null || (nec.efecto && !efecto)) ? null : { nuevos, efecto };
+    cache[clave] = res;
+    await esperar(400);                                      // pausa para no saturar el traductor gratuito
+  }
+  if (!res) return null;
+  const existentes = (Array.isArray(carta.ataques) ? carta.ataques : []).filter(esAtaqueReal);   // se descartan ataques vacíos
+  const habNuevas = nec.habilidad ? res.nuevos.filter(esEntradaHabilidad) : [];
+  const atNuevos = nec.ataques ? res.nuevos.filter(a => !esEntradaHabilidad(a)) : [];
+  const ataques = [
+    ...habNuevas, ...existentes.filter(esEntradaHabilidad),
+    ...existentes.filter(a => !esEntradaHabilidad(a)), ...atNuevos
+  ];
+  return { ataques, descripcion: nec.efecto ? res.efecto : descripcionActual };
+}
+
+// Las descripciones que se rellenaron antes con «Habilidad — …» ya no hacen falta: la habilidad
+// ahora va como bloque junto a los ataques.
+function esDescripcionAutoDeHabilidad(t) { return /^\s*Habilidad\s—\s/.test(String(t || '')); }
 
 let descAutoEnCurso = false;
 async function completarDescripcionesTcg() {
@@ -9445,95 +9545,97 @@ async function completarDescripcionesTcg() {
   const porId = {};
   dataset.forEach(c => { porId[String(c.id).toLowerCase()] = c; });
 
-  const candidatas = [];
-  let sinDescripcion = 0, sinCoincidencia = 0, sinTexto = 0;
+  const trabajo = [];
+  let aLimpiar = 0, sinCoincidencia = 0, completas = 0;
   Object.keys(dataTCG).forEach(poke => {
     ((dataTCG[poke] && dataTCG[poke].cartas) || []).forEach(carta => {
-      if (carta.descripcion && String(carta.descripcion).trim()) return;     // no se pisa lo ya escrito
-      sinDescripcion++;
-      const ref = porId[claveCartaTcg(carta)];
+      if (esDescripcionAutoDeHabilidad(carta.descripcion)) aLimpiar++;
+      const ref = buscarRefTcg(dataset, porId, poke, carta);
       if (!ref) { sinCoincidencia++; return; }
-      const tieneTexto = (ref.type === 'Trainer' && ref.card_text) || (ref.ability && ref.ability.exists);
-      if (!tieneTexto) { sinTexto++; return; }
-      candidatas.push({ carta, ref });
+      const desc = esDescripcionAutoDeHabilidad(carta.descripcion) ? '' : carta.descripcion;
+      const nec = necesidadesCartaTcg(carta, ref, desc);
+      if (!nec.habilidad && !nec.ataques && !nec.efecto) { completas++; return; }
+      trabajo.push({ carta, ref, nec, desc });
     });
   });
-  const resumenPrevio = `${sinDescripcion} carta(s) sin descripción: ${candidatas.length} con texto para completar, ${sinTexto} sin habilidad ni efecto, ${sinCoincidencia} que no se pudieron emparejar.`;
-  if (!candidatas.length) { showToast('ℹ️ ' + resumenPrevio); return; }
-  if (!confirm(`${resumenPrevio}\n\nSe traducirá el texto de las ${candidatas.length} cartas, de a una (tarda unos ${Math.max(1, Math.round(candidatas.length * 0.7))} segundos o más). Las descripciones que ya escribiste no se tocan.\n\n¿Continuar?`)) return;
+  const conHab = trabajo.filter(t => t.nec.habilidad).length;
+  const conAt = trabajo.filter(t => t.nec.ataques).length;
+  const conEf = trabajo.filter(t => t.nec.efecto).length;
+  const resumen = `${trabajo.length} carta(s) por completar: ${conHab} sin habilidad, ${conAt} sin ataques, ${conEf} de Entrenador sin efecto. ` +
+    `${completas} ya están completas y ${sinCoincidencia} no se pudieron emparejar.` +
+    (aLimpiar ? ` Además se quitarán ${aLimpiar} descripción(es) automáticas «Habilidad — …» que se habían rellenado antes.` : '');
+  if (!trabajo.length && !aLimpiar) { showToast('ℹ️ ' + resumen); return; }
+  if (!confirm(resumen + '\n\nSe traducirá de a una carta (puede tardar unos minutos). No se tocan los ataques ni las descripciones que ya tienes.\n\n¿Continuar?')) return;
 
   descAutoEnCurso = true;
+  // 1) limpieza de las descripciones automáticas de habilidad
+  Object.keys(dataTCG).forEach(poke => ((dataTCG[poke] && dataTCG[poke].cartas) || []).forEach(carta => {
+    if (esDescripcionAutoDeHabilidad(carta.descripcion)) delete carta.descripcion;
+  }));
+  // 2) habilidad, ataques y efecto de Entrenador
   const cache = {};
-  let hechas = 0, fallidas = 0, seguidasFallidas = 0;
-  for (let i = 0; i < candidatas.length; i++) {
-    const { carta, ref } = candidatas[i];
-    let texto = cache[ref.id];
-    if (texto === undefined) {
-      texto = await descripcionDesdePocketDecks(ref, true);
-      cache[ref.id] = texto;
-      await esperar(400);                                    // pausa para no saturar el traductor gratuito
-    }
-    if (texto) { carta.descripcion = texto; hechas++; seguidasFallidas = 0; }
-    else { fallidas++; seguidasFallidas++; }
-    if ((i + 1) % 5 === 0) showToast(`📝 Completando descripciones… ${i + 1}/${candidatas.length}`);
+  let hechas = 0, fallidas = 0, seguidas = 0;
+  for (let i = 0; i < trabajo.length; i++) {
+    const { carta, ref, nec, desc } = trabajo[i];
+    const r = await completarCartaTcg(carta, ref, nec, desc, cache);
+    if (r) {
+      carta.ataques = r.ataques;
+      if (r.descripcion) carta.descripcion = r.descripcion;
+      hechas++; seguidas = 0;
+    } else { fallidas++; seguidas++; }
+    if ((i + 1) % 5 === 0) showToast(`📝 Completando cartas… ${i + 1}/${trabajo.length}`);
     if ((i + 1) % 20 === 0) persistAll();
-    if (seguidasFallidas >= 3) break;                        // el traductor probablemente llegó a su límite diario
+    if (seguidas >= 3) break;                               // el traductor probablemente llegó a su límite diario
   }
   persistAll();
   descAutoEnCurso = false;
-  const cortado = seguidasFallidas >= 3;
-  showToast(`✅ ${hechas} descripción(es) completadas` + (fallidas ? ` · ${fallidas} sin traducir` : '') +
-    (cortado ? ' · se detuvo porque el traductor gratuito dejó de responder (suele ser el límite diario); vuelve a pulsar más tarde' : ''), fallidas > 0);
+  showToast(`✅ ${hechas} carta(s) completadas` + (aLimpiar ? ` · ${aLimpiar} descripción(es) automática(s) quitada(s)` : '') + (fallidas ? ` · ${fallidas} sin traducir` : '') +
+    (seguidas >= 3 ? ' · se detuvo porque el traductor gratuito dejó de responder (suele ser el límite diario); vuelve a pulsar más tarde' : ''), fallidas > 0);
 }
 
-// ── DESCRIPCIÓN AUTOMÁTICA DE LA CARTA ──────────────────────────────────────
-// Al agregar una carta desde la búsqueda oficial, el campo «Descripción» se rellena solo:
-//  · cartas de Entrenador → su efecto (card_text);
-//  · Pokémon con habilidad → «Habilidad — Nombre: efecto».
-// En PocketDecks los símbolos de energía vienen como «[ W ]»; se pasan a {W}, que la página
-// dibuja como ícono. Si el texto viene en inglés se traduce igual que los ataques
-// (MyMemory y, si falla, la traducción por patrones). Queda editable por si algo sale mal.
-function simbolosATokens(texto) {
-  return String(texto || '').replace(/\[\s*([A-Za-z])\s*\]/g, (m, l) => '{' + l.toUpperCase() + '}');
-}
-
-// Traduce un texto del inglés al español cuidando que no se pierdan los símbolos de energía.
-async function traducirTextoCartaEn(texto, estricto) {
-  if (!texto) return '';
-  const conTokens = simbolosATokens(texto);
-  let cantidad = 0;
-  const protegido = conTokens.replace(/\{([A-Za-z])\}/g, (m, l) => { cantidad++; return 'QQ' + l.toUpperCase() + 'QQ'; });
-  const es = await traducirConMyMemory(protegido);
-  if (es) {
-    const quedaron = (es.match(/QQ\s*[A-Za-z]\s*QQ/gi) || []).length;
-    if (quedaron === cantidad) return es.replace(/QQ\s*([A-Za-z])\s*QQ/gi, (m, l) => '{' + l.toUpperCase() + '}');
-  }
-  if (estricto) return null;                   // proceso masivo: mejor no rellenar que dejar texto a medias en inglés
-  return traducirTextoAtaqueTcg(conTokens);   // respaldo: patrones fijos, los símbolos no se tocan
-}
-
-async function descripcionDesdePocketDecks(c, estricto) {
-  if (!c) return '';
-  if (c.type === 'Trainer' && c.card_text) return (await traducirTextoCartaEn(c.card_text, estricto)) || '';
-  if (c.ability && c.ability.exists && (c.ability.name || c.ability.effect)) {
-    const nombre = c.ability.name ? ((await traducirConMyMemory(c.ability.name)) || c.ability.name) : '';
-    const efecto = c.ability.effect ? await traducirTextoCartaEn(c.ability.effect, estricto) : '';
-    if (estricto && c.ability.effect && !efecto) return '';
-    return ('Habilidad — ' + nombre + (efecto ? ': ' + efecto : '')).trim();
-  }
-  return '';
-}
-
-// TCGdex ya trae el texto en español. (Los nombres de los campos son los que
-// publica TCGdex; si alguno no existe, simplemente no se rellena nada.)
-function descripcionDesdeTcgdex(d) {
-  if (!d) return '';
-  const partes = [];
-  if (/trainer|entrenador/i.test(String(d.category || '')) && d.effect) partes.push(simbolosATokens(d.effect).trim());
-  (Array.isArray(d.abilities) ? d.abilities : []).forEach(h => {
-    if (h && (h.name || h.effect)) partes.push(('Habilidad — ' + (h.name || '') + (h.effect ? ': ' + simbolosATokens(h.effect) : '')).trim());
+// Igual, pero solo para las cartas de la ventana abierta (🃏 Gestionar). Actualiza las filas;
+// luego hay que pulsar «💾 Guardar cartas».
+async function completarDescripcionesFilasTcg() {
+  const estado = document.getElementById('tcg-search-status');
+  const nombrePokemon = tcgEditingPokemon || '';
+  const filas = Array.from(document.querySelectorAll('#tcg-cards-list .tcg-card-row')).map(row => {
+    let ataques = []; try { ataques = JSON.parse(row.dataset.ataques || '[]'); } catch (e) {}
+    const ta = row.querySelector('.tcg-desc-input');
+    return { row, ta, carta: {
+      imagen: (row.querySelector('.tcg-imagen-input') || {}).value || '',
+      expansion: (row.querySelector('.tcg-expansion-input') || {}).value || '',
+      ataques
+    } };
   });
-  return partes.join('\n\n');
+  if (!filas.length) { estado.textContent = 'Este Pokémon no tiene cartas.'; return; }
+  let dataset;
+  try {
+    estado.textContent = '⏳ Descargando el dataset de cartas…';
+    dataset = await cargarCartasPocketDecks();
+  } catch (e) { estado.textContent = '❌ No se pudo descargar el dataset de cartas. Revisa tu conexión.'; return; }
+  const porId = {};
+  dataset.forEach(c => { porId[String(c.id).toLowerCase()] = c; });
+  const cache = {};
+  let hechas = 0, completas = 0, sinCoincidencia = 0, fallidas = 0, limpiadas = 0, seguidas = 0;
+  for (let i = 0; i < filas.length; i++) {
+    const { row, ta, carta } = filas[i];
+    if (ta && esDescripcionAutoDeHabilidad(ta.value)) { ta.value = ''; limpiadas++; }
+    const ref = buscarRefTcg(dataset, porId, nombrePokemon, carta);
+    if (!ref) { sinCoincidencia++; continue; }
+    const nec = necesidadesCartaTcg(carta, ref, ta ? ta.value : '');
+    if (!nec.habilidad && !nec.ataques && !nec.efecto) { completas++; continue; }
+    estado.textContent = `⏳ Traduciendo… ${i + 1}/${filas.length}`;
+    const r = await completarCartaTcg(carta, ref, nec, ta ? ta.value : '', cache);
+    if (!r) { fallidas++; if (++seguidas >= 3) break; continue; }
+    seguidas = 0;
+    row.dataset.ataques = JSON.stringify(r.ataques);
+    if (ta && r.descripcion) ta.value = r.descripcion;
+    hechas++;
+  }
+  estado.textContent = `✅ ${hechas} carta(s) completada(s)` + (completas ? ` · ${completas} ya estaban completas` : '') +
+    (sinCoincidencia ? ` · ${sinCoincidencia} que no se pudieron emparejar` : '') + (limpiadas ? ` · ${limpiadas} descripción(es) automática(s) quitada(s)` : '') +
+    (fallidas ? ` · ${fallidas} sin traducir (el traductor gratuito puede haber llegado a su límite)` : '') +
+    ((hechas || limpiadas) ? '. Revisa y pulsa «💾 Guardar cartas».' : '');
 }
 
 async function agregarCartaDesdeTcgdex(detalle, img) {
@@ -9559,19 +9661,13 @@ async function agregarCartaDesdeTcgdex(detalle, img) {
 async function agregarCartaDesdePocketDecks(c, img) {
   const statusEl = document.getElementById('tcg-search-status');
   const previousStatus = statusEl ? statusEl.textContent : '';
-  if (statusEl) statusEl.textContent = '⏳ Traduciendo ataques y descripción...';
+  if (statusEl) statusEl.textContent = '⏳ Traduciendo habilidad y ataques...';
 
-  // Respaldo sin español nativo: traducimos con MyMemory, con la heurística
-  // por patrones como red de contención si la API falla.
-  // La fuente trae siempre dos casillas de ataque; si la segunda viene vacía no se guarda.
-  const attacksArr = attacksObjetoAArray(c.attacks).filter(a => a && (a.name || a.effect || (a.damage !== null && a.damage !== undefined && a.damage !== '')));
-  const ataques = [];
-  for (const a of attacksArr) {
-    const nombreEs = a.name ? (await traducirConMyMemory(a.name)) || a.name : '';
-    const effectEs = a.effect ? ((await traducirConMyMemory(a.effect)) || traducirTextoAtaqueTcg(a.effect)) : '';
-    ataques.push({ name: a.name, nombreEs, damage: a.damage, effect: a.effect, effectEs });
-  }
-
+  // Respaldo sin español nativo: traducimos con MyMemory, con la heurística por
+  // patrones como red de contención si la API falla. La habilidad entra como un
+  // bloque más de la lista, igual que los ataques; el cuadro «Descripción» queda
+  // solo para el efecto de las cartas de Entrenador.
+  const ataques = (await ataquesDesdePocketDecks(c, false, true, true)) || [];
   const descripcion = await descripcionDesdePocketDecks(c);
   addTcgCardRow({
     rareza: mapearRarezaPocketDecks(c.rarity),
