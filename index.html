@@ -2574,6 +2574,7 @@
   .btn-editar-ataque:hover { opacity: 1; }
   .btn-editar-ataque.btn-eliminar-ataque { margin-left: 0; }
   .carta-detalle-ataque-efecto { font-size: 0.8rem; color: var(--text); white-space: pre-wrap; }
+  .carta-detalle-ataque-dano { font-weight: 400; margin-left: 8px; }
   .tcg-energy-inline { width: 1.15em; height: 1.15em; vertical-align: -0.2em; margin: 0 1px; }
   .energia-paleta { display: flex; flex-wrap: wrap; gap: 4px; margin: 4px 0; }
   .energia-paleta button { background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.2); border-radius: 6px; padding: 2px 4px; cursor: pointer; line-height: 0; }
@@ -9261,12 +9262,12 @@ function renderCartaDetalleAtaques(carta) {
   }
   cont.innerHTML = ataques.map((a, i) => {
     const nombre = a.nombreEs || a.name || '';
-    const dano = (a.damage !== undefined && a.damage !== null && a.damage !== '') ? ` — ${esc(String(a.damage))} de daño` : '';
+    const dano = (a.damage !== undefined && a.damage !== null && a.damage !== '') ? `<span class="carta-detalle-ataque-dano">${esc(String(a.damage))} de daño</span>` : '';
     const efectoTexto = a.effectEs || (a.effect ? traducirTextoAtaqueTcg(a.effect) : '');
     if (!permitirEditar && !nombre && !dano && !efectoTexto) return '';   // ataque vacío: no se muestra a quien solo mira
     return `<div class="carta-detalle-ataque" id="carta-detalle-ataque-${i}">
       <div class="carta-detalle-ataque-header">
-        ${nombre ? `<strong>${esc(nombre)}</strong>` : ''}${dano}
+        ${nombre ? `<strong>${textoConSimbolos(nombre).replace(/(<img class="tcg-energy-inline"[^>]*>)(?=[^<\s])/g, '$1 ')}</strong>` : ''}${dano}
         ${permitirEditar ? `<button type="button" class="btn-editar-ataque" title="Editar este ataque" onclick="editarAtaqueCarta(${i})">✏️</button><button type="button" class="btn-editar-ataque btn-eliminar-ataque" title="Eliminar este ataque" onclick="eliminarAtaqueCarta(${i})">🗑️</button>` : ''}
       </div>
       ${efectoTexto ? `<div class="carta-detalle-ataque-efecto" id="carta-detalle-ataque-efecto-${i}">${textoConSimbolos(efectoTexto)}</div>` : ''}
@@ -9333,6 +9334,21 @@ function agregarAtaqueManualCarta() {
 
 // Edita nombre, daño y efecto de un ataque (reemplaza todo el bloque, no
 // solo el texto del efecto, para poder ponerle nombre a un ataque nuevo).
+// Fila de símbolos del editor de un ataque: inserta en el campo que esté activo (el nombre o el
+// efecto). Los botones no le quitan el foco al campo, así que el símbolo cae donde está el cursor.
+function paletaAtaqueHTML(i) {
+  return `<div class="energia-paleta" title="Insertar símbolo de energía en el nombre o en el efecto">` +
+    ENERGIAS_TCG.map(e => `<button type="button" title="${e.nombre}  {${e.cod}}" onmousedown="event.preventDefault()" onclick="insertarEnergiaAtaque(${i},'${e.cod}')"><img src="${TIPO_ICONS[e.key]}" alt="${e.nombre}"></button>`).join('') +
+    `</div>`;
+}
+function insertarEnergiaAtaque(i, cod) {
+  const idNombre = `carta-detalle-ataque-nombre-${i}`;
+  const idEfecto = `carta-detalle-ataque-textarea-${i}`;
+  const activo = document.activeElement && (document.activeElement.id === idNombre || document.activeElement.id === idEfecto)
+    ? document.activeElement.id : (window._ataqueCampoFoco === idNombre ? idNombre : idEfecto);
+  insertarEnergia(activo, cod);
+}
+
 function editarAtaqueCarta(i) {
   const carta = obtenerCartaDetalleActual();
   if (!carta || !Array.isArray(carta.ataques) || !carta.ataques[i]) return;
@@ -9343,10 +9359,10 @@ function editarAtaqueCarta(i) {
   const bloque = document.getElementById(`carta-detalle-ataque-${i}`);
   if (!bloque) return;
   bloque.innerHTML = `
-    <input type="text" class="carta-detalle-ataque-input" id="carta-detalle-ataque-nombre-${i}" placeholder="Nombre del ataque" value="${esc(nombreActual)}">
+    ${paletaAtaqueHTML(i)}
+    <input type="text" class="carta-detalle-ataque-input" id="carta-detalle-ataque-nombre-${i}" placeholder="Nombre del ataque (puedes poner símbolos, ej.: {W}{C} Cola Destructora)" value="${esc(nombreActual)}" onfocus="window._ataqueCampoFoco=this.id">
     <input type="text" class="carta-detalle-ataque-input" id="carta-detalle-ataque-dano-${i}" placeholder="Daño (opcional)" value="${esc(String(danoActual))}">
-    ${paletaEnergiasHTML('carta-detalle-ataque-textarea-' + i)}
-    <textarea class="carta-detalle-ataque-textarea" id="carta-detalle-ataque-textarea-${i}" placeholder="Efecto del ataque (opcional). Símbolos: {D}, {R}, {W}…">${esc(efectoActual)}</textarea>
+    <textarea class="carta-detalle-ataque-textarea" id="carta-detalle-ataque-textarea-${i}" placeholder="Efecto del ataque (opcional). Símbolos: {D}, {R}, {W}…" onfocus="window._ataqueCampoFoco=this.id">${esc(efectoActual)}</textarea>
     <div class="modal-btns" style="justify-content:flex-start;margin-top:6px">
       <button type="button" class="btn btn-yellow" style="padding:4px 10px;font-size:0.72rem" onclick="guardarAtaqueCarta(${i})">💾 Guardar</button>
       <button type="button" class="btn" style="padding:4px 10px;font-size:0.72rem;background:#444;color:#fff" onclick="renderCartaDetalleAtaques(obtenerCartaDetalleActual())">Cancelar</button>
