@@ -1540,6 +1540,7 @@
   .pokemon-panel-titulo { text-align: center; font-size: var(--lat-nombre, 1.8rem); font-weight: 800; font-style: italic; color: var(--white); line-height: 1.2; padding-bottom: 10px; border-bottom: 1px solid rgba(255,255,255,0.12); overflow-wrap: anywhere; }
   .pokemon-panel-body { flex: 1; display: flex; align-items: center; justify-content: center; padding: 10px 0 4px; }
   .result-lateral .pokemon-sprite { width: var(--lat-sprite, 260px); height: var(--lat-sprite, 260px); object-fit: contain; }
+  .result-lateral .pokemon-sprite.sprite-ilustracion { filter: drop-shadow(0 3px 6px rgba(0,0,0,0.55)); }
   .result-datos { display: grid; grid-template-columns: 1fr; gap: var(--lat-gap, 10px); }
   .result-datos .result-item { display: flex; flex-direction: column; justify-content: center; }
   .result-datos .result-item .ri-value { font-size: var(--lat-dato, 1rem); }
@@ -2413,6 +2414,7 @@
   .pokemon-panel-titulo { text-align: center; font-size: var(--lat-nombre, 1.8rem); font-weight: 800; font-style: italic; color: var(--white); line-height: 1.2; padding-bottom: 10px; border-bottom: 1px solid rgba(255,255,255,0.12); overflow-wrap: anywhere; }
   .pokemon-panel-body { flex: 1; display: flex; align-items: center; justify-content: center; padding: 10px 0 4px; }
   .result-lateral .pokemon-sprite { width: var(--lat-sprite, 260px); height: var(--lat-sprite, 260px); object-fit: contain; }
+  .result-lateral .pokemon-sprite.sprite-ilustracion { filter: drop-shadow(0 3px 6px rgba(0,0,0,0.55)); }
   .result-datos { display: grid; grid-template-columns: 1fr; gap: var(--lat-gap, 10px); }
   .result-datos .result-item { display: flex; flex-direction: column; justify-content: center; }
   .result-datos .result-item .ri-value { font-size: var(--lat-dato, 1rem); }
@@ -5477,7 +5479,7 @@ async function calcularBBoxGifLocal(url) {
         }
       }
     }
-    if (maxX >= 0) resultado = { w, h, minX, minY, maxX, maxY, colores };
+    if (maxX >= 0) resultado = { w, h, minX, minY, maxX, maxY, colores, frames: total };
   } catch (e) { resultado = null; }
   finally { try { if (dec) dec.close(); } catch (e) {} }
   _gifLocalBBoxCache.set(url, resultado);
@@ -5545,13 +5547,110 @@ async function prepararSvgLocal(url) {
   return resultado;
 }
 
+// ── REAJUSTE DE CALIDAD DE LAS ILUSTRACIONES ────────────────────────────────
+// Cuando una ilustración (PNG/WebP con bordes suavizados, no pixel art ni animada) se muestra más grande
+// que su tamaño real, la ampliación básica del navegador la deja borrosa. Aquí se recorta el dibujo, se
+// reajusta al tamaño exacto en que se va a ver (en píxeles reales de la pantalla) con el método Lanczos
+// y se le añade un poco de nitidez. El archivo original no se toca; solo cambia la copia que se muestra.
+const _reajusteCache = new Map();
+
+function pesosLanczos(n, m) {
+  const esc = m / n, a = 3, lista = [];
+  for (let d = 0; d < m; d++) {
+    const centro = (d + 0.5) / esc - 0.5, ini = Math.floor(centro) - a + 1, fin = Math.floor(centro) + a;
+    const idx = [], w = []; let suma = 0;
+    for (let i = ini; i <= fin; i++) {
+      const x = centro - i;
+      const l = x === 0 ? 1 : (Math.abs(x) < a ? (a * Math.sin(Math.PI * x) * Math.sin(Math.PI * x / a)) / (Math.PI * Math.PI * x * x) : 0);
+      idx.push(Math.min(n - 1, Math.max(0, i))); w.push(l); suma += l;
+    }
+    lista.push({ idx, w: w.map(v => v / suma) });
+  }
+  return lista;
+}
+
+function remuestrearLanczos(pm, ancho, alto, nAncho, nAlto) {
+  const px = pesosLanczos(ancho, nAncho), py = pesosLanczos(alto, nAlto);
+  const medio = new Float32Array(nAncho * alto * 4);
+  for (let y = 0; y < alto; y++) for (let x = 0; x < nAncho; x++) {
+    const { idx, w } = px[x]; let r = 0, g = 0, b = 0, a = 0;
+    for (let k = 0; k < idx.length; k++) { const o = (y * ancho + idx[k]) * 4; r += pm[o] * w[k]; g += pm[o + 1] * w[k]; b += pm[o + 2] * w[k]; a += pm[o + 3] * w[k]; }
+    const o2 = (y * nAncho + x) * 4; medio[o2] = r; medio[o2 + 1] = g; medio[o2 + 2] = b; medio[o2 + 3] = a;
+  }
+  const fin = new Float32Array(nAncho * nAlto * 4);
+  for (let y = 0; y < nAlto; y++) { const { idx, w } = py[y];
+    for (let x = 0; x < nAncho; x++) { let r = 0, g = 0, b = 0, a = 0;
+      for (let k = 0; k < idx.length; k++) { const o = (idx[k] * nAncho + x) * 4; r += medio[o] * w[k]; g += medio[o + 1] * w[k]; b += medio[o + 2] * w[k]; a += medio[o + 3] * w[k]; }
+      const o2 = (y * nAncho + x) * 4; fin[o2] = r; fin[o2 + 1] = g; fin[o2 + 2] = b; fin[o2 + 3] = a;
+    } }
+  return fin;
+}
+
+// Nitidez suave (máscara de enfoque con un desenfoque gaussiano de 5 puntos), solo sobre el color.
+function enfocarPremultiplicado(pm, ancho, alto, cantidad) {
+  const k = [1, 4, 6, 4, 1], t = new Float32Array(pm.length), bl = new Float32Array(pm.length);
+  for (let y = 0; y < alto; y++) for (let x = 0; x < ancho; x++) for (let c = 0; c < 3; c++) {
+    let s = 0; for (let i = -2; i <= 2; i++) s += pm[(y * ancho + Math.min(ancho - 1, Math.max(0, x + i))) * 4 + c] * k[i + 2];
+    t[(y * ancho + x) * 4 + c] = s / 16;
+  }
+  for (let y = 0; y < alto; y++) for (let x = 0; x < ancho; x++) for (let c = 0; c < 3; c++) {
+    let s = 0; for (let i = -2; i <= 2; i++) s += t[(Math.min(alto - 1, Math.max(0, y + i)) * ancho + x) * 4 + c] * k[i + 2];
+    bl[(y * ancho + x) * 4 + c] = s / 16;
+  }
+  const out = new Float32Array(pm.length);
+  for (let i = 0; i < pm.length; i += 4) {
+    const a = pm[i + 3]; out[i + 3] = a;
+    for (let c = 0; c < 3; c++) out[i + c] = Math.min(a, Math.max(0, pm[i + c] + cantidad * (pm[i + c] - bl[i + c])));
+  }
+  return out;
+}
+
+async function reajustarIlustracionLocal(imgEl, url) {
+  try {
+    const b = await calcularBBoxGifLocal(url);
+    if (!b || b.colores <= 200 || b.frames > 1) return null;          // pixel art o animado: no se toca
+    const caja = parseFloat(getComputedStyle(imgEl).width);
+    if (!(caja > 0)) return null;
+    const escala = (imgEl.dataset && imgEl.dataset.gifSlug) ? gifEscalaDe(imgEl.dataset.gifSlug) : 1;
+    const objetivo = Math.round(caja * (window.devicePixelRatio || 1) * escala);
+    const m = 1;
+    const x0 = Math.max(0, b.minX - m), y0 = Math.max(0, b.minY - m), x1 = Math.min(b.w, b.maxX + 1 + m), y1 = Math.min(b.h, b.maxY + 1 + m);
+    const cw = x1 - x0, ch = y1 - y0, factor = objetivo / Math.max(cw, ch);
+    if (factor < 1.08 || factor > 6) return null;                      // solo cuando se amplía de verdad
+    const clave = url + '|' + objetivo;
+    if (_reajusteCache.has(clave)) return _reajusteCache.get(clave);
+    const c0 = document.createElement('canvas'); c0.width = cw; c0.height = ch;
+    const g0 = c0.getContext('2d', { willReadFrequently: true });
+    g0.drawImage(imgEl, x0, y0, cw, ch, 0, 0, cw, ch);
+    const src = g0.getImageData(0, 0, cw, ch).data;
+    const pm = new Float32Array(cw * ch * 4);
+    for (let i = 0, n = cw * ch; i < n; i++) {                          // alfa premultiplicado: evita bordes oscuros
+      const a = src[i * 4 + 3] / 255; pm[i * 4] = src[i * 4] / 255 * a; pm[i * 4 + 1] = src[i * 4 + 1] / 255 * a; pm[i * 4 + 2] = src[i * 4 + 2] / 255 * a; pm[i * 4 + 3] = a;
+    }
+    const dw = Math.max(1, Math.round(cw * factor)), dh = Math.max(1, Math.round(ch * factor));
+    const grande = enfocarPremultiplicado(remuestrearLanczos(pm, cw, ch, dw, dh), dw, dh, 0.7);
+    const c1 = document.createElement('canvas'); c1.width = dw; c1.height = dh;
+    const g1 = c1.getContext('2d'), salida = g1.createImageData(dw, dh);
+    for (let i = 0, n = dw * dh; i < n; i++) {
+      const a = Math.min(1, Math.max(0, grande[i * 4 + 3]));
+      salida.data[i * 4 + 3] = Math.round(a * 255);
+      if (a > 0.003) for (let c = 0; c < 3; c++) salida.data[i * 4 + c] = Math.min(255, Math.round(grande[i * 4 + c] / a * 255));
+    }
+    g1.putImageData(salida, 0, 0);
+    const blob = await new Promise(res => c1.toBlob(res, 'image/png'));
+    const blobUrl = blob ? URL.createObjectURL(blob) : null;
+    _reajusteCache.set(clave, blobUrl);
+    return blobUrl;
+  } catch (e) { return null; }       // si algo falla, se muestra el original
+}
+
 async function recortarGifLocal(imgEl, url) {
   try {
     if (!(window.CSS && CSS.supports && CSS.supports('object-view-box', 'inset(0px)'))) return;
     const b = await calcularBBoxGifLocal(url);
     if (!b) return;
     // Una ilustración (muchos colores por los bordes suavizados) se amplía suavizada; el pixel art (pocos colores) se deja pixelado.
-    if (b.colores > 200) imgEl.style.imageRendering = 'auto';
+    if (b.colores > 200) { imgEl.style.imageRendering = 'auto'; imgEl.classList.add('sprite-ilustracion'); }
     const cw = b.maxX - b.minX + 1, ch = b.maxY - b.minY + 1;
     if (cw >= b.w * 0.94 && ch >= b.h * 0.94) return;     // ya ocupa casi todo el lienzo
     const m = 1;                                           // 1 px de aire alrededor
@@ -5583,6 +5682,7 @@ function loadSpriteWithFallback(imgEl, candidates, onSuccess, onFail) {
     imgEl.style.objectFit = esLocal ? 'contain' : '';
     imgEl.style.objectViewBox = '';                         // quita el recorte de un GIF anterior
     imgEl.style.scale = '';                                 // y el tamaño de uno anterior
+    imgEl.classList.remove('sprite-ilustracion');
     const tok = (imgEl._lsTok = (imgEl._lsTok || 0) + 1);
     if (esLocal && esSvg) {                                 // SVG propio: se muestra una copia con el área visible ajustada
       imgEl.onerror = null; imgEl.onload = null;
@@ -5598,8 +5698,13 @@ function loadSpriteWithFallback(imgEl, candidates, onSuccess, onFail) {
     imgEl.onerror = tryNext;
     imgEl.onload = async () => {
       if (esLocal) {
-        await recortarGifLocal(imgEl, url);
-        if (imgEl._lsTok !== tok) return;                   // llegó otra carga para esta imagen
+        if (imgEl._lsProcesada !== tok) {                   // primera carga: se analiza y, si es una ilustración que se amplía, se reajusta
+          await recortarGifLocal(imgEl, url);
+          if (imgEl._lsTok !== tok) return;                 // llegó otra carga para esta imagen
+          const copia = await reajustarIlustracionLocal(imgEl, url);
+          if (imgEl._lsTok !== tok) return;
+          if (copia) { imgEl._lsProcesada = tok; imgEl.style.objectViewBox = ''; imgEl.src = copia; return; }   // al cargar la copia se vuelve a entrar acá
+        }
         aplicarEscalaGif(imgEl);                            // tamaño elegido a mano (si lo hay)
       } else if (!esGif) {
         trimTransparentPadding(imgEl);
