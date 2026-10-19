@@ -4611,11 +4611,24 @@ let currentMode = null; // 'champions' | 'go' | 'tcg'
 // Formato que se está consultando en la vista pública cuando currentMode es
 // 'champions': 'singles' o 'doubles'. Independiente del switch de Datos.
 let champConsultaModo = 'singles';
+// El buscador muestra el nombre TRADUCIDO («Tauros de Paldea (Raza Luchadora)»), pero los datos se guardan
+// con el nombre de la lista («Tauros Paldean Combat»). Si se usaba el texto del buscador para volver a
+// mostrar la ficha, no se encontraba el Pokémon y salía «Sin datos» (al cambiar entre Singles y Doubles, y
+// cada vez que llegaba algo de la nube). Por eso se guarda aparte la clave real del Pokémon elegido.
+let pokemonClaveActual = null;
+function claveDelBuscador() {
+  const txt = document.getElementById('search-input').value.trim();
+  if (!txt) return null;
+  if (pokemonClaveActual && (txt === pokemonClaveActual || txt === traducirNombrePokemon(pokemonClaveActual))) return pokemonClaveActual;
+  const q = normBusqueda(txt);
+  const exacto = (POKEMON_LISTS[currentMode] || []).find(p => pokemonIgualBusqueda(p, q));   // lo escrito a mano coincide con un nombre guardado o traducido
+  return exacto || txt;
+}
 function cambiarFormatoConsultaChampions(modo) {
   champConsultaModo = modo;
   document.getElementById('champ-consulta-formato-singles').classList.toggle('active', modo === 'singles');
   document.getElementById('champ-consulta-formato-doubles').classList.toggle('active', modo === 'doubles');
-  const nombreActual = document.getElementById('search-input').value.trim();
+  const nombreActual = claveDelBuscador();
   if (nombreActual) showResult(nombreActual);
 }
 
@@ -5214,6 +5227,7 @@ function handleKey(e) {
 }
 
 function selectPokemon(name) {
+  pokemonClaveActual = name;
   document.getElementById('search-input').value = traducirNombrePokemon(name); // el mismo nombre que se ve en la ficha
   document.getElementById('autocomplete-list').classList.remove('open');
   document.getElementById('clear-btn').style.display = 'block';
@@ -8667,7 +8681,7 @@ function initFirebaseSync() {
       if (currentTab === 'torneos' || currentTab === 'trueques') showTab(currentTab);
       if (currentMode === 'tcg' && typeof renderTcgMazosPublicList === 'function') renderTcgMazosPublicList(currentMode);
       const searchInput = document.getElementById('search-input');
-      if (currentMode && searchInput) showResult(searchInput.value.trim() || null);
+      if (currentMode && searchInput) showResult(claveDelBuscador());
     }
 
     const inicialesHechos = new Set();
