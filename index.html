@@ -4573,8 +4573,8 @@ function readStorageObj(key) {
     return raw ? JSON.parse(raw) : {};
   } catch(e) { return {}; }
 }
-function getChampionsData(name) { return readStorageObj('pokemonData')[name] || {}; }
-function getChampionsDataDoubles(name) { return readStorageObj('pokemonDataChampionsDoubles')[name] || {}; }
+function getChampionsData(name) { return (typeof dataChampions === 'object' && dataChampions && dataChampions[name]) || readStorageObj('pokemonData')[name] || {}; }
+function getChampionsDataDoubles(name) { return (typeof dataChampionsDoubles === 'object' && dataChampionsDoubles && dataChampionsDoubles[name]) || readStorageObj('pokemonDataChampionsDoubles')[name] || {}; }
 function getGOData(name)        { return readStorageObj('pokemonDataGO')[name] || {}; }
 function getTCGData(name)       { return readStorageObj('pokemonDataTCG')[name] || {}; }
 function getAllTCGData()        { return readStorageObj('pokemonDataTCG'); }
@@ -8502,35 +8502,77 @@ function applyExpansionesDoc(doc) {
 // momento evita que ese estado "viejo" pise datos ya sincronizados.
 let firestoreSyncCompleted = false;
 let pushToFirestorePendiente = false;
+let renderTrasEdicionPendiente = false;   // se reconstruye la tabla de Datos al salir de la celda que se estaba editando
 
-function pushToFirestore() {
-  if (!window._fbDb) return Promise.resolve();
+// ── PROTECCIÓN DE LOS CAMBIOS LOCALES FRENTE A LA NUBE ──────────────────────
+// Cada vez que Firestore avisa de un cambio (incluido el eco de lo que acabas de guardar), la página
+// vuelve a aplicar los documentos de la nube sobre lo que hay en memoria. Si en ese momento tenías
+// cambios que todavía no habían llegado a la nube (por ejemplo, algo que estabas escribiendo en Datos),
+// se pisaban con la versión anterior y parecía que «no se guardaba» o que la información «se borraba».
+// Ahora, desde que se hace un cambio local hasta que la nube lo confirma, ese documento se marca como
+// «pendiente»: las instantáneas de la nube no lo pisan, y si la página se cierra antes, la marca queda
+// guardada en este dispositivo y los cambios se suben solos la próxima vez.
+let docsPendientes = {};   // id del documento -> número de versión del último cambio local sin confirmar
+try { docsPendientes = JSON.parse(localStorage.getItem('docsPendientesNube') || '{}') || {}; } catch (e) { docsPendientes = {}; }
+function guardarDocsPendientes() { try { localStorage.setItem('docsPendientesNube', JSON.stringify(docsPendientes)); } catch (e) {} }
+function hayAdminEnNube() { return !!(window._fbAuth && window._fbAuth.currentUser); }
+function marcarDocPendiente(id) {
+  if (!hayAdminEnNube()) return 0;   // un visitante no escribe en la nube: su copia siempre sigue a la de la nube
+  docsPendientes[id] = (Number(docsPendientes[id]) || 0) + 1;
+  guardarDocsPendientes();
+  return docsPendientes[id];
+}
+function confirmarDocSubido(id, version) {   // solo se desmarca si no hubo cambios nuevos mientras se subía
+  if (docsPendientes[id] === version) { delete docsPendientes[id]; guardarDocsPendientes(); }
+}
+// Guarda lo que se está escribiendo en las tablas de Datos sin esperar al botón «Guardar cambios».
+const _autoguardado = {};
+function autoguardarDatos(id) {
+  marcarDocPendiente(id);                       // desde ya, la nube no pisa lo que se está escribiendo
+  clearTimeout(_autoguardado[id]);
+  _autoguardado[id] = setTimeout(() => { persistLocalOnly(); pushToFirestore([id]); }, 900);
+}
+
+function payloadsFirestore() {
+  // Cada campo se guarda como texto (JSON.stringify) en vez de objeto/mapa
+  // nativo de Firestore, para evitar el límite de "demasiadas entradas de
+  // índice" que genera un mapa con una clave por cada Pokémon.
+  return {
+    champions: { list: JSON.stringify(POKEMON_LISTS.champions), champions: JSON.stringify(dataChampions), championsDoubles: JSON.stringify(dataChampionsDoubles), enReparacion: !!modosEnReparacion.champions },
+    go: { list: JSON.stringify(POKEMON_LISTS.go), go: JSON.stringify(dataGO), enReparacion: !!modosEnReparacion.go, ligaOrder: JSON.stringify(ligaOrder) },
+    tcg: { list: JSON.stringify(POKEMON_LISTS.tcg), tcg: JSON.stringify(dataTCG), enReparacion: !!modosEnReparacion.tcg },
+    mazos: { mazos: JSON.stringify(dataMazos) },
+    expansiones: { expansiones: JSON.stringify(EXPANSIONES_SUGERIDAS.tcg) },
+    config: { torneosEnReparacion: !!modosEnReparacion.torneos, truequesEnReparacion: !!modosEnReparacion.trueques, nombresMostrar: JSON.stringify(NOMBRES_MOSTRAR), gifEscalas: JSON.stringify(GIF_ESCALAS) }
+  };
+}
+
+// Devuelve una promesa con { subido, motivo }: subido=false si los datos quedaron solo en este
+// dispositivo (sin conexión con la nube, esperando la sincronización inicial o con un fallo al escribir).
+// «ids» limita la subida a esos documentos; sin ids se suben todos.
+function pushToFirestore(ids) {
+  const todosLosIds = ['champions', 'go', 'tcg', 'mazos', 'expansiones', 'config'];
+  const objetivo = (Array.isArray(ids) && ids.length) ? ids : todosLosIds;
+  const versiones = {};
+  objetivo.forEach(id => { versiones[id] = marcarDocPendiente(id); });   // protege estos datos locales hasta que la nube los confirme
+  if (!window._fbDb) return Promise.resolve({ subido: false, motivo: 'sin-nube' });
   if (!firestoreSyncCompleted) {
     // Todavía no sabemos qué hay realmente en la nube: no se sube nada. En
     // cuanto se confirme la sincronización inicial, se reintenta solo.
     pushToFirestorePendiente = true;
-    return Promise.resolve();
+    return Promise.resolve({ subido: false, motivo: 'esperando' });
   }
   const col = window._fbDb.collection('appdata');
-  // Cada campo se guarda como texto (JSON.stringify) en vez de objeto/mapa
-  // nativo de Firestore, para evitar el límite de "demasiadas entradas de
-  // índice" que genera un mapa con una clave por cada Pokémon.
-  const writes = [
-    ['champions', { list: JSON.stringify(POKEMON_LISTS.champions), champions: JSON.stringify(dataChampions), championsDoubles: JSON.stringify(dataChampionsDoubles), enReparacion: !!modosEnReparacion.champions }],
-    ['go', { list: JSON.stringify(POKEMON_LISTS.go), go: JSON.stringify(dataGO), enReparacion: !!modosEnReparacion.go, ligaOrder: JSON.stringify(ligaOrder) }],
-    ['tcg', { list: JSON.stringify(POKEMON_LISTS.tcg), tcg: JSON.stringify(dataTCG), enReparacion: !!modosEnReparacion.tcg }],
-    ['mazos', { mazos: JSON.stringify(dataMazos) }],
-    ['expansiones', { expansiones: JSON.stringify(EXPANSIONES_SUGERIDAS.tcg) }],
-    ['config', { torneosEnReparacion: !!modosEnReparacion.torneos, truequesEnReparacion: !!modosEnReparacion.trueques, nombresMostrar: JSON.stringify(NOMBRES_MOSTRAR), gifEscalas: JSON.stringify(GIF_ESCALAS) }]
-  ];
-  return Promise.all(writes.map(([id, payload]) =>
-    col.doc(id).set(payload).catch(err => ({ id, err }))
+  const payloads = payloadsFirestore();
+  return Promise.all(objetivo.map(id =>
+    col.doc(id).set(payloads[id]).then(() => { confirmarDocSubido(id, versiones[id]); return null; }).catch(err => ({ id, err }))
   )).then(results => {
     const failed = results.filter(r => r && r.err);
     if (failed.length) {
       console.log('Firestore write failed en:', failed.map(f => f.id).join(', '), failed);
       showToast(`⚠️ No se pudo sincronizar "${failed.map(f => f.id).join(', ')}" con la nube (puede ser tamaño o conexión)`, true);
     }
+    return { subido: failed.length === 0, motivo: failed.length ? 'fallo' : '' };
   });
 }
 
@@ -8598,12 +8640,13 @@ function initFirebaseSync() {
     // procesa con su propia función, tocando solo lo que le corresponde.
     function applyAll() {
       let anyExists = false;
+      // Los documentos con cambios locales sin confirmar (docsPendientes) no se pisan con la versión de la nube.
       ['champions', 'go', 'tcg'].forEach(game => {
-        if (latestDocs[game]) { anyExists = true; applyGameDoc(game, latestDocs[game]); }
+        if (latestDocs[game]) { anyExists = true; if (!docsPendientes[game]) applyGameDoc(game, latestDocs[game]); }
       });
-      if (latestDocs['mazos']) { anyExists = true; applyMazosDoc(latestDocs['mazos']); }
-      if (latestDocs['expansiones']) { anyExists = true; applyExpansionesDoc(latestDocs['expansiones']); }
-      if (latestDocs['config']) { anyExists = true; applyConfigDoc(latestDocs['config']); }
+      if (latestDocs['mazos']) { anyExists = true; if (!docsPendientes.mazos) applyMazosDoc(latestDocs['mazos']); }
+      if (latestDocs['expansiones']) { anyExists = true; if (!docsPendientes.expansiones) applyExpansionesDoc(latestDocs['expansiones']); }
+      if (latestDocs['config']) { anyExists = true; if (!docsPendientes.config) applyConfigDoc(latestDocs['config']); }
 
       if (!anyExists) return;
       migrarLigaUnicaAMultiple();
@@ -8613,7 +8656,12 @@ function initFirebaseSync() {
       const huboMigracionIds = typeof migrarCartasAIds === 'function' && migrarCartasAIds();
       persistLocalOnly();
       if ((huboMigracion || huboResetPocketLive || huboMigracionIds) && typeof pushToFirestore === 'function') pushToFirestore();
-      if (typeof renderCurrentTable === 'function') renderCurrentTable();
+      // Si estás escribiendo en una celda de Datos, no se reconstruye la tabla (perderías el cursor): se hace al salir de la celda.
+      if (typeof renderCurrentTable === 'function') {
+        const ae = document.activeElement;
+        if (ae && ae.matches && ae.matches('.editable-cell, .move-type-select')) renderTrasEdicionPendiente = true;
+        else renderCurrentTable();
+      }
       if (typeof ensurePokemonDatalistMazos === 'function') ensurePokemonDatalistMazos(mazoEditingMode);
       if (currentMode) aplicarEstadoReparacion(currentMode);
       if (currentTab === 'torneos' || currentTab === 'trueques') showTab(currentTab);
@@ -8622,6 +8670,28 @@ function initFirebaseSync() {
       if (currentMode && searchInput) showResult(searchInput.value.trim() || null);
     }
 
+    const inicialesHechos = new Set();
+    function chequeoInicial(id) {
+      if (inicialesHechos.has(id)) return;
+      inicialesHechos.add(id);
+      pendingInitialChecks--;
+      if (pendingInitialChecks === 0) {
+        // Ya se conoce el estado real de la nube (existan o no los
+        // documentos): de acá en más sí es seguro subir cambios, porque
+        // el estado en memoria ya está reconciliado con Firestore.
+        firestoreSyncCompleted = true;
+        const pendientes = Object.keys(docsPendientes);
+        if (!anyExistedAtStart) {
+          // Todavía no hay nada en la nube: subimos lo que tengamos localmente como base inicial.
+          pushToFirestore();
+        } else if (pushToFirestorePendiente) {
+          pushToFirestorePendiente = false;
+          pushToFirestore();
+        } else if (pendientes.length) {
+          pushToFirestore(pendientes);   // cambios locales que quedaron sin subir en una sesión anterior
+        }
+      }
+    }
     FIRESTORE_DOC_IDS.forEach(id => {
       col.doc(id).onSnapshot((doc) => {
         if (doc.exists) {
@@ -8631,24 +8701,10 @@ function initFirebaseSync() {
           delete latestDocs[id];
         }
         applyAll();
-        if (pendingInitialChecks > 0) {
-          pendingInitialChecks--;
-          if (pendingInitialChecks === 0) {
-            // Ya se conoce el estado real de la nube (existan o no los
-            // documentos): de acá en más sí es seguro subir cambios, porque
-            // el estado en memoria ya está reconciliado con Firestore.
-            firestoreSyncCompleted = true;
-            if (!anyExistedAtStart) {
-              // Todavía no hay nada en la nube: subimos lo que tengamos localmente como base inicial.
-              pushToFirestore();
-            } else if (pushToFirestorePendiente) {
-              pushToFirestorePendiente = false;
-              pushToFirestore();
-            }
-          }
-        }
+        chequeoInicial(id);
       }, (err) => {
         console.log('No se pudo escuchar Firestore (' + id + ')', err);
+        chequeoInicial(id);   // si un documento no responde, no se bloquean para siempre las subidas de los demás
       });
     });
   } catch (e) {
@@ -8689,6 +8745,16 @@ function checkAdminPassword() {
 }
 
 // Se llama al elegir Lite o Completa en el modal que aparece tras la contraseña.
+document.addEventListener('focusout', e => {
+  if (!renderTrasEdicionPendiente || !e.target || !e.target.matches || !e.target.matches('.editable-cell, .move-type-select')) return;
+  setTimeout(() => {
+    const ae = document.activeElement;
+    if (ae && ae.matches && ae.matches('.editable-cell, .move-type-select')) return;   // pasó a otra celda: se espera
+    renderTrasEdicionPendiente = false;
+    if (typeof renderCurrentTable === 'function') renderCurrentTable();
+  }, 250);
+});
+
 function chooseDatosVersion(lite) {
   LITE_MODE = !!lite;
   liteDatosPage = { champions: 1, go: 1, tcg: 1 };
@@ -8805,20 +8871,25 @@ function renderTableChampions() {
     </tr>`;
   }).join('');
 
+  // El almacén se busca en el momento de escribir (y no al dibujar la tabla): si mientras tanto llegó algo
+  // de la nube y se cambió el objeto en memoria, lo escrito no se va a un objeto viejo.
+  const almacenVigente = () => champDatosModo === 'doubles' ? dataChampionsDoubles : dataChampions;
   tbody.querySelectorAll('.editable-cell:not(.name-cell)').forEach(input => {
     input.addEventListener('input', () => {
-      const p = input.dataset.pokemon, f = input.dataset.field;
-      if (!champStore[p]) champStore[p] = EMPTY_CHAMPIONS();
-      champStore[p][f] = input.value;
+      const p = input.dataset.pokemon, f = input.dataset.field, store = almacenVigente();
+      if (!store[p]) store[p] = EMPTY_CHAMPIONS();
+      store[p][f] = input.value;
+      autoguardarDatos('champions');
     });
   });
   tbody.querySelectorAll('.move-type-select').forEach(select => {
     select.addEventListener('change', () => {
-      const p = select.dataset.pokemon, f = select.dataset.field;
-      if (!champStore[p]) champStore[p] = EMPTY_CHAMPIONS();
-      champStore[p][f] = select.value;
+      const p = select.dataset.pokemon, f = select.dataset.field, store = almacenVigente();
+      if (!store[p]) store[p] = EMPTY_CHAMPIONS();
+      store[p][f] = select.value;
       const wrap = select.nextElementSibling;
       if (wrap) wrap.innerHTML = typeIconHTML(select.value);
+      autoguardarDatos('champions');
     });
   });
   bindNameCellEvents(tbody);
@@ -8886,6 +8957,7 @@ function renderTableGO() {
       const p = input.dataset.pokemon, f = input.dataset.field;
       if (!dataGO[p]) dataGO[p] = EMPTY_GO();
       dataGO[p][f] = input.value;
+      autoguardarDatos('go');
     });
   });
   // Stats Liga Super/Ultra: mientras se escribe, se le agrega la "/" sola
@@ -10972,8 +11044,14 @@ async function saveAllData() {
   if (btn) { btn.disabled = true; btn.textContent = '💾 Guardando...'; }
   showToast('💾 Guardando...');
   try {
-    await persistAll();
-    showToast('✅ Datos guardados correctamente');
+    const r = await persistAll();
+    if (r && r.subido === false && r.motivo !== 'fallo') {
+      showToast(r.motivo === 'sin-nube'
+        ? '⚠️ Guardado solo en este dispositivo: no hay conexión con la nube.'
+        : '⚠️ Guardado en este dispositivo. La nube todavía se está sincronizando; se subirá sola en unos segundos.', true);
+    } else if (!(r && r.subido === false)) {
+      showToast('✅ Datos guardados correctamente');
+    }
   } catch (err) {
     console.log('Error al guardar', err);
     showToast('⚠️ Hubo un problema al guardar en la nube. Revisa tu conexión.', true);
