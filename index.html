@@ -1545,6 +1545,40 @@
   .result-datos .result-item { display: flex; flex-direction: column; justify-content: center; }
   .result-datos .result-item .ri-value { font-size: var(--lat-dato, 1rem); }
 
+  /* Equipo recomendado (Champions): hasta 5 cuadros con el GIF de cada Pokémon y su nombre arriba */
+  .equipo-rec { margin-top: 18px; }
+  .equipo-rec-titulo { font-family: 'Press Start 2P', monospace; font-size: 0.8rem; color: var(--yellow); text-align: center; font-style: normal; margin: 4px 0 14px; line-height: 1.5; }
+  .equipo-rec-grid { display: grid; grid-template-columns: repeat(5, minmax(0, 118px)); justify-content: center; gap: 12px; }   /* cuadros de hasta 118 px, centrados */
+  .equipo-rec-item { display: flex; flex-direction: column; align-items: center; gap: 6px; min-width: 0; }
+  .equipo-rec-nombre { width: 100%; min-height: 2.4em; display: flex; align-items: flex-end; justify-content: center; font-size: 0.78rem; font-weight: 800; font-style: italic; color: var(--white); line-height: 1.2; text-align: center; overflow-wrap: anywhere; }
+  .equipo-rec-cuadro { width: 100%; aspect-ratio: 1 / 1; padding: 6px; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.12); border-bottom: 3px solid var(--yellow); border-radius: 10px; display: flex; align-items: center; justify-content: center; overflow: hidden; cursor: pointer; transition: transform 0.12s, border-color 0.12s, background 0.12s; }
+  .equipo-rec-cuadro:hover, .equipo-rec-cuadro:focus-visible { transform: translateY(-3px); background: rgba(255,215,0,0.08); border-color: var(--yellow); outline: none; }
+  .equipo-rec-cuadro.sin-pokemon { cursor: default; border-bottom-color: rgba(255,255,255,0.25); }
+  .equipo-rec-cuadro.sin-pokemon:hover { transform: none; background: rgba(0,0,0,0.3); border-color: rgba(255,255,255,0.12); }
+  .equipo-rec-cuadro img { width: 100%; height: 100%; object-fit: contain; display: block; }
+  .equipo-rec-cuadro .sin-imagen { font-size: 0.7rem; color: var(--muted); font-style: italic; }
+  @media (max-width: 600px) {
+    /* en el móvil los 5 cuadros van en una sola línea, más chicos */
+    .equipo-rec { margin-left: -8px; margin-right: -8px; }
+    .equipo-rec-titulo { font-size: 0.68rem; margin-bottom: 10px; }
+    .equipo-rec-grid { grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 5px; }
+    .equipo-rec-item { gap: 4px; }
+    .equipo-rec-nombre { font-size: 0.5rem; min-height: 0; line-height: 1.3; display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; overflow-wrap: normal; padding: 0 1px; }   /* una sola línea; si no cabe, termina en «…» */
+    .equipo-rec-cuadro { padding: 3px; border-radius: 8px; border-bottom-width: 2px; }
+  }
+  /* Ventana para escribir el equipo recomendado (Datos): Singles y Doubles a la vez */
+  .eqr-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 8px; }
+  .eqr-col { min-width: 0; text-align: left; }
+  .eqr-col-titulo { font-family: 'Press Start 2P', monospace; font-size: 0.62rem; color: var(--yellow); margin: 6px 0 10px; }
+  .eqr-fila { display: grid; grid-template-columns: 22px 1fr; column-gap: 8px; align-items: center; margin: 0 0 9px; text-align: left; }
+  .eqr-num { text-align: center; color: var(--yellow); font-weight: 800; }
+  .eqr-cuenta { font-size: 0.74rem; font-weight: 700; margin: -2px 0 10px; color: #ffb74d; }
+  .eqr-cuenta.completo { color: #4caf50; }
+  .eqr-input { min-width: 0; background: var(--black); border: 1px solid rgba(255,255,255,0.2); border-radius: 8px; color: var(--text); padding: 9px 10px; font-size: 0.9rem; font-family: 'Courier New', monospace; }
+  .eqr-estado { grid-column: 2; min-height: 1.1em; font-size: 0.7rem; line-height: 1.25; color: var(--muted); padding-top: 2px; }
+  .eqr-estado .ok { color: #4caf50; font-weight: 700; } .eqr-estado .no { color: #ff6b6b; font-weight: 700; } .eqr-estado .aviso { color: #ffb74d; }
+  @media (max-width: 700px) { .eqr-cols { grid-template-columns: 1fr; gap: 6px; } }
+
   /* DATOS SECTION */
   /* Lock screen */
   .lock-screen {
@@ -2418,6 +2452,40 @@
   .result-datos { display: grid; grid-template-columns: 1fr; gap: var(--lat-gap, 10px); }
   .result-datos .result-item { display: flex; flex-direction: column; justify-content: center; }
   .result-datos .result-item .ri-value { font-size: var(--lat-dato, 1rem); }
+
+  /* Equipo recomendado (Champions): hasta 5 cuadros con el GIF de cada Pokémon y su nombre arriba */
+  .equipo-rec { margin-top: 18px; }
+  .equipo-rec-titulo { font-family: 'Press Start 2P', monospace; font-size: 0.8rem; color: var(--yellow); text-align: center; font-style: normal; margin: 4px 0 14px; line-height: 1.5; }
+  .equipo-rec-grid { display: grid; grid-template-columns: repeat(5, minmax(0, 118px)); justify-content: center; gap: 12px; }   /* cuadros de hasta 118 px, centrados */
+  .equipo-rec-item { display: flex; flex-direction: column; align-items: center; gap: 6px; min-width: 0; }
+  .equipo-rec-nombre { width: 100%; min-height: 2.4em; display: flex; align-items: flex-end; justify-content: center; font-size: 0.78rem; font-weight: 800; font-style: italic; color: var(--white); line-height: 1.2; text-align: center; overflow-wrap: anywhere; }
+  .equipo-rec-cuadro { width: 100%; aspect-ratio: 1 / 1; padding: 6px; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.12); border-bottom: 3px solid var(--yellow); border-radius: 10px; display: flex; align-items: center; justify-content: center; overflow: hidden; cursor: pointer; transition: transform 0.12s, border-color 0.12s, background 0.12s; }
+  .equipo-rec-cuadro:hover, .equipo-rec-cuadro:focus-visible { transform: translateY(-3px); background: rgba(255,215,0,0.08); border-color: var(--yellow); outline: none; }
+  .equipo-rec-cuadro.sin-pokemon { cursor: default; border-bottom-color: rgba(255,255,255,0.25); }
+  .equipo-rec-cuadro.sin-pokemon:hover { transform: none; background: rgba(0,0,0,0.3); border-color: rgba(255,255,255,0.12); }
+  .equipo-rec-cuadro img { width: 100%; height: 100%; object-fit: contain; display: block; }
+  .equipo-rec-cuadro .sin-imagen { font-size: 0.7rem; color: var(--muted); font-style: italic; }
+  @media (max-width: 600px) {
+    /* en el móvil los 5 cuadros van en una sola línea, más chicos */
+    .equipo-rec { margin-left: -8px; margin-right: -8px; }
+    .equipo-rec-titulo { font-size: 0.68rem; margin-bottom: 10px; }
+    .equipo-rec-grid { grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 5px; }
+    .equipo-rec-item { gap: 4px; }
+    .equipo-rec-nombre { font-size: 0.5rem; min-height: 0; line-height: 1.3; display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; overflow-wrap: normal; padding: 0 1px; }   /* una sola línea; si no cabe, termina en «…» */
+    .equipo-rec-cuadro { padding: 3px; border-radius: 8px; border-bottom-width: 2px; }
+  }
+  /* Ventana para escribir el equipo recomendado (Datos): Singles y Doubles a la vez */
+  .eqr-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 8px; }
+  .eqr-col { min-width: 0; text-align: left; }
+  .eqr-col-titulo { font-family: 'Press Start 2P', monospace; font-size: 0.62rem; color: var(--yellow); margin: 6px 0 10px; }
+  .eqr-fila { display: grid; grid-template-columns: 22px 1fr; column-gap: 8px; align-items: center; margin: 0 0 9px; text-align: left; }
+  .eqr-num { text-align: center; color: var(--yellow); font-weight: 800; }
+  .eqr-cuenta { font-size: 0.74rem; font-weight: 700; margin: -2px 0 10px; color: #ffb74d; }
+  .eqr-cuenta.completo { color: #4caf50; }
+  .eqr-input { min-width: 0; background: var(--black); border: 1px solid rgba(255,255,255,0.2); border-radius: 8px; color: var(--text); padding: 9px 10px; font-size: 0.9rem; font-family: 'Courier New', monospace; }
+  .eqr-estado { grid-column: 2; min-height: 1.1em; font-size: 0.7rem; line-height: 1.25; color: var(--muted); padding-top: 2px; }
+  .eqr-estado .ok { color: #4caf50; font-weight: 700; } .eqr-estado .no { color: #ff6b6b; font-weight: 700; } .eqr-estado .aviso { color: #ffb74d; }
+  @media (max-width: 700px) { .eqr-cols { grid-template-columns: 1fr; gap: 6px; } }
 
   /* DATOS SECTION */
   /* Lock screen */
@@ -4179,6 +4247,24 @@
   </div>
 </div>
 
+<!-- MODAL EQUIPO RECOMENDADO (Datos → Champions) -->
+<div class="modal-overlay" id="modal-equipo-rec">
+  <div class="modal" style="max-width:940px;max-height:92vh;overflow:auto">
+    <h3>👥 EQUIPO RECOMENDADO</h3>
+    <p id="eqr-sub" style="font-size:0.82rem;color:var(--muted);line-height:1.5"></p>
+    <div class="eqr-cols">
+      <div class="eqr-col"><div class="eqr-col-titulo">Singles · top 5</div><div class="eqr-cuenta" id="eqr-cuenta-s"></div><div id="eqr-filas-s"></div></div>
+      <div class="eqr-col"><div class="eqr-col-titulo">Doubles · top 5</div><div class="eqr-cuenta" id="eqr-cuenta-d"></div><div id="eqr-filas-d"></div></div>
+    </div>
+    <datalist id="eqr-sugerencias"></datalist>
+    <div class="modal-btns" style="margin-top:14px;flex-wrap:wrap">
+      <button class="btn" style="background:#444;color:#fff" onclick="copiarEquipoSinglesADoubles()" title="Copia las 5 casillas de Singles a Doubles (reemplaza lo que haya)">⇄ Copiar Singles a Doubles</button>
+      <button class="btn btn-primary" onclick="guardarEquipoDatos()">💾 Guardar equipo</button>
+      <button class="btn" style="background:#444;color:#fff" onclick="closeModal('modal-equipo-rec')">Cancelar</button>
+    </div>
+  </div>
+</div>
+
 <!-- MODAL LISTA DE GIF ANIMADOS -->
 <div class="modal-overlay" id="modal-lista-gif">
   <div class="modal" style="max-width:900px;max-height:92vh;overflow:auto">
@@ -5226,6 +5312,133 @@ function handleKey(e) {
   items.forEach((it, i) => it.classList.toggle('active', i === selectedIndex));
 }
 
+// ── EQUIPO RECOMENDADO (Champions) ──────────────────────────────────────────
+// Cada Pokémon puede tener, en cada formato (Singles / Doubles), hasta 5 compañeros recomendados. En Datos
+// se escriben los nombres de archivo de sus GIF (por ejemplo «abomasnow.gif», de la carpeta sprites-animados)
+// y en Consulta aparecen debajo de la ficha (solo cuando están los 5 escritos): el GIF dentro de un cuadro y el nombre arriba. Al tocar un
+// cuadro, la ficha de ese Pokémon pasa a verse arriba, en lugar de la actual. Se guarda dentro de los datos
+// de cada Pokémon (campo «equipo»), así que viaja con la nube igual que el resto.
+let equipoVistaActual = [];   // [{ archivo, clave }] de los cuadros que se están viendo
+
+function baseDeArchivo(a) { return String(a || '').trim().toLowerCase().replace(/\.(svg|png|gif|webp)$/i, ''); }
+function claveDesdeArchivo(archivo) {
+  const base = baseDeArchivo(archivo);
+  return (POKEMON_LISTS.champions || []).find(p => listaGifSlug(p) === base) || null;
+}
+function nombreVisibleEquipo(archivo, clave) {
+  if (clave) return traducirNombrePokemon(clave);
+  const b = baseDeArchivo(archivo).replace(/-/g, ' ');
+  return b.charAt(0).toUpperCase() + b.slice(1);
+}
+function candidatosEquipo(archivo) {
+  const a = String(archivo || '').trim(), lista = [];
+  if (/\.(svg|png|gif|webp)$/i.test(a)) { lista.push(SPRITES_LOCALES_DIR + a); lista.push(SPRITES_LOCALES_DIR + a.toLowerCase()); }   // primero, el archivo tal como se escribió
+  const base = baseDeArchivo(a);
+  SPRITES_LOCALES_EXT.forEach(e => lista.push(SPRITES_LOCALES_DIR + base + '.' + e));                                              // y si no está, el mismo nombre en otro formato
+  return [...new Set(lista)];
+}
+function equipoDe(name) {
+  const d = champConsultaModo === 'doubles' ? getChampionsDataDoubles(name) : getChampionsData(name);
+  return (Array.isArray(d.equipo) ? d.equipo : []).map(x => String(x || '').trim()).filter(Boolean).slice(0, 5);
+}
+function equipoRecomendadoHTML(name) {
+  const archivos = equipoDe(name);
+  if (archivos.length < 5) { equipoVistaActual = []; return ''; }      // con menos de 5 escritos no se muestra nada
+  equipoVistaActual = archivos.map(a => ({ archivo: a, clave: claveDesdeArchivo(a) }));
+  return `<div class="equipo-rec">
+    <div class="equipo-rec-titulo">Equipo Recomendado</div>
+    <div class="equipo-rec-grid">` + equipoVistaActual.map((e, i) => {
+      const nombre = esc(nombreVisibleEquipo(e.archivo, e.clave));
+      return `<div class="equipo-rec-item">
+        <div class="equipo-rec-nombre">${nombre}</div>
+        <button type="button" class="equipo-rec-cuadro${e.clave ? '' : ' sin-pokemon'}" id="equipo-rec-${i}" onclick="abrirDesdeEquipo(${i})" title="${e.clave ? 'Ver las stats de ' + nombre : nombre + ' (no está en tu lista de Champions)'}"><img alt="${nombre}" style="display:none"></button>
+      </div>`;
+    }).join('') + `</div></div>`;
+}
+function cargarEquipoRecomendado() {
+  equipoVistaActual.forEach((e, i) => {
+    const cuadro = document.getElementById('equipo-rec-' + i); if (!cuadro) return;
+    const img = cuadro.querySelector('img');
+    img.dataset.gifSlug = baseDeArchivo(e.archivo);           // aplica el tamaño elegido en «Lista de sprites», si lo hay
+    loadSpriteWithFallback(img, candidatosEquipo(e.archivo),
+      () => { img.style.display = 'block'; },
+      () => { img.remove(); cuadro.insertAdjacentHTML('beforeend', '<span class="sin-imagen">sin imagen</span>'); });
+  });
+}
+function abrirDesdeEquipo(i) {
+  const e = equipoVistaActual[i];
+  if (!e || !e.clave) return;
+  selectPokemon(e.clave);                                      // la ficha de ese Pokémon reemplaza a la que se estaba viendo
+  const tarjeta = document.getElementById('consulta-result-card');
+  if (tarjeta && tarjeta.scrollIntoView) tarjeta.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+// Datos: ventana para escribir los nombres de los GIF del equipo de un Pokémon. Se escriben a la vez los 5
+// de Singles y los 5 de Doubles (cada formato tiene su propio top 5, que puede ser distinto o igual).
+let eqrPokemon = null;
+const _eqrTemporizador = {};
+function eqrFilasHTML(fmt, actual) {
+  return [0, 1, 2, 3, 4].map(i =>
+    `<div class="eqr-fila"><span class="eqr-num">${i + 1}</span><input type="text" class="eqr-input" id="eqr-in-${fmt}-${i}" list="eqr-sugerencias" placeholder="abomasnow.gif" autocomplete="off" spellcheck="false" value="${esc(actual[i] || '')}" oninput="eqrValidar('${fmt}', ${i})"><span class="eqr-estado" id="eqr-es-${fmt}-${i}"></span></div>`).join('');
+}
+function eqrActualizarCuenta(fmt) {
+  const n = [0, 1, 2, 3, 4].filter(i => (document.getElementById(`eqr-in-${fmt}-${i}`).value || '').trim()).length;
+  const el = document.getElementById('eqr-cuenta-' + fmt); if (!el) return;
+  el.className = 'eqr-cuenta' + (n === 5 ? ' completo' : '');
+  el.textContent = n === 5 ? '5/5 ✅ se mostrará en Consulta' : `${n}/5 · no se mostrará en Consulta hasta completar los 5`;
+}
+function abrirEquipoDatos(name) {
+  eqrPokemon = name;
+  const eq = d => (d && Array.isArray(d.equipo)) ? d.equipo : [];
+  document.getElementById('eqr-sub').innerHTML = `Top 5 de compañeros recomendados para <b>${esc(traducirNombrePokemon(name))}</b>. ` +
+    `Escribe el nombre de archivo de cada GIF de la carpeta <b>sprites-animados</b>, por ejemplo <b>abomasnow.gif</b>; se mostrarán en este orden, y en Consulta cada formato (Singles / Doubles) muestra su propio top 5.`;
+  document.getElementById('eqr-sugerencias').innerHTML = (POKEMON_LISTS.champions || []).map(p => `<option value="${esc(listaGifSlug(p))}.gif">${esc(traducirNombrePokemon(p))}</option>`).join('');
+  document.getElementById('eqr-filas-s').innerHTML = eqrFilasHTML('s', eq(dataChampions[name]));
+  document.getElementById('eqr-filas-d').innerHTML = eqrFilasHTML('d', eq(dataChampionsDoubles[name]));
+  document.getElementById('modal-equipo-rec').classList.add('open');
+  ['s', 'd'].forEach(f => { eqrActualizarCuenta(f); [0, 1, 2, 3, 4].forEach(i => eqrValidar(f, i, true)); });
+}
+function eqrCargaOk(url) {
+  return new Promise(res => { const im = new Image(); im.onload = () => res(true); im.onerror = () => res(false); im.src = url + '?c=' + Date.now(); });
+}
+function eqrValidar(fmt, i, inmediato) {
+  eqrActualizarCuenta(fmt);
+  const clave = fmt + i;
+  clearTimeout(_eqrTemporizador[clave]);
+  const estado = document.getElementById(`eqr-es-${fmt}-${i}`); if (!estado) return;
+  const valor = (document.getElementById(`eqr-in-${fmt}-${i}`).value || '').trim();
+  if (!valor) { estado.innerHTML = ''; return; }
+  estado.innerHTML = '…';
+  _eqrTemporizador[clave] = setTimeout(async () => {
+    const pk = claveDesdeArchivo(valor);
+    let existe = false;
+    for (const url of candidatosEquipo(valor)) { if (await eqrCargaOk(url)) { existe = true; break; } }
+    const campo = document.getElementById(`eqr-in-${fmt}-${i}`);
+    if (!campo || (campo.value || '').trim() !== valor) return;          // el campo cambió mientras se comprobaba
+    estado.innerHTML = (existe ? '<span class="ok">✅ archivo encontrado</span>' : '<span class="no">❌ no está en la carpeta</span>') + ' · ' +
+      (pk ? `<span class="ok">${esc(traducirNombrePokemon(pk))}</span>` : '<span class="aviso">⚠️ no coincide con tu lista (no se podrá abrir)</span>');
+  }, inmediato ? 0 : 450);
+}
+function copiarEquipoSinglesADoubles() {
+  [0, 1, 2, 3, 4].forEach(i => { document.getElementById('eqr-in-d-' + i).value = document.getElementById('eqr-in-s-' + i).value; eqrValidar('d', i, true); });
+  eqrActualizarCuenta('d');
+}
+function guardarEquipoDatos() {
+  if (!eqrPokemon) return;
+  const leer = fmt => [0, 1, 2, 3, 4].map(i => (document.getElementById(`eqr-in-${fmt}-${i}`).value || '').trim()).filter(Boolean).slice(0, 5);
+  const guardar = (store, lista) => {
+    if (!store[eqrPokemon]) store[eqrPokemon] = EMPTY_CHAMPIONS();
+    if (lista.length) store[eqrPokemon].equipo = lista; else delete store[eqrPokemon].equipo;
+  };
+  const s = leer('s'), d = leer('d');
+  guardar(dataChampions, s); guardar(dataChampionsDoubles, d);
+  closeModal('modal-equipo-rec');
+  renderCurrentTable();
+  const aviso = (n, nom) => n === 5 ? `${nom} 5/5 ✅` : (n ? `${nom} ${n}/5 (no se mostrará hasta completar 5)` : `${nom} vacío`);
+  showToast('👥 Equipo guardado: ' + aviso(s.length, 'Singles') + ' · ' + aviso(d.length, 'Doubles'), s.length < 5 && s.length > 0 || d.length < 5 && d.length > 0);
+  persistAll();
+}
+
 function selectPokemon(name) {
   pokemonClaveActual = name;
   document.getElementById('search-input').value = traducirNombrePokemon(name); // el mismo nombre que se ve en la ficha
@@ -5934,6 +6147,10 @@ async function showResult(name) {
       ${bodyHTML}
     </div>
   `;
+  if (currentMode === 'champions') {          // Equipo recomendado, debajo de la ficha
+    const htmlEquipo = equipoRecomendadoHTML(name);
+    if (htmlEquipo) { el.insertAdjacentHTML('beforeend', htmlEquipo); cargarEquipoRecomendado(); }
+  }
 
   const img = document.getElementById('poke-sprite');
   if (img) {
@@ -6408,7 +6625,7 @@ const PROTEGIDOS_VACIOS = {
 };
 
 function pokemonVacioChampions(nombre) {
-  const vacioUnSet = d => !d.naturaleza && !d.objeto && !d.ataque1 && !d.ataque2 && !d.ataque3 && !d.ataque4;
+  const vacioUnSet = d => !d.naturaleza && !d.objeto && !d.ataque1 && !d.ataque2 && !d.ataque3 && !d.ataque4 && !(d.equipo && d.equipo.length);
   return vacioUnSet(dataChampions[nombre] || EMPTY_CHAMPIONS()) && vacioUnSet(dataChampionsDoubles[nombre] || EMPTY_CHAMPIONS());
 }
 
@@ -7145,8 +7362,8 @@ async function championsSugerirUno(name) {
   try {
     showToast('🪄 Leyendo PokéBase para ' + name + '…');
     const { singles, doubles, aviso } = await championsObtenerSugerenciaPokebase(name);
-    if (singles) dataChampions[name] = { ...EMPTY_CHAMPIONS(), ...singles };
-    if (doubles) dataChampionsDoubles[name] = { ...EMPTY_CHAMPIONS(), ...doubles };
+    if (singles) dataChampions[name] = { ...EMPTY_CHAMPIONS(), ...singles, ...(dataChampions[name] && dataChampions[name].equipo ? { equipo: dataChampions[name].equipo } : {}) };
+    if (doubles) dataChampionsDoubles[name] = { ...EMPTY_CHAMPIONS(), ...doubles, ...(dataChampionsDoubles[name] && dataChampionsDoubles[name].equipo ? { equipo: dataChampionsDoubles[name].equipo } : {}) };
     persistAll();
     renderTableChampions();
     if (aviso) console.warn(name + ': ' + aviso);
@@ -8879,6 +9096,7 @@ function renderTableChampions() {
         </div>
       </td>
       <td style="text-align:center; white-space:nowrap">
+        <button class="delete-btn" title="Equipo recomendado (top 5): el número indica cuántos hay escritos en Singles / Doubles" onclick="abrirEquipoDatos('${name.replace(/'/g,"\\'")}')">👥${(() => { const nS = ((dataChampions[name] || {}).equipo || []).length, nD = ((dataChampionsDoubles[name] || {}).equipo || []).length; return (nS || nD) ? ' ' + nS + '/' + nD : ''; })()}</button>
         <button class="delete-btn" title="Sugerir naturaleza, objeto y ataques" onclick="championsSugerirUno('${name.replace(/'/g,"\\'")}')">🪄</button>
         <button class="delete-btn" onclick="confirmDelete('${name.replace(/'/g,"\\'")}')">🗑️</button>
       </td>
@@ -11266,7 +11484,7 @@ async function ejecutarBulkClear(names) {
   names.forEach(name => {
     if (mode === 'champions') {
       const store = champDatosModo === 'doubles' ? dataChampionsDoubles : dataChampions;
-      if (store[name]) store[name] = EMPTY_CHAMPIONS();
+      if (store[name]) { const eq = store[name].equipo; store[name] = EMPTY_CHAMPIONS(); if (eq) store[name].equipo = eq; }   // el equipo recomendado no se vacía
     } else if (mode === 'go') {
       if (!dataGO[name]) return;
       const ligas = Array.isArray(dataGO[name].ligas) ? dataGO[name].ligas : [];
