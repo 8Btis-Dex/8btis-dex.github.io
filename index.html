@@ -1591,6 +1591,14 @@
   .eqr-num { text-align: center; color: var(--yellow); font-weight: 800; }
   .eqr-cuenta { font-size: 0.74rem; font-weight: 700; margin: -2px 0 10px; color: #ffb74d; }
   .eqr-cuenta.completo { color: #4caf50; }
+  .eqr-cp-barra { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 8px 0; }
+  .eqr-cp-op { display: inline-flex; align-items: center; gap: 5px; font-weight: 700; font-size: 0.85rem; cursor: pointer; }
+  .eqr-cp-lista { max-height: 230px; overflow: auto; display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 4px 8px; background: rgba(0,0,0,0.25); border-radius: 10px; padding: 8px; text-align: left; }
+  .eqr-cp-item { display: flex; align-items: center; gap: 6px; font-size: 0.82rem; padding: 4px 6px; border-radius: 6px; cursor: pointer; }
+  .eqr-cp-item:hover { background: rgba(255,255,255,0.07); }
+  .eqr-cp-item.rel { outline: 1px solid rgba(255,215,0,0.45); }
+  .eqr-cp-item small { color: #ffb74d; font-weight: 700; margin-left: auto; white-space: nowrap; }
+  .eqr-cp-resumen { font-size: 0.8rem; color: var(--muted); margin-top: 8px; min-height: 1.2em; }
   .eqr-input { min-width: 0; background: var(--black); border: 1px solid rgba(255,255,255,0.2); border-radius: 8px; color: var(--text); padding: 9px 10px; font-size: 0.9rem; font-family: 'Courier New', monospace; }
   .eqr-estado { grid-column: 2; min-height: 1.1em; font-size: 0.7rem; line-height: 1.25; color: var(--muted); padding-top: 2px; }
   .eqr-estado .ok { color: #4caf50; font-weight: 700; } .eqr-estado .no { color: #ff6b6b; font-weight: 700; } .eqr-estado .aviso { color: #ffb74d; }
@@ -2516,6 +2524,14 @@
   .eqr-num { text-align: center; color: var(--yellow); font-weight: 800; }
   .eqr-cuenta { font-size: 0.74rem; font-weight: 700; margin: -2px 0 10px; color: #ffb74d; }
   .eqr-cuenta.completo { color: #4caf50; }
+  .eqr-cp-barra { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 8px 0; }
+  .eqr-cp-op { display: inline-flex; align-items: center; gap: 5px; font-weight: 700; font-size: 0.85rem; cursor: pointer; }
+  .eqr-cp-lista { max-height: 230px; overflow: auto; display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 4px 8px; background: rgba(0,0,0,0.25); border-radius: 10px; padding: 8px; text-align: left; }
+  .eqr-cp-item { display: flex; align-items: center; gap: 6px; font-size: 0.82rem; padding: 4px 6px; border-radius: 6px; cursor: pointer; }
+  .eqr-cp-item:hover { background: rgba(255,255,255,0.07); }
+  .eqr-cp-item.rel { outline: 1px solid rgba(255,215,0,0.45); }
+  .eqr-cp-item small { color: #ffb74d; font-weight: 700; margin-left: auto; white-space: nowrap; }
+  .eqr-cp-resumen { font-size: 0.8rem; color: var(--muted); margin-top: 8px; min-height: 1.2em; }
   .eqr-input { min-width: 0; background: var(--black); border: 1px solid rgba(255,255,255,0.2); border-radius: 8px; color: var(--text); padding: 9px 10px; font-size: 0.9rem; font-family: 'Courier New', monospace; }
   .eqr-estado { grid-column: 2; min-height: 1.1em; font-size: 0.7rem; line-height: 1.25; color: var(--muted); padding-top: 2px; }
   .eqr-estado .ok { color: #4caf50; font-weight: 700; } .eqr-estado .no { color: #ff6b6b; font-weight: 700; } .eqr-estado .aviso { color: #ffb74d; }
@@ -4312,9 +4328,24 @@
     </div>
     <div id="eqr-fuente-estado" style="font-size:0.78rem;color:var(--muted);line-height:1.4;margin-top:10px;text-align:left"></div>
     <datalist id="eqr-sugerencias"></datalist>
+    <div id="eqr-copiar" style="display:none">
+      <div class="eqr-col-titulo" style="margin-top:16px">📋 Copiar este equipo a otros Pokémon (por ejemplo, las formas de Furfrou o Vivillon)</div>
+      <div class="eqr-cp-barra">
+        <label class="eqr-cp-op"><input type="checkbox" id="eqr-cp-s" checked onchange="eqrCopiarResumen()"> Singles</label>
+        <label class="eqr-cp-op"><input type="checkbox" id="eqr-cp-d" checked onchange="eqrCopiarResumen()"> Doubles</label>
+        <input type="text" id="eqr-cp-filtro" class="eqr-input" style="flex:1;min-width:140px" placeholder="Buscar Pokémon…" oninput="eqrCopiarRender()" autocomplete="off">
+        <button class="btn" style="background:#444;color:#fff;padding:6px 10px" onclick="eqrCopiarMarcarFormas()" title="Marca los Pokémon con el mismo nombre de especie">Sus formas</button>
+        <button class="btn" style="background:#444;color:#fff;padding:6px 10px" onclick="eqrCopiarMarcar(true)">Todos</button>
+        <button class="btn" style="background:#444;color:#fff;padding:6px 10px" onclick="eqrCopiarMarcar(false)">Ninguno</button>
+      </div>
+      <div id="eqr-cp-lista" class="eqr-cp-lista"></div>
+      <div id="eqr-cp-resumen" class="eqr-cp-resumen"></div>
+      <div style="display:flex;justify-content:center;margin-top:8px"><button class="btn btn-primary" id="eqr-cp-boton" onclick="eqrGuardarYCopiar()">💾 Guardar y copiar</button></div>
+    </div>
     <div class="modal-btns" style="margin-top:14px;flex-wrap:wrap">
       <button class="btn" style="background:#444;color:#fff" onclick="copiarEquipoSinglesADoubles()" title="Copia las 5 casillas de Singles a Doubles (reemplaza lo que haya)">⇄ Copiar Singles a Doubles</button>
       <button class="btn" style="background:#2E1A5E;color:#fff" onclick="completarEquipoDesdeFuente()" title="Rellena los dos top 5 con los compañeros más usados de PokéBase (solo las columnas que estén vacías)">✨ Completar desde PokéBase</button>
+      <button class="btn" style="background:#6a3fb5;color:#fff" onclick="eqrAbrirCopiar()" title="Copia el equipo a otros Pokémon, por ejemplo a todas las formas de Furfrou o Vivillon">📋 Copiar a otras formas…</button>
       <button class="btn btn-primary" onclick="guardarEquipoDatos()">💾 Guardar equipo</button>
       <button class="btn" style="background:#444;color:#fff" onclick="closeModal('modal-equipo-rec')">Cancelar</button>
     </div>
@@ -5490,13 +5521,26 @@ function movimientoEnIngles(valor) {
 async function descAtaque(valor) {
   const en = movimientoEnIngles(valor);
   const slug = slugApi(en || valor);
-  return conCache('mov|' + slug, async () => {
-    const m = await pokeapiJson('move/' + slug);
-    const clase = { physical: 'Físico', special: 'Especial', status: 'De estado' }[m.damage_class && m.damage_class.name] || '';
-    const datos = [clase, m.power ? 'Potencia ' + m.power : '', m.accuracy ? 'Precisión ' + m.accuracy + ' %' : '', m.pp ? 'PP ' + m.pp : ''].filter(Boolean).join(' · ');
-    const n = (m.names || []).find(x => x.language.name === 'es');
-    return { titulo: n ? n.name : valor, texto: (datos ? datos + '\n' : '') + (textoEs(m.flavor_text_entries) || '') };
-  });
+  const pb = descMovPokebase(en || valor);
+  let r = null;
+  try {
+    r = await conCache('mov|' + slug, async () => {
+      const m = await pokeapiJson('move/' + slug);
+      const clase = { physical: 'Físico', special: 'Especial', status: 'De estado' }[m.damage_class && m.damage_class.name] || '';
+      const datos = [clase, m.power ? 'Potencia ' + m.power : '', m.accuracy ? 'Precisión ' + m.accuracy + ' %' : '', m.pp ? 'PP ' + m.pp : ''].filter(Boolean).join(' · ');
+      const n = (m.names || []).find(x => x.language.name === 'es');
+      const desc = textoEs(m.flavor_text_entries);
+      return { titulo: n ? n.name : valor, texto: (datos ? datos + '\n' : '') + desc, desc };
+    });
+  } catch (e) { if (!pb) throw e; }
+  const sinTexto = !r || r.desc === '' || (r.desc === undefined && !/\n/.test(r.texto || ''));
+  if (!sinTexto) return r;
+  if (pb) {
+    const clase = { physical: 'Físico', special: 'Especial', status: 'De estado' }[String(pb.c).toLowerCase()] || '';
+    const datos = [clase, pb.pp ? 'PP ' + pb.pp : ''].filter(Boolean).join(' · ');
+    return { titulo: (r && r.titulo) || valor, texto: (datos ? datos + '\n' : '') + pb.d, nota: 'Descripción en inglés, de PokéBase (Champions).' };
+  }
+  return r;
 }
 async function descObjeto(valor) {
   const local = getItemDescription(valor);
@@ -5544,7 +5588,7 @@ async function mostrarDescFlotante(objetivo) {
   try {
     const d = await obtenerDescripcion(tipo, valor, pokemon);
     if (descObjetivo !== objetivo) return;           // mientras tanto se pasó a otro dato
-    pintarDesc(objetivo, (d && d.titulo) || valor, (d && d.texto) || 'Sin descripción disponible.', '', d && d.html);
+    pintarDesc(objetivo, (d && d.titulo) || valor, (d && d.texto) || 'Sin descripción disponible.', (d && d.nota) || '', d && d.html);
   } catch (e) {
     if (descObjetivo !== objetivo) return;
     pintarDesc(objetivo, valor, 'No se pudo cargar la descripción.', 'Revisa tu conexión e inténtalo de nuevo.');
@@ -5646,6 +5690,10 @@ function pfInformePagina(nombre, html) {
   for (const m of html.matchAll(/["'](\/(?:api|_next\/data)\/[^"'\s\\]*)["']/g)) apis.add(m[1].split('?')[0] + (m[1].includes('?') ? '?…' : ''));
   l.push(`Direcciones de datos (API/JSON) que menciona: ${apis.size}` + (apis.size ? '\n' + [...apis].slice(0, 12).map(a => '  • ' + a).join('\n') : ''));
   l.push(`Datos estructurados (JSON-LD): ${(html.match(/application\/ld\+json/g) || []).length}`);
+  // ¿Cómo indica la página el formato (Singles / Doubles)? Hace falta para saber a cuál pertenece cada conjunto de datos.
+  const cuenta = p => (html.match(new RegExp(p, 'g')) || []).length;
+  l.push(`Formato: «Ranked format»=${cuenta('Ranked format')} · Singles=${cuenta('Singles')} · Doubles=${cuenta('Doubles')} · aria-selected=${cuenta('aria-selected')}`);
+  for (const p of ['Ranked format', 'aria-selected', 'Doubles']) { const i = html.indexOf(p); if (i >= 0) l.push(`  «${p}» → …${html.slice(Math.max(0, i - 120), i + 260).replace(/\s+/g, ' ')}…`); }
   return l.join('\n');
 }
 async function probarFuente() {
@@ -5776,9 +5824,77 @@ function abrirEquipoDatos(name) {
   document.getElementById('eqr-sugerencias').innerHTML = (POKEMON_LISTS.champions || []).map(p => `<option value="${esc(listaGifSlug(p))}.gif">${esc(traducirNombrePokemon(p))}</option>`).join('');
   document.getElementById('eqr-filas-s').innerHTML = eqrFilasHTML('s', eq(dataChampions[name]));
   document.getElementById('eqr-filas-d').innerHTML = eqrFilasHTML('d', eq(dataChampionsDoubles[name]));
+  eqrCopiarSel = new Set(); document.getElementById('eqr-copiar').style.display = 'none';
   document.getElementById('modal-equipo-rec').classList.add('open');
   ['s', 'd'].forEach(f => { eqrActualizarCuenta(f); [0, 1, 2, 3, 4].forEach(i => eqrValidar(f, i, true)); });
 }
+// Copiar el equipo recomendado a otros Pokémon (por ejemplo, todas las formas de Furfrou o de Vivillon).
+let eqrCopiarSel = new Set();
+function eqrEspecie(nombre) { const t = normDesc(nombre).split(/[\s(\-\/]+/)[0]; return t.length >= 4 ? t : ''; }
+function eqrSonFormas(a, b) { const ea = eqrEspecie(a); return !!ea && ea === eqrEspecie(b); }
+function eqrTieneEquipo(nombre) {
+  const n = st => ((st[nombre] || {}).equipo || []).length;
+  return { s: n(dataChampions), d: n(dataChampionsDoubles) };
+}
+function eqrAbrirCopiar() {
+  const panel = document.getElementById('eqr-copiar');
+  if (panel.style.display === 'none') { panel.style.display = 'block'; eqrCopiarMarcarFormas(); document.getElementById('eqr-cp-filtro').value = ''; eqrCopiarRender(); panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); }
+  else panel.style.display = 'none';
+}
+function eqrCopiarMarcarFormas() {
+  eqrCopiarSel = new Set((POKEMON_LISTS.champions || []).filter(p => p !== eqrPokemon && eqrSonFormas(p, eqrPokemon)));
+  eqrCopiarRender();
+}
+function eqrCopiarMarcar(todos) {
+  const f = normDesc(document.getElementById('eqr-cp-filtro').value);
+  (POKEMON_LISTS.champions || []).filter(p => p !== eqrPokemon && (!f || normDesc(traducirNombrePokemon(p)).includes(f) || normDesc(p).includes(f))).forEach(p => { if (todos) eqrCopiarSel.add(p); else eqrCopiarSel.delete(p); });
+  eqrCopiarRender();
+}
+function eqrCopiarToggle(i) {
+  const p = (document.getElementById('eqr-cp-lista').children[i] || {}).dataset;
+  if (!p) return;
+  const nombre = p.nombre;
+  if (eqrCopiarSel.has(nombre)) eqrCopiarSel.delete(nombre); else eqrCopiarSel.add(nombre);
+  eqrCopiarResumen();
+}
+function eqrCopiarRender() {
+  const f = normDesc(document.getElementById('eqr-cp-filtro').value);
+  const lista = (POKEMON_LISTS.champions || []).filter(p => p !== eqrPokemon && (!f || normDesc(traducirNombrePokemon(p)).includes(f) || normDesc(p).includes(f)));
+  lista.sort((a, b) => (eqrSonFormas(b, eqrPokemon) - eqrSonFormas(a, eqrPokemon)));        // primero sus formas
+  document.getElementById('eqr-cp-lista').innerHTML = lista.map((p, i) => {
+    const t = eqrTieneEquipo(p), marca = (t.s || t.d) ? `<small title="Ya tiene equipo escrito: se reemplazará">${t.s}/${t.d}</small>` : '';
+    return `<label class="eqr-cp-item${eqrSonFormas(p, eqrPokemon) ? ' rel' : ''}" data-nombre="${esc(p)}"><input type="checkbox" ${eqrCopiarSel.has(p) ? 'checked' : ''} onchange="eqrCopiarToggle(${i})"> <span>${esc(traducirNombrePokemon(p))}</span>${marca}</label>`;
+  }).join('') || '<span style="color:var(--muted)">No hay ningún Pokémon que coincida.</span>';
+  eqrCopiarResumen();
+}
+function eqrCopiarResumen() {
+  const el = document.getElementById('eqr-cp-resumen'); if (!el) return;
+  const cs = document.getElementById('eqr-cp-s').checked, cd = document.getElementById('eqr-cp-d').checked;
+  const reemplaza = [...eqrCopiarSel].filter(p => { const t = eqrTieneEquipo(p); return (cs && t.s) || (cd && t.d); }).length;
+  const que = [cs ? 'Singles' : '', cd ? 'Doubles' : ''].filter(Boolean).join(' y ');
+  el.textContent = !eqrCopiarSel.size ? 'Marca los Pokémon a los que quieres copiar el equipo.' :
+    (!que ? 'Marca Singles y/o Doubles.' : `Se copiará ${que} a ${eqrCopiarSel.size} Pokémon` + (reemplaza ? (reemplaza === 1 ? ' · 1 ya tiene equipo y se reemplazará' : ` · ${reemplaza} ya tienen equipo y se reemplazarán`) : '') + '.');
+}
+function eqrAplicarEquipo(store, nombre, lista) {
+  if (!store[nombre]) store[nombre] = EMPTY_CHAMPIONS();
+  if (lista.length) store[nombre].equipo = lista.slice(); else delete store[nombre].equipo;
+}
+function eqrGuardarYCopiar() {
+  if (!eqrPokemon) return;
+  const leer = fmt => [0, 1, 2, 3, 4].map(i => (document.getElementById(`eqr-in-${fmt}-${i}`).value || '').trim()).filter(Boolean).slice(0, 5);
+  const s = leer('s'), d = leer('d');
+  const cs = document.getElementById('eqr-cp-s').checked && s.length > 0, cd = document.getElementById('eqr-cp-d').checked && d.length > 0;
+  if (!eqrCopiarSel.size) { showToast('Marca al menos un Pokémon al que copiar el equipo.', true); return; }
+  if (!cs && !cd) { showToast('No hay nada que copiar: marca Singles y/o Doubles con casillas escritas.', true); return; }
+  eqrAplicarEquipo(dataChampions, eqrPokemon, s); eqrAplicarEquipo(dataChampionsDoubles, eqrPokemon, d);      // se guarda también el del Pokémon actual
+  eqrCopiarSel.forEach(p => { if (cs) eqrAplicarEquipo(dataChampions, p, s); if (cd) eqrAplicarEquipo(dataChampionsDoubles, p, d); });
+  const n = eqrCopiarSel.size;
+  closeModal('modal-equipo-rec');
+  renderCurrentTable();
+  showToast(`📋 Equipo copiado a ${n} Pokémon (${[cs ? 'Singles' : '', cd ? 'Doubles' : ''].filter(Boolean).join(' y ')})`);
+  persistAll();
+}
+
 function eqrCargaOk(url) {
   return new Promise(res => { const im = new Image(); im.onload = () => res(true); im.onerror = () => res(false); im.src = url + '?c=' + Date.now(); });
 }
@@ -7758,6 +7874,39 @@ function pokebaseConstruirBuild(conjunto) {
   return resultado;
 }
 
+const POKEBASE_SOLO_DOBLES = ['helping hand', 'follow me', 'rage powder', 'wide guard', 'quick guard', 'ally switch', 'after you', 'instruct', 'fake out', 'coaching', 'decorate', 'life dew', 'pollen puff'];
+function pokebaseParecenDobles(conjunto) {
+  const top = (conjunto.moves || []).slice().sort((a, b) => (b.percent || 0) - (a.percent || 0)).slice(0, 6).map(m => normDesc(m.name));
+  return top.some(n => POKEBASE_SOLO_DOBLES.includes(n));
+}
+
+// Descripciones de ataques que trae la página de PokéBase (en inglés, con tipo, clase y PP): se guardan en este
+// navegador cada vez que se lee una página, sin pedir nada más. Sirven de respaldo para la descripción flotante
+// cuando PokeAPI no conoce el ataque o no tiene su texto en español (por ejemplo, los ataques nuevos de Champions).
+const POKEBASE_DESC_KEY = 'pokebaseMovDesc';
+let pokebaseMovDesc = {};
+try { pokebaseMovDesc = JSON.parse(localStorage.getItem(POKEBASE_DESC_KEY) || '{}') || {}; } catch (e) { pokebaseMovDesc = {}; }
+function pokebaseGuardarDescMov(htmlCrudo) {
+  const listas = pokebaseListasGenericas(pokebaseLimpiarFlujo(htmlCrudo), 0, null).filter(g => g.clave === 'moves' && g.lista.some(o => o && typeof o.description === 'string' && o.description));
+  const texto = x => (x && typeof x === 'object') ? (x.name || '') : (x || '');
+  let nuevos = 0;
+  listas.forEach(g => g.lista.forEach(o => {
+    if (!o || !o.name || typeof o.description !== 'string' || !o.description.trim()) return;
+    const k = normDesc(o.name);
+    if (!pokebaseMovDesc[k]) nuevos++;
+    delete pokebaseMovDesc[k];                                   // se reinserta al final: así las más recientes son las que se conservan
+    pokebaseMovDesc[k] = [o.description.trim(), String(texto(o.type)), String(texto(o.damageClass)), o.pp || 0];
+  }));
+  const claves = Object.keys(pokebaseMovDesc);
+  if (claves.length > 1200) claves.slice(0, claves.length - 1200).forEach(k => delete pokebaseMovDesc[k]);
+  try { localStorage.setItem(POKEBASE_DESC_KEY, JSON.stringify(pokebaseMovDesc)); } catch (e) {}
+  return nuevos;
+}
+function descMovPokebase(nombreEn) {
+  const x = pokebaseMovDesc[normDesc(nombreEn)];
+  return x ? { d: x[0], t: x[1], c: x[2], pp: x[3] } : null;
+}
+
 async function championsObtenerSugerenciaPokebase(name) {
   const candidatos = pokebaseSlugsCandidatos(name);
   const probadas = [];
@@ -7767,6 +7916,7 @@ async function championsObtenerSugerenciaPokebase(name) {
       const { html, url } = await pokebaseFetchHtml(slug);
       const r = pokebaseLeerConjuntos(html);
       probadas.push(url);
+      try { pokebaseGuardarDescMov(html); } catch (e) { /* las descripciones son un extra: si falla, se sigue */ }
       if (r.conjuntos.length >= 1) { lectura = r; urlUsada = url; POKEBASE_SLUG_RECORDADO[name] = slug; break; }
     } catch (e) {
       probadas.push('https://pokebase.app/pokemon-champions/pokemon/' + slug);
@@ -7780,7 +7930,13 @@ async function championsObtenerSugerenciaPokebase(name) {
   if (conjuntos.length === 1) {
     if (formatoPorDefecto === 'singles') singles = pokebaseConstruirBuild(conjuntos[0]);
     else if (formatoPorDefecto === 'doubles') doubles = pokebaseConstruirBuild(conjuntos[0]);
-    else throw new Error('Solo se encontró un conjunto de datos y no se pudo saber de qué formato es');
+    else {
+      // PokéBase trae un solo conjunto y no se puede leer de qué formato es: se deduce por sus ataques (los de
+      // Doubles: Ayuda, Señuelo, Furia Polvo…) y se avisa para que lo revises.
+      const parecenDobles = pokebaseParecenDobles(conjuntos[0]);
+      if (parecenDobles) doubles = pokebaseConstruirBuild(conjuntos[0]); else singles = pokebaseConstruirBuild(conjuntos[0]);
+      aviso = 'PokéBase solo trae un conjunto de datos y no indica de qué formato es; por sus ataques parece de ' + (parecenDobles ? 'Doubles' : 'Singles') + '. Revísalo.';
+    }
   } else if (formatoPorDefecto && conjuntoPorDefecto >= 0) {
     const otro = conjuntoPorDefecto === 0 ? 1 : 0;
     const a = pokebaseConstruirBuild(conjuntos[conjuntoPorDefecto]);
@@ -7834,7 +7990,7 @@ async function championsSugerirUno(name) {
     if (nS + nD > 0) persistAll();
     renderTableChampions();
     if (aviso) console.warn(name + ': ' + aviso);
-    const dudoso = aviso ? ' · ⚠️ no se pudo confirmar cuál es Singles y cuál Doubles, revísalo' : '';
+    const dudoso = aviso ? ' · ⚠️ ' + aviso : '';
     if (nS + nD === 0) showToast('🪄 ' + name + ': no había campos vacíos que completar (no se cambió nada)' + dudoso, !!aviso);
     else showToast('🪄 ' + name + ': se completaron ' + nS + ' campo(s) en Singles y ' + nD + ' en Doubles · lo que ya estaba escrito no se tocó' + dudoso, !!aviso);
   } catch (e) {
@@ -7878,7 +8034,7 @@ async function championsSugerirVacios() {
   }
   persistAll();
   renderTableChampions();
-  if (status) status.textContent = `Listo: se completaron ${completados} sets en ${hechos} Pokémon revisados (fuente: pokebase.app).` + (fallos ? ` ${fallos} no se encontraron (revisa la consola, F12).` : '') + (dudosos ? ` En ${dudosos} no se pudo confirmar cuál conjunto es Singles y cuál Doubles (se usó el orden de la página): revísalos.` : '');
+  if (status) status.textContent = `Listo: se completaron ${completados} sets en ${hechos} Pokémon revisados (fuente: pokebase.app).` + (fallos ? ` ${fallos} no se encontraron (revisa la consola, F12).` : '') + (dudosos ? ` En ${dudosos} no se pudo confirmar el formato (Singles/Doubles) y se estimó: revísalos (detalle en la consola, F12).` : '');
   championsSugerirEnCurso = false;
 }
 
