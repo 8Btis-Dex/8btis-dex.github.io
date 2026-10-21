@@ -7800,17 +7800,43 @@ function championsEsVacio(d) {
   return !d.naturaleza && !d.objeto && !d.ataque1 && !d.ataque2 && !d.ataque3 && !d.ataque4;
 }
 
+// Mezcla una sugerencia con lo que ya está escrito: SOLO se rellenan los campos vacíos; lo escrito no se toca.
+// Ataques: los huecos se llenan con los más usados que el Pokémon todavía no tenga en otra casilla; si un
+// ataque ya escrito no tiene tipo, se le pone el de ese mismo ataque en la sugerencia (si aparece).
+function championsMezclarSoloVacios(actual, sugerido) {
+  const base = { ...EMPTY_CHAMPIONS(), ...(actual || {}) };
+  const rellenados = [];
+  const vacio = v => !v || !String(v).trim();
+  ['naturaleza', 'habilidad', 'objeto'].forEach(f => { if (vacio(base[f]) && !vacio(sugerido[f])) { base[f] = sugerido[f]; rellenados.push(f); } });
+  const sug = [1, 2, 3, 4].map(i => ({ nombre: sugerido['ataque' + i], tipo: sugerido['tipo' + i] })).filter(c => !vacio(c.nombre));
+  const escritos = [1, 2, 3, 4].map(i => base['ataque' + i]).filter(a => !vacio(a)).map(normDesc);
+  const candidatos = sug.filter(c => !escritos.includes(normDesc(c.nombre)));
+  [1, 2, 3, 4].forEach(i => {
+    if (vacio(base['ataque' + i])) {
+      const c = candidatos.shift();
+      if (c) { base['ataque' + i] = c.nombre; base['tipo' + i] = c.tipo || ''; rellenados.push('ataque' + i); }
+    } else if (vacio(base['tipo' + i])) {
+      const igual = sug.find(c => normDesc(c.nombre) === normDesc(base['ataque' + i]));
+      if (igual && igual.tipo) { base['tipo' + i] = igual.tipo; rellenados.push('tipo' + i); }
+    }
+  });
+  if ((!Array.isArray(base.equipo) || !base.equipo.length) && Array.isArray(sugerido.equipo) && sugerido.equipo.length) { base.equipo = sugerido.equipo; rellenados.push('equipo'); }
+  return { datos: base, rellenados };
+}
+
 async function championsSugerirUno(name) {
   try {
     showToast('🪄 Leyendo PokéBase para ' + name + '…');
     const { singles, doubles, aviso } = await championsObtenerSugerenciaPokebase(name);
-    if (singles) dataChampions[name] = { ...EMPTY_CHAMPIONS(), ...singles, ...(dataChampions[name] && dataChampions[name].equipo ? { equipo: dataChampions[name].equipo } : {}), ...(dataChampions[name] && dataChampions[name].habilidad ? { habilidad: dataChampions[name].habilidad } : {}) };
-    if (doubles) dataChampionsDoubles[name] = { ...EMPTY_CHAMPIONS(), ...doubles, ...(dataChampionsDoubles[name] && dataChampionsDoubles[name].equipo ? { equipo: dataChampionsDoubles[name].equipo } : {}), ...(dataChampionsDoubles[name] && dataChampionsDoubles[name].habilidad ? { habilidad: dataChampionsDoubles[name].habilidad } : {}) };
-    persistAll();
+    let nS = 0, nD = 0;
+    if (singles) { const r = championsMezclarSoloVacios(dataChampions[name], singles); dataChampions[name] = r.datos; nS = r.rellenados.length; }
+    if (doubles) { const r = championsMezclarSoloVacios(dataChampionsDoubles[name], doubles); dataChampionsDoubles[name] = r.datos; nD = r.rellenados.length; }
+    if (nS + nD > 0) persistAll();
     renderTableChampions();
     if (aviso) console.warn(name + ': ' + aviso);
-    showToast('🪄 Sugerencia aplicada a ' + name + ' (Singles y Doubles, lo más usado en PokéBase)'
-      + (aviso ? ' · ⚠️ no se pudo confirmar cuál es Singles y cuál Doubles, revísalo' : ''), !!aviso);
+    const dudoso = aviso ? ' · ⚠️ no se pudo confirmar cuál es Singles y cuál Doubles, revísalo' : '';
+    if (nS + nD === 0) showToast('🪄 ' + name + ': no había campos vacíos que completar (no se cambió nada)' + dudoso, !!aviso);
+    else showToast('🪄 ' + name + ': se completaron ' + nS + ' campo(s) en Singles y ' + nD + ' en Doubles · lo que ya estaba escrito no se tocó' + dudoso, !!aviso);
   } catch (e) {
     console.error(e);
     showToast('❌ ' + (e && e.message ? e.message : 'No se pudo generar una sugerencia para ' + name), true);
@@ -9543,7 +9569,7 @@ function renderTableChampions() {
       </td>
       <td style="text-align:center; white-space:nowrap">
         <button class="delete-btn" title="Equipo recomendado (top 5): el número indica cuántos hay escritos en Singles / Doubles" onclick="abrirEquipoDatos('${name.replace(/'/g,"\\'")}')">👥${(() => { const nS = ((dataChampions[name] || {}).equipo || []).length, nD = ((dataChampionsDoubles[name] || {}).equipo || []).length; return (nS || nD) ? ' ' + nS + '/' + nD : ''; })()}</button>
-        <button class="delete-btn" title="Sugerir naturaleza, objeto y ataques" onclick="championsSugerirUno('${name.replace(/'/g,"\\'")}')">🪄</button>
+        <button class="delete-btn" title="Sugerir (PokéBase): completa solo los campos vacíos, no pisa lo escrito" onclick="championsSugerirUno('${name.replace(/'/g,"\\'")}')">🪄</button>
         <button class="delete-btn" onclick="confirmDelete('${name.replace(/'/g,"\\'")}')">🗑️</button>
       </td>
     </tr>`;
