@@ -1569,11 +1569,25 @@
     .equipo-rec-nombre { font-size: 0.5rem; min-height: 0; line-height: 1.3; display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; overflow-wrap: normal; padding: 0 1px; }   /* una sola línea; si no cabe, termina en «…» */
     .equipo-rec-cuadro { padding: 3px; border-radius: 8px; border-bottom-width: 2px; }
   }
+  /* Descripciones automáticas (naturaleza, habilidad, objeto y ataques) */
+  .result-item.con-desc { position: relative; cursor: help; }
+  .result-item.con-desc:focus-visible { outline: 2px solid var(--yellow); outline-offset: 2px; }
+  .result-item .desc-i { position: absolute; top: 6px; right: 9px; font-size: 0.72rem; color: var(--yellow); opacity: 0.55; font-style: normal; line-height: 1; transition: opacity 0.15s; }
+  .result-item.con-desc:hover .desc-i { opacity: 1; }
+  #desc-flotante { position: fixed; z-index: 99999; max-width: min(340px, 88vw); background: #0a1a33; color: var(--white); border: 1px solid var(--yellow); border-radius: 10px; padding: 10px 12px; box-shadow: 0 8px 26px rgba(0,0,0,0.6); font-size: 0.84rem; line-height: 1.45; text-align: left; font-style: normal; pointer-events: none; display: none; }
+  #desc-flotante .df-titulo { font-weight: 800; color: var(--yellow); margin-bottom: 4px; font-size: 0.86rem; }
+  #desc-flotante .df-texto { white-space: pre-line; font-weight: 600; }
+  #desc-flotante .df-nota { margin-top: 6px; font-size: 0.7rem; color: var(--muted); }
+  .stat-sube { color: #5fd16b; font-weight: 800; }
+  .stat-baja { color: #ff6b6b; font-weight: 800; }
+  .nat-stats { display: flex; gap: 14px; justify-content: center; margin-top: 4px; font-size: 0.78rem; font-weight: 800; font-style: normal; }
+  .nat-stats.neutra { color: var(--muted); font-weight: 600; font-size: 0.72rem; }
   /* Ventana para escribir el equipo recomendado (Datos): Singles y Doubles a la vez */
   .eqr-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 8px; }
   .eqr-col { min-width: 0; text-align: left; }
   .eqr-col-titulo { font-family: 'Press Start 2P', monospace; font-size: 0.62rem; color: var(--yellow); margin: 6px 0 10px; }
   .eqr-fila { display: grid; grid-template-columns: 22px 1fr; column-gap: 8px; align-items: center; margin: 0 0 9px; text-align: left; }
+  .pf-fila { display: flex; gap: 8px; margin-top: 8px; flex-wrap: wrap; }
   .eqr-num { text-align: center; color: var(--yellow); font-weight: 800; }
   .eqr-cuenta { font-size: 0.74rem; font-weight: 700; margin: -2px 0 10px; color: #ffb74d; }
   .eqr-cuenta.completo { color: #4caf50; }
@@ -2480,11 +2494,25 @@
     .equipo-rec-nombre { font-size: 0.5rem; min-height: 0; line-height: 1.3; display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; overflow-wrap: normal; padding: 0 1px; }   /* una sola línea; si no cabe, termina en «…» */
     .equipo-rec-cuadro { padding: 3px; border-radius: 8px; border-bottom-width: 2px; }
   }
+  /* Descripciones automáticas (naturaleza, habilidad, objeto y ataques) */
+  .result-item.con-desc { position: relative; cursor: help; }
+  .result-item.con-desc:focus-visible { outline: 2px solid var(--yellow); outline-offset: 2px; }
+  .result-item .desc-i { position: absolute; top: 6px; right: 9px; font-size: 0.72rem; color: var(--yellow); opacity: 0.55; font-style: normal; line-height: 1; transition: opacity 0.15s; }
+  .result-item.con-desc:hover .desc-i { opacity: 1; }
+  #desc-flotante { position: fixed; z-index: 99999; max-width: min(340px, 88vw); background: #0a1a33; color: var(--white); border: 1px solid var(--yellow); border-radius: 10px; padding: 10px 12px; box-shadow: 0 8px 26px rgba(0,0,0,0.6); font-size: 0.84rem; line-height: 1.45; text-align: left; font-style: normal; pointer-events: none; display: none; }
+  #desc-flotante .df-titulo { font-weight: 800; color: var(--yellow); margin-bottom: 4px; font-size: 0.86rem; }
+  #desc-flotante .df-texto { white-space: pre-line; font-weight: 600; }
+  #desc-flotante .df-nota { margin-top: 6px; font-size: 0.7rem; color: var(--muted); }
+  .stat-sube { color: #5fd16b; font-weight: 800; }
+  .stat-baja { color: #ff6b6b; font-weight: 800; }
+  .nat-stats { display: flex; gap: 14px; justify-content: center; margin-top: 4px; font-size: 0.78rem; font-weight: 800; font-style: normal; }
+  .nat-stats.neutra { color: var(--muted); font-weight: 600; font-size: 0.72rem; }
   /* Ventana para escribir el equipo recomendado (Datos): Singles y Doubles a la vez */
   .eqr-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 8px; }
   .eqr-col { min-width: 0; text-align: left; }
   .eqr-col-titulo { font-family: 'Press Start 2P', monospace; font-size: 0.62rem; color: var(--yellow); margin: 6px 0 10px; }
   .eqr-fila { display: grid; grid-template-columns: 22px 1fr; column-gap: 8px; align-items: center; margin: 0 0 9px; text-align: left; }
+  .pf-fila { display: flex; gap: 8px; margin-top: 8px; flex-wrap: wrap; }
   .eqr-num { text-align: center; color: var(--yellow); font-weight: 800; }
   .eqr-cuenta { font-size: 0.74rem; font-weight: 700; margin: -2px 0 10px; color: #ffb74d; }
   .eqr-cuenta.completo { color: #4caf50; }
@@ -3624,6 +3652,7 @@
         <button class="btn btn-yellow datos-only-data" onclick="showAddPokemonVarios()">📋 Agregar varios</button>
         <button class="btn datos-only-data" style="background:var(--purple);color:#fff" onclick="openExpansionesModal()">🏷️ Expansiones</button>
         <button class="btn datos-only-data" style="background:#16a085;color:#fff" onclick="openVerificarObjetos()">🔎 Verificar objetos</button>
+        <button class="btn datos-only-data" id="btn-probar-fuentes" style="background:#2E1A5E;color:#fff;display:none" onclick="abrirProbarFuentes()" title="Comprueba qué datos trae una página (PokéBase, OP.GG u otra) antes de usarla como fuente">🧪 Probar fuentes</button>
         <button class="btn datos-only-data" id="btn-desc-auto" style="background:#2E1A5E;color:#fff;display:none" onclick="completarDescripcionesTcg()" title="Agrega la habilidad y los ataques que les falten a las cartas ya guardadas (y el efecto de las de Entrenador)">📝 Completar habilidad y ataques</button>
         <button class="btn datos-only-data" style="background:#2E1A5E;color:#fff" onclick="openListaGif()" title="Qué sprites (SVG, GIF, PNG o WebP) faltan por subir a la carpeta sprites-animados">📋 Lista de sprites</button>
         <button class="btn" style="background:#e67e22;color:#fff" onclick="openUsuariosModal()">➕ Crear usuario</button>
@@ -3666,6 +3695,7 @@
               <th>#</th>
               <th>Pokémon</th>
               <th>Naturaleza</th>
+              <th>Habilidad</th>
               <th>Objeto</th>
               <th>Ataque 1</th>
               <th>Ataque 2</th>
@@ -4253,6 +4283,24 @@
   </div>
 </div>
 
+<!-- MODAL PROBAR FUENTES -->
+<div class="modal-overlay" id="modal-probar-fuentes">
+  <div class="modal" style="max-width:860px;max-height:92vh;overflow:auto">
+    <h3>🧪 PROBAR FUENTES DE DATOS</h3>
+    <p style="font-size:0.82rem;color:var(--muted);line-height:1.5;text-align:left">Descarga una página y cuenta qué datos trae (listas de habilidades, compañeros, ataques…), sin guardar nada. Elige la fuente, escribe un Pokémon (o una dirección completa) y pulsa «Probar». Después copia el informe: con eso se puede decidir si la página sirve y cómo leerla.</p>
+    <div class="pf-fila">
+      <select id="pf-fuente" class="eqr-input" style="flex:0 0 220px"><option value="pokebase">PokéBase (pokebase.app)</option><option value="opgg">OP.GG (op.gg)</option><option value="otra">Otra dirección</option></select>
+      <input id="pf-entrada" class="eqr-input" style="flex:1" placeholder="Charizard  ·  o una dirección completa (https://…)" autocomplete="off" spellcheck="false">
+    </div>
+    <div class="modal-btns" style="flex-wrap:wrap;margin-top:10px">
+      <button class="btn btn-primary" id="pf-btn" onclick="probarFuente()">▶ Probar</button>
+      <button class="btn" style="background:#444;color:#fff" onclick="copiarInformeFuente()">📋 Copiar informe</button>
+      <button class="btn" style="background:#444;color:#fff" onclick="closeModal('modal-probar-fuentes')">Cerrar</button>
+    </div>
+    <textarea id="pf-informe" readonly spellcheck="false" style="width:100%;height:360px;margin-top:10px;background:var(--black);color:#cfe3ff;border:1px solid rgba(255,255,255,0.2);border-radius:8px;padding:10px;font-family:'Courier New',monospace;font-size:0.76rem;line-height:1.4"></textarea>
+  </div>
+</div>
+
 <!-- MODAL EQUIPO RECOMENDADO (Datos → Champions) -->
 <div class="modal-overlay" id="modal-equipo-rec">
   <div class="modal" style="max-width:940px;max-height:92vh;overflow:auto">
@@ -4262,9 +4310,11 @@
       <div class="eqr-col"><div class="eqr-col-titulo">Singles · top 5</div><div class="eqr-cuenta" id="eqr-cuenta-s"></div><div id="eqr-filas-s"></div></div>
       <div class="eqr-col"><div class="eqr-col-titulo">Doubles · top 5</div><div class="eqr-cuenta" id="eqr-cuenta-d"></div><div id="eqr-filas-d"></div></div>
     </div>
+    <div id="eqr-fuente-estado" style="font-size:0.78rem;color:var(--muted);line-height:1.4;margin-top:10px;text-align:left"></div>
     <datalist id="eqr-sugerencias"></datalist>
     <div class="modal-btns" style="margin-top:14px;flex-wrap:wrap">
       <button class="btn" style="background:#444;color:#fff" onclick="copiarEquipoSinglesADoubles()" title="Copia las 5 casillas de Singles a Doubles (reemplaza lo que haya)">⇄ Copiar Singles a Doubles</button>
+      <button class="btn" style="background:#2E1A5E;color:#fff" onclick="completarEquipoDesdeFuente()" title="Rellena los dos top 5 con los compañeros más usados de PokéBase (solo las columnas que estén vacías)">✨ Completar desde PokéBase</button>
       <button class="btn btn-primary" onclick="guardarEquipoDatos()">💾 Guardar equipo</button>
       <button class="btn" style="background:#444;color:#fff" onclick="closeModal('modal-equipo-rec')">Cancelar</button>
     </div>
@@ -5318,6 +5368,331 @@ function handleKey(e) {
   items.forEach((it, i) => it.classList.toggle('active', i === selectedIndex));
 }
 
+// ── DESCRIPCIONES AUTOMÁTICAS: NATURALEZA, HABILIDAD, OBJETO Y ATAQUE ─────────
+// En Consulta, al pasar el cursor (o tocar, en el móvil) sobre uno de esos datos aparece su explicación:
+//  · Naturaleza: qué estadística sube y cuál baja (tabla fija, no necesita internet).
+//  · Objeto: la descripción de items-desc-es.json y, si no está ahí, la de PokeAPI.
+//  · Habilidad y ataque: la descripción en español de PokeAPI (los ataques, además, con potencia, precisión y PP).
+// Lo que se baja de PokeAPI se guarda en este navegador para no volver a pedirlo.
+const NAT_STATS = {
+  hardy: null, lonely: ['atk', 'def'], brave: ['atk', 'spe'], adamant: ['atk', 'spa'], naughty: ['atk', 'spd'],
+  bold: ['def', 'atk'], docile: null, relaxed: ['def', 'spe'], impish: ['def', 'spa'], lax: ['def', 'spd'],
+  timid: ['spe', 'atk'], hasty: ['spe', 'def'], serious: null, jolly: ['spe', 'spa'], naive: ['spe', 'spd'],
+  modest: ['spa', 'atk'], mild: ['spa', 'def'], quiet: ['spa', 'spe'], bashful: null, rash: ['spa', 'spd'],
+  calm: ['spd', 'atk'], gentle: ['spd', 'def'], sassy: ['spd', 'spe'], careful: ['spd', 'spa'], quirky: null
+};
+const NAT_ES = {
+  hardy: ['fuerte'], lonely: ['solitario', 'solitaria', 'huraño', 'huraña'], brave: ['audaz'], adamant: ['firme'],
+  naughty: ['pícaro', 'pícara'], bold: ['osado', 'osada'], docile: ['dócil'], relaxed: ['plácido', 'plácida'],
+  impish: ['agitado', 'agitada'], lax: ['flojo', 'floja'], timid: ['miedoso', 'miedosa'], hasty: ['activo', 'activa'],
+  serious: ['serio', 'seria'], jolly: ['alegre'], naive: ['ingenuo', 'ingenua'], modest: ['modesto', 'modesta'],
+  mild: ['afable'], quiet: ['manso', 'mansa'], bashful: ['tímido', 'tímida', 'raro'], rash: ['alocado', 'alocada'],
+  calm: ['tranquilo', 'tranquila', 'sereno', 'serena'], gentle: ['amable'], sassy: ['grosero', 'grosera'],
+  careful: ['cauto', 'cauta'], quirky: ['extraño', 'extraña', 'rara']
+};
+const STAT_NOMBRE = { atk: 'Ataque', def: 'Defensa', spa: 'Ataque Especial', spd: 'Defensa Especial', spe: 'Velocidad' };
+function normDesc(t) { return String(t || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, ' ').trim(); }
+let _natPorNombre = null;
+function claveNaturaleza(valor) {
+  if (!_natPorNombre) {
+    _natPorNombre = {};
+    Object.keys(NAT_STATS).forEach(en => { _natPorNombre[en] = en; (NAT_ES[en] || []).forEach(es => { _natPorNombre[normDesc(es)] = en; }); });
+  }
+  return _natPorNombre[normDesc(valor)] || null;
+}
+const STAT_CORTO = { atk: 'Ataque', def: 'Defensa', spa: 'At. Esp.', spd: 'Def. Esp.', spe: 'Velocidad' };
+// Línea de la casilla de naturaleza en Consulta: ▲ lo que sube (verde) y ▼ lo que baja (rojo).
+function natStatsHTML(valor) {
+  const k = claveNaturaleza(valor); if (!k) return '';
+  const st = NAT_STATS[k];
+  if (!st) return '<div class="nat-stats neutra">Neutra: no sube ni baja nada</div>';
+  return `<div class="nat-stats"><span class="stat-sube">▲ ${STAT_CORTO[st[0]]}</span><span class="stat-baja">▼ ${STAT_CORTO[st[1]]}</span></div>`;
+}
+function descNaturaleza(valor) {
+  const k = claveNaturaleza(valor);
+  if (!k) return null;
+  const st = NAT_STATS[k];
+  if (!st) return { titulo: valor, texto: 'Naturaleza neutra: no sube ni baja ninguna estadística.' };
+  return { titulo: valor, texto: `Sube ${STAT_NOMBRE[st[0]]} y baja ${STAT_NOMBRE[st[1]]} (±10 %).`,
+           html: `Sube <span class="stat-sube">${STAT_NOMBRE[st[0]]}</span> y baja <span class="stat-baja">${STAT_NOMBRE[st[1]]}</span> (±10 %).` };
+}
+
+const DESC_CACHE_KEY = 'descAutoV1';
+let descCache = {};
+try { descCache = JSON.parse(localStorage.getItem(DESC_CACHE_KEY) || '{}') || {}; } catch (e) { descCache = {}; }
+function descCacheGuardar() {
+  try {
+    const claves = Object.keys(descCache);
+    if (claves.length > 700) claves.slice(0, claves.length - 700).forEach(k => delete descCache[k]);   // se mantienen las 700 más recientes
+    localStorage.setItem(DESC_CACHE_KEY, JSON.stringify(descCache));
+  } catch (e) {}
+}
+const _descEnCurso = {};
+function conCache(clave, obtener) {
+  if (descCache[clave]) return Promise.resolve(descCache[clave]);
+  if (_descEnCurso[clave]) return _descEnCurso[clave];
+  _descEnCurso[clave] = obtener().then(r => { if (r) { descCache[clave] = r; descCacheGuardar(); } delete _descEnCurso[clave]; return r; }).catch(e => { delete _descEnCurso[clave]; throw e; });
+  return _descEnCurso[clave];
+}
+async function pokeapiJson(ruta) {
+  const r = await fetch('https://pokeapi.co/api/v2/' + ruta);
+  if (!r.ok) throw new Error('PokeAPI ' + r.status);
+  return r.json();
+}
+function textoEs(entradas) {   // último texto en español de una lista «flavor_text_entries»
+  const es = (entradas || []).filter(e => e.language && e.language.name === 'es' && e.flavor_text);
+  return es.length ? es[es.length - 1].flavor_text.replace(/[\n\f\r]+/g, ' ').replace(/\s+/g, ' ').trim() : '';
+}
+function slugApi(t) { return String(t || '').toLowerCase().replace(/['’.]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, ''); }
+
+// Habilidades de un Pokémon (nombre en español y descripción), de PokeAPI.
+function habilidadesDe(pokemon) {
+  const slug = getSpriteSlug((pokemon || '').replace(/\s*\boscuro\b\s*/gi, ' ').trim() || pokemon);
+  return conCache('habs|' + slug, async () => {
+    const p = await pokeapiJson('pokemon/' + slug);
+    const lista = await Promise.all((p.abilities || []).map(async a => {
+      try {
+        const h = await pokeapiJson('ability/' + a.ability.name);
+        const nombre = (h.names || []).find(n => n.language.name === 'es');
+        const corto = (h.effect_entries || []).find(e => e.language.name === 'en');
+        return { slug: a.ability.name, es: nombre ? nombre.name : a.ability.name, oculta: !!a.is_hidden, desc: textoEs(h.flavor_text_entries) || (corto ? corto.short_effect + ' (en inglés)' : '') };
+      } catch (e) { return { slug: a.ability.name, es: a.ability.name, oculta: !!a.is_hidden, desc: '' }; }
+    }));
+    return { lista };
+  }).then(r => r.lista);
+}
+async function descHabilidad(valor, pokemon) {
+  const v = normDesc(valor);
+  let lista = [];
+  try { lista = await habilidadesDe(pokemon); } catch (e) { /* se prueba abajo con el nombre escrito */ }
+  const h = lista.find(x => normDesc(x.es) === v || normDesc(x.slug.replace(/-/g, ' ')) === v);
+  if (h) return { titulo: h.es + (h.oculta ? ' (oculta)' : ''), texto: h.desc || 'Sin descripción disponible.' };
+  // no es una de las habilidades de ese Pokémon (o está escrita en inglés): se busca por su nombre
+  const r = await conCache('hab|' + slugApi(valor), async () => {
+    const h2 = await pokeapiJson('ability/' + slugApi(valor));
+    const n = (h2.names || []).find(x => x.language.name === 'es'); const c = (h2.effect_entries || []).find(e => e.language.name === 'en');
+    return { titulo: n ? n.name : valor, texto: textoEs(h2.flavor_text_entries) || (c ? c.short_effect + ' (en inglés)' : '') };
+  });
+  return r;
+}
+
+let _movEnPorEs = null;
+function movimientoEnIngles(valor) {
+  if (!_movEnPorEs) {
+    _movEnPorEs = {};
+    (typeof MOVES_ES_ENGLISH_NAMES !== 'undefined' ? MOVES_ES_ENGLISH_NAMES : []).forEach(en => {
+      const es = MOVES_ES_LOOKUP_LOWER[en.trim().toLowerCase()];
+      _movEnPorEs[normDesc(en)] = en; if (es) _movEnPorEs[normDesc(es)] = en;
+    });
+  }
+  return _movEnPorEs[normDesc(valor)] || null;
+}
+async function descAtaque(valor) {
+  const en = movimientoEnIngles(valor);
+  const slug = slugApi(en || valor);
+  return conCache('mov|' + slug, async () => {
+    const m = await pokeapiJson('move/' + slug);
+    const clase = { physical: 'Físico', special: 'Especial', status: 'De estado' }[m.damage_class && m.damage_class.name] || '';
+    const datos = [clase, m.power ? 'Potencia ' + m.power : '', m.accuracy ? 'Precisión ' + m.accuracy + ' %' : '', m.pp ? 'PP ' + m.pp : ''].filter(Boolean).join(' · ');
+    const n = (m.names || []).find(x => x.language.name === 'es');
+    return { titulo: n ? n.name : valor, texto: (datos ? datos + '\n' : '') + (textoEs(m.flavor_text_entries) || '') };
+  });
+}
+async function descObjeto(valor) {
+  const local = getItemDescription(valor);
+  if (local) return { titulo: valor, texto: local };
+  const v = normDesc(valor);
+  const slug = Object.keys(ITEM_ES_BY_SLUG || {}).find(k => normDesc(ITEM_ES_BY_SLUG[k]) === v) || slugApi(valor);
+  return conCache('obj|' + slug, async () => {
+    const o = await pokeapiJson('item/' + slug);
+    const n = (o.names || []).find(x => x.language.name === 'es'); const c = (o.effect_entries || []).find(e => e.language.name === 'en');
+    return { titulo: n ? n.name : valor, texto: textoEs(o.flavor_text_entries) || (c ? c.short_effect + ' (en inglés)' : '') };
+  });
+}
+async function obtenerDescripcion(tipo, valor, pokemon) {
+  if (tipo === 'naturaleza') return descNaturaleza(valor) || { titulo: valor, texto: 'No reconozco esta naturaleza.' };
+  if (tipo === 'habilidad') return descHabilidad(valor, pokemon);
+  if (tipo === 'objeto') return descObjeto(valor);
+  if (tipo === 'ataque') return descAtaque(valor);
+  return null;
+}
+
+// Descripción flotante
+let descObjetivo = null, descTemporizador = null;
+function descElemento() {
+  let el = document.getElementById('desc-flotante');
+  if (!el) { el = document.createElement('div'); el.id = 'desc-flotante'; el.setAttribute('role', 'tooltip'); document.body.appendChild(el); }
+  return el;
+}
+function posicionarDesc(objetivo) {
+  const el = descElemento(), r = objetivo.getBoundingClientRect();
+  el.style.left = '0px'; el.style.top = '0px';
+  const w = el.offsetWidth, h = el.offsetHeight, margen = 8;
+  let x = r.left + r.width / 2 - w / 2; x = Math.max(margen, Math.min(window.innerWidth - w - margen, x));
+  let y = r.bottom + 8; if (y + h > window.innerHeight - margen) y = Math.max(margen, r.top - h - 8);   // si no cabe debajo, va arriba
+  el.style.left = x + 'px'; el.style.top = y + 'px';
+}
+function pintarDesc(objetivo, titulo, texto, nota, html) {
+  const el = descElemento();
+  el.innerHTML = `<div class="df-titulo">${esc(titulo || '')}</div><div class="df-texto">${html || esc(texto || '')}</div>${nota ? `<div class="df-nota">${esc(nota)}</div>` : ''}`;
+  el.style.display = 'block'; posicionarDesc(objetivo);
+}
+async function mostrarDescFlotante(objetivo) {
+  descObjetivo = objetivo;
+  const tipo = objetivo.dataset.descTipo, valor = objetivo.dataset.descValor, pokemon = objetivo.dataset.descPokemon;
+  pintarDesc(objetivo, valor, 'Cargando descripción…');
+  try {
+    const d = await obtenerDescripcion(tipo, valor, pokemon);
+    if (descObjetivo !== objetivo) return;           // mientras tanto se pasó a otro dato
+    pintarDesc(objetivo, (d && d.titulo) || valor, (d && d.texto) || 'Sin descripción disponible.', '', d && d.html);
+  } catch (e) {
+    if (descObjetivo !== objetivo) return;
+    pintarDesc(objetivo, valor, 'No se pudo cargar la descripción.', 'Revisa tu conexión e inténtalo de nuevo.');
+  }
+}
+function ocultarDescFlotante() {
+  clearTimeout(descTemporizador); descObjetivo = null;
+  const el = document.getElementById('desc-flotante'); if (el) el.style.display = 'none';
+}
+(function () {
+  // ¿hay un cursor que pase por encima? Sí en ordenadores (incluidos los táctiles con ratón); no en móviles y tabletas.
+  const conHover = () => (window.matchMedia && window.matchMedia('(hover: hover)').matches) || !(navigator.maxTouchPoints > 0);
+  const buscar = e => (e.target && e.target.closest) ? e.target.closest('.con-desc') : null;
+  document.addEventListener('mouseover', e => { if (!conHover()) return; const el = buscar(e); if (el) { clearTimeout(descTemporizador); descTemporizador = setTimeout(() => mostrarDescFlotante(el), 160); } });
+  document.addEventListener('mouseout', e => { if (!conHover()) return; const el = buscar(e); if (el && !el.contains(e.relatedTarget)) ocultarDescFlotante(); });
+  document.addEventListener('click', e => {                         // en el móvil: tocar abre, volver a tocar (o tocar fuera) cierra
+    const el = buscar(e);
+    if (!el) { ocultarDescFlotante(); return; }
+    if (descObjetivo === el) ocultarDescFlotante(); else mostrarDescFlotante(el);
+  });
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') { ocultarDescFlotante(); return; }
+    if ((e.key === 'Enter' || e.key === ' ') && e.target && e.target.classList && e.target.classList.contains('con-desc')) { e.preventDefault(); e.target.click(); }
+  });
+  window.addEventListener('scroll', () => { if (descObjetivo) ocultarDescFlotante(); }, true);
+  window.addEventListener('resize', ocultarDescFlotante);
+})();
+
+// Datos: sugerencias de habilidad (las del propio Pokémon) y descripción al pasar el cursor
+function asegurarDatalistHabilidad() {
+  let dl = document.getElementById('suggest-champions-habilidad');
+  if (!dl) { dl = document.createElement('datalist'); dl.id = 'suggest-champions-habilidad'; document.body.appendChild(dl); }
+  return dl;
+}
+function enlazarDescripcionesDatos(tbody) {
+  if (!tbody) return;
+  tbody.querySelectorAll('.nature-input').forEach(inp => {
+    const poner = () => { const d = descNaturaleza(inp.value); if (d) inp.title = d.texto; else inp.removeAttribute('title'); };
+    poner(); inp.addEventListener('input', poner);
+  });
+  tbody.querySelectorAll('.habilidad-input').forEach(inp => {
+    const rotular = async () => {
+      if (!inp.value.trim()) { inp.removeAttribute('title'); return; }
+      try { const d = await descHabilidad(inp.value, inp.dataset.pokemon); if (d && d.texto) inp.title = d.texto; } catch (e) {}
+    };
+    inp.addEventListener('focus', async () => {
+      const dl = asegurarDatalistHabilidad(); dl.innerHTML = '';
+      try { const lista = await habilidadesDe(inp.dataset.pokemon); dl.innerHTML = lista.map(h => `<option value="${esc(h.es)}"></option>`).join(''); } catch (e) {}
+    });
+    inp.addEventListener('mouseenter', rotular);
+    inp.addEventListener('blur', rotular);
+  });
+}
+
+// ── PROBAR FUENTES ──────────────────────────────────────────────────────────
+// Descarga una página con el mismo lector que usa PokéBase (r.jina.ai) y escribe un informe: tamaño, si
+// lleva los datos dentro (Next.js), qué listas de objetos con «name» contiene (con sus campos y los primeros
+// nombres), qué palabras clave aparecen y qué enlaces de Pokémon tiene. No guarda nada.
+async function pfLeer(url, formato) {
+  const res = await fetch(GAMEWITH_READER_BASE + url, formato ? { headers: { 'X-Return-Format': formato } } : undefined);
+  return { status: res.status, ok: res.ok, texto: await res.text() };
+}
+function pfInformePagina(nombre, html) {
+  const l = [];
+  const h = pokebaseLimpiarFlujo(html);
+  l.push(`── ${nombre} ──`);
+  l.push(`Tamaño: ${Math.round(html.length / 1024)} KB`);
+  l.push(`Datos dentro de la página: __NEXT_DATA__ ${html.includes('__NEXT_DATA__') ? 'sí' : 'no'} · self.__next_f ${html.includes('self.__next_f') ? 'sí' : 'no'}`);
+  const palabras = ['Ability', 'Abilities', 'Habilidad', 'Teammate', 'Partner', 'Synergy', 'Compañero', 'Counter', 'Build', 'Moves', 'Ataques', 'Item', 'Objeto', 'Nature', 'Naturaleza', 'description'];
+  l.push('Palabras clave (veces): ' + palabras.map(p => `${p}=${(h.match(new RegExp(p, 'g')) || []).length}`).join(' · '));
+  let listas = [];
+  try { listas = pokebaseListasGenericas(h, 0, null); } catch (e) { l.push('(no se pudieron analizar las listas: ' + e.message + ')'); }
+  l.push(`Listas con «name» encontradas: ${listas.length}`);
+  const vistas = new Set();
+  listas.slice(0, 60).forEach(g => {
+    const marca = g.clave + '|' + g.lista.length + '|' + pokebaseNombreDe(g.lista[0]);
+    if (vistas.has(marca)) return; vistas.add(marca);
+    const campos = Object.keys(g.lista[0] || {}).slice(0, 14).join(', ');
+    const ej = g.lista.slice(0, 4).map(o => pokebaseNombreDe(o) + (typeof o.percent === 'number' ? ' (' + o.percent + ')' : '')).join('; ');
+    l.push(`  • «${g.clave}» → ${g.lista.length} elementos · campos: ${campos}`);
+    l.push(`      ej.: ${ej}`);
+  });
+  const enlaces = [...new Set([...html.matchAll(/href="([^"#]*(?:pokedex|pokemon)[^"#]*)"/gi)].map(m => m[1]))];
+  l.push(`Enlaces a Pokémon/pokedex: ${enlaces.length}` + (enlaces.length ? ' · primeros: ' + enlaces.slice(0, 12).join(' , ') : ''));
+  // ¿Trae descripciones? Campos de los datos cuyo nombre sugiere un texto explicativo (habilidades, ataques, objetos…).
+  const descs = [];
+  for (const m of h.matchAll(/"(description|desc|effect|shortEffect|short_effect|flavor[A-Za-z_]*|summary|detail|tooltip)"\s*:\s*"([^"]{25,300})"/g)) { descs.push({ campo: m[1], texto: m[2] }); if (descs.length >= 600) break; }
+  l.push(`Textos de descripción en los datos: ${descs.length}` + (descs.length ? ' · campos: ' + [...new Set(descs.map(d => d.campo))].join(', ') : ' (ninguno: esta página no trae descripciones en sus datos)'));
+  if (descs.length) {
+    const txt = descs.map(d => d.texto).join(' ');
+    const es = (txt.match(/\b(el|la|los|las|de|que|un|una|con|su|sus|en)\b/gi) || []).length, en = (txt.match(/\b(the|of|and|is|to|a|an|with|its|that|in)\b/gi) || []).length;
+    l.push(`  idioma aproximado de esos textos: ${es > en * 1.2 ? 'español' : en > es * 1.2 ? 'inglés' : 'mezclado/no claro'} (palabras en español: ${es}, en inglés: ${en})`);
+    const paso = Math.max(1, Math.floor(descs.length / 8));
+    descs.filter((_, i) => i % paso === 0).slice(0, 8).forEach(d => l.push(`  • ${d.campo}: «${d.texto.slice(0, 150)}${d.texto.length > 150 ? '…' : ''}»`));
+  }
+  // ¿De dónde saca la página sus datos? Direcciones de API (sin los valores de los parámetros) y datos estructurados.
+  const apis = new Set();
+  for (const m of html.matchAll(/https?:\/\/[^"'\s<>\\)]+/g)) { if (/\/(api|graphql|_next\/data)\b|\.json\b/i.test(m[0])) apis.add(m[0].split('?')[0] + (m[0].includes('?') ? '?…' : '')); }
+  for (const m of html.matchAll(/["'](\/(?:api|_next\/data)\/[^"'\s\\]*)["']/g)) apis.add(m[1].split('?')[0] + (m[1].includes('?') ? '?…' : ''));
+  l.push(`Direcciones de datos (API/JSON) que menciona: ${apis.size}` + (apis.size ? '\n' + [...apis].slice(0, 12).map(a => '  • ' + a).join('\n') : ''));
+  l.push(`Datos estructurados (JSON-LD): ${(html.match(/application\/ld\+json/g) || []).length}`);
+  return l.join('\n');
+}
+async function probarFuente() {
+  const fuente = document.getElementById('pf-fuente').value, entrada = (document.getElementById('pf-entrada').value || '').trim();
+  const informe = document.getElementById('pf-informe'), btn = document.getElementById('pf-btn');
+  const lineas = []; const log = t => { lineas.push(t); informe.value = lineas.join('\n'); informe.scrollTop = informe.scrollHeight; };
+  btn.disabled = true; informe.value = '';
+  log(`Prueba del ${new Date().toLocaleString()} · fuente: ${fuente}`);
+  try {
+    let urls = [];
+    if (/^https?:\/\//i.test(entrada)) urls = [entrada];
+    else if (fuente === 'pokebase') urls = pokebaseSlugsCandidatos(entrada || 'Charizard').slice(0, 3).map(sl => 'https://pokebase.app/pokemon-champions/pokemon/' + sl);
+    else if (fuente === 'opgg') { urls = ['https://op.gg/es/pokemon-champions/pokedex']; if (entrada) urls.push('https://op.gg/es/pokemon-champions/pokedex/' + pokebaseASlug(entrada)); }
+    else { log('Escribe una dirección completa (https://…).'); btn.disabled = false; return; }
+    for (const url of urls) {
+      log(`\nDescargando ${url} …`);
+      let r;
+      try { r = await pfLeer(url, 'html'); } catch (e) { log('  ✗ No se pudo descargar: ' + e.message + ' (¿bloqueo entre sitios o sin conexión?)'); continue; }
+      log(`  Respuesta: ${r.status}${r.ok ? '' : ' (error)'} · ${Math.round(r.texto.length / 1024)} KB`);
+      if (!r.ok || r.texto.length < 1500) { log('  ✗ Respuesta vacía o con error; primeras líneas:\n' + r.texto.slice(0, 400)); continue; }
+      log(pfInformePagina(url, r.texto));
+      try {
+        const md = await pfLeer(url);
+        log('\nTexto legible (primeros 1200 caracteres):\n' + md.texto.slice(0, 1200).replace(/\n{3,}/g, '\n\n'));
+      } catch (e) { log('(no se pudo obtener la versión en texto)'); }
+      if (fuente === 'pokebase' && /pokebase\.app/.test(url)) {
+        try {
+          const c = pokebaseLeerConjuntos(r.texto);
+          log(`\nLectura de PokéBase: ${c.conjuntos.length} conjunto(s) de datos (Singles/Doubles) · formato por defecto: ${c.formatoPorDefecto || '¿?'}`);
+          c.conjuntos.forEach((x, i) => log(`  conjunto ${i + 1}: ${x.moves.length} ataques, ${x.items.length} objetos, ${x.natures.length} naturalezas` +
+            (x.abilities ? `, ${x.abilities.length} habilidades (la más usada: ${pokebaseNombreDe(pokebaseOrdenados(x.abilities)[0])})` : ', sin habilidades') +
+            (x.equipoLista ? `, ${x.equipoLista.length} compañeros (los primeros: ${pokebaseOrdenados(x.equipoLista).slice(0, 5).map(pokebaseNombreDe).join(', ')})` : ', sin compañeros')));
+        } catch (e) { log('  (no se pudo interpretar como página de PokéBase: ' + e.message + ')'); }
+      }
+      if (urls.length > 1 && fuente === 'opgg') await esperar(1500);
+    }
+    log('\nFin de la prueba. Pulsa «Copiar informe» y pégalo para decidir cómo usar esta fuente.');
+  } catch (e) { log('Error: ' + e.message); }
+  btn.disabled = false;
+}
+function copiarInformeFuente() {
+  const t = document.getElementById('pf-informe').value;
+  if (!t) { showToast('Primero pulsa «Probar»', true); return; }
+  (navigator.clipboard ? navigator.clipboard.writeText(t) : Promise.reject()).then(() => showToast('📋 Informe copiado')).catch(() => { const z = document.getElementById('pf-informe'); z.select(); showToast('Selecciona el texto y cópialo (Ctrl+C)', true); });
+}
+function abrirProbarFuentes() { document.getElementById('modal-probar-fuentes').classList.add('open'); document.getElementById('pf-entrada').focus(); }
+
 // ── EQUIPO RECOMENDADO (Champions) ──────────────────────────────────────────
 // Cada Pokémon puede tener, en cada formato (Singles / Doubles), hasta 5 compañeros recomendados. En Datos
 // se escriben los nombres de archivo de sus GIF (por ejemplo «abomasnow.gif», de la carpeta sprites-animados)
@@ -5424,6 +5799,24 @@ function eqrValidar(fmt, i, inmediato) {
     estado.innerHTML = (existe ? '<span class="ok">✅ archivo encontrado</span>' : '<span class="no">❌ no está en la carpeta</span>') + ' · ' +
       (pk ? `<span class="ok">${esc(traducirNombrePokemon(pk))}</span>` : '<span class="aviso">⚠️ no coincide con tu lista (no se podrá abrir)</span>');
   }, inmediato ? 0 : 450);
+}
+async function completarEquipoDesdeFuente() {
+  const est = document.getElementById('eqr-fuente-estado'); if (!est || !eqrPokemon) return;
+  est.textContent = '⏳ Leyendo PokéBase… (puede tardar unos segundos)';
+  try {
+    const { singles, doubles } = await championsObtenerSugerenciaPokebase(eqrPokemon);
+    const llenar = (fmt, nombre, build) => {
+      const vacia = [0, 1, 2, 3, 4].every(i => !(document.getElementById(`eqr-in-${fmt}-${i}`).value || '').trim());
+      if (!build || !build.equipo || !build.equipo.length) return `${nombre}: PokéBase no trae compañeros que estén en tu lista`;
+      if (!vacia) return `${nombre}: ya tenía compañeros escritos (no se tocó)`;
+      build.equipo.slice(0, 5).forEach((a, i) => { document.getElementById(`eqr-in-${fmt}-${i}`).value = a; eqrValidar(fmt, i, true); });
+      eqrActualizarCuenta(fmt);
+      return `${nombre}: ${Math.min(5, build.equipo.length)} compañeros`;
+    };
+    const partes = [llenar('s', 'Singles', singles), llenar('d', 'Doubles', doubles)];
+    const algo = partes.some(t => /compañeros$/.test(t) && !/no trae|ya tenía/.test(t));
+    est.textContent = (algo ? '✅ ' : 'ℹ️ ') + partes.join(' · ') + (algo ? '. Revisa y pulsa «Guardar equipo».' : '. Si crees que PokéBase sí los trae, usa «🧪 Probar fuentes» para ver qué datos tiene la página.');
+  } catch (e) { est.textContent = '❌ ' + (e && e.message ? e.message : 'No se pudo leer PokéBase'); }
 }
 function copiarEquipoSinglesADoubles() {
   [0, 1, 2, 3, 4].forEach(i => { document.getElementById('eqr-in-d-' + i).value = document.getElementById('eqr-in-s-' + i).value; eqrValidar('d', i, true); });
@@ -6006,28 +6399,37 @@ async function showResult(name) {
   let bodyHTML = '';
   if (currentMode === 'champions') {
     const d = champConsultaModo === 'doubles' ? getChampionsDataDoubles(name) : getChampionsData(name);
+    // Cada dato con valor lleva su descripción automática (flotante al pasar el cursor o al tocar).
+    const cls = v => isEmpty(v) ? 'result-item' : 'result-item con-desc';
+    const dd = (tipo, v) => isEmpty(v) ? '' : ` data-desc-tipo="${tipo}" data-desc-valor="${esc(v)}" data-desc-pokemon="${esc(name)}" tabindex="0"`;
+    const ii = v => isEmpty(v) ? '' : '<span class="desc-i" aria-hidden="true">ⓘ</span>';
     bodyHTML = `
-      <div class="result-item">
+      <div class="${cls(d.naturaleza)}"${dd('naturaleza', d.naturaleza)}>${ii(d.naturaleza)}
         <div class="ri-label">Naturaleza</div>
         <div class="ri-value ${isEmpty(d.naturaleza)?'empty':''}">${val(d.naturaleza,'Sin datos')}</div>
+        ${natStatsHTML(d.naturaleza)}
       </div>
-      <div class="result-item">
+      <div class="${cls(d.habilidad)}"${dd('habilidad', d.habilidad)}>${ii(d.habilidad)}
+        <div class="ri-label">Habilidad</div>
+        <div class="ri-value ${isEmpty(d.habilidad)?'empty':''}">${val(d.habilidad,'Sin datos')}</div>
+      </div>
+      <div class="${cls(d.objeto)}"${dd('objeto', d.objeto)}>${ii(d.objeto)}
         <div class="ri-label">Objeto</div>
-        <div class="ri-value ${isEmpty(d.objeto)?'empty':''}" ${getItemDescription(d.objeto) ? `title="${esc(getItemDescription(d.objeto))}"` : ''}>${d.objeto ? itemIconHTML(d.objeto) : ''}${val(d.objeto,'Sin datos')}</div>
+        <div class="ri-value ${isEmpty(d.objeto)?'empty':''}">${d.objeto ? itemIconHTML(d.objeto) : ''}${val(d.objeto,'Sin datos')}</div>
       </div>
-      <div class="result-item">
+      <div class="${cls(d.ataque1)}"${dd('ataque', d.ataque1)}>${ii(d.ataque1)}
         <div class="ri-label">Ataque 1</div>
         <div class="ri-value ${isEmpty(d.ataque1)?'empty':''}">${d.tipo1 ? typeIconHTML(d.tipo1) : ''}${val(d.ataque1,'Sin datos')}</div>
       </div>
-      <div class="result-item">
+      <div class="${cls(d.ataque2)}"${dd('ataque', d.ataque2)}>${ii(d.ataque2)}
         <div class="ri-label">Ataque 2</div>
         <div class="ri-value ${isEmpty(d.ataque2)?'empty':''}">${d.tipo2 ? typeIconHTML(d.tipo2) : ''}${val(d.ataque2,'Sin datos')}</div>
       </div>
-      <div class="result-item">
+      <div class="${cls(d.ataque3)}"${dd('ataque', d.ataque3)}>${ii(d.ataque3)}
         <div class="ri-label">Ataque 3</div>
         <div class="ri-value ${isEmpty(d.ataque3)?'empty':''}">${d.tipo3 ? typeIconHTML(d.tipo3) : ''}${val(d.ataque3,'Sin datos')}</div>
       </div>
-      <div class="result-item">
+      <div class="${cls(d.ataque4)}"${dd('ataque', d.ataque4)}>${ii(d.ataque4)}
         <div class="ri-label">Ataque 4</div>
         <div class="ri-value ${isEmpty(d.ataque4)?'empty':''}">${d.tipo4 ? typeIconHTML(d.tipo4) : ''}${val(d.ataque4,'Sin datos')}</div>
       </div>`;
@@ -6397,7 +6799,7 @@ function goToLitePage(mode, delta) {
   renderCurrentTable();
 }
 
-const EMPTY_CHAMPIONS = () => ({ naturaleza:'', objeto:'', ataque1:'', tipo1:'', ataque2:'', tipo2:'', ataque3:'', tipo3:'', ataque4:'', tipo4:'' });
+const EMPTY_CHAMPIONS = () => ({ naturaleza:'', habilidad:'', objeto:'', ataque1:'', tipo1:'', ataque2:'', tipo2:'', ataque3:'', tipo3:'', ataque4:'', tipo4:'' });
 const EMPTY_GO         = () => ({ cpMax:'', cpSuper:'', cpUltra:'', statsSuper:'', statsUltra:'', statsMaster:'', movRapido:'', tipoRapido:'', movCargado:'', tipoCargado:'', movCargado2:'', tipoCargado2:'', ligas:[] });
 
 // ── ICONOS DE TIPO (Pokémon GO: ataque rápido / cargado) ────────────────────
@@ -6596,7 +6998,7 @@ const PROTEGIDOS_VACIOS = {
 };
 
 function pokemonVacioChampions(nombre) {
-  const vacioUnSet = d => !d.naturaleza && !d.objeto && !d.ataque1 && !d.ataque2 && !d.ataque3 && !d.ataque4 && !(d.equipo && d.equipo.length);
+  const vacioUnSet = d => !d.naturaleza && !d.habilidad && !d.objeto && !d.ataque1 && !d.ataque2 && !d.ataque3 && !d.ataque4 && !(d.equipo && d.equipo.length);
   return vacioUnSet(dataChampions[nombre] || EMPTY_CHAMPIONS()) && vacioUnSet(dataChampionsDoubles[nombre] || EMPTY_CHAMPIONS());
 }
 
@@ -7215,6 +7617,52 @@ async function pokebaseFetchHtml(slug) {
 
 // Devuelve los dos conjuntos de datos de la página ({moves, items, natures}) en el
 // orden en que aparecen, más una pista de cuál es el que la página muestra por defecto.
+// ── LISTAS EXTRA DE LA PÁGINA DE POKÉBASE (habilidades, compañeros…) ─────────
+// La página de PokéBase lleva sus datos dentro del código (Next.js). Además de moves / items / natures
+// puede traer otras listas de objetos con «name» (habilidades, compañeros…). Aquí se localizan todas las
+// listas de ese tipo; las que se llaman como una habilidad o como un compañero se usan para completar
+// la habilidad y el equipo recomendado. Si la página no trae esas listas, no se completa nada.
+function pokebaseLimpiarFlujo(htmlCrudo) {
+  return htmlCrudo.replace(/\\"/g, '"').replace(/"\]\)<\/script><script>self\.__next_f\.push\(\[1,"/g, '');
+}
+function pokebaseNombreDe(o) { return (o && typeof o.name === 'string' && o.name) || (o && o.pokemon && typeof o.pokemon.name === 'string' && o.pokemon.name) || ''; }
+function pokebaseListasGenericas(h, desde, hasta) {
+  const hallazgos = [], re = /"([A-Za-z][A-Za-z0-9_]*)":\[\{/g;
+  re.lastIndex = desde || 0;
+  const limite = hasta == null ? h.length : hasta;
+  let m;
+  while ((m = re.exec(h)) && m.index < limite) {
+    const ini = m.index + m[0].length - 2;           // posición del «[»
+    let d = 0, fin = -1;
+    for (let j = ini; j < Math.min(h.length, ini + 80000); j++) { const c = h[j]; if (c === '[') d++; else if (c === ']') { d--; if (d === 0) { fin = j; break; } } }
+    if (fin < 0) continue;
+    let lista; try { lista = JSON.parse(h.slice(ini, fin + 1)); } catch (e) { continue; }
+    if (!Array.isArray(lista) || !lista.length || !lista.some(o => pokebaseNombreDe(o))) continue;
+    hallazgos.push({ clave: m[1], pos: m.index, lista });
+    re.lastIndex = fin;                              // no se vuelve a entrar en los elementos de esa lista
+  }
+  return hallazgos;
+}
+const POKEBASE_RE_HABILIDADES = /abilit|habil/i;
+const POKEBASE_RE_EQUIPO = /teammate|team_?mate|partner|synerg|pair|companion|ally|allies/i;
+function pokebaseOrdenados(lista) {
+  return lista.slice().sort((a, b) => (typeof b.percent === 'number' ? b.percent : 0) - (typeof a.percent === 'number' ? a.percent : 0));
+}
+// Nombre en inglés de PokéBase → archivo de tu carpeta (por ejemplo «Hisuian Arcanine» → «arcanine-hisui.gif»), solo si está en tu lista.
+function archivoEquipoDesdeNombreEn(nombreEn) {
+  const q = normDesc(nombreEn);
+  const p = (POKEMON_LISTS.champions || []).find(x => normDesc(pokebaseNombreIngles(x)) === q || normDesc(x) === q);
+  return p ? listaGifSlug(p) + '.gif' : null;
+}
+async function habilidadEnEspanol(pokemon, nombreEn) {
+  try {
+    const lista = await habilidadesDe(pokemon);
+    const h = lista.find(x => x.slug === slugApi(nombreEn));
+    if (h && h.es) return h.es;
+  } catch (e) { /* se deja el nombre en inglés */ }
+  return nombreEn;
+}
+
 function pokebaseLeerConjuntos(htmlCrudo) {
   // Une los trozos del flujo de datos de Next.js y des-escapa las comillas.
   const h = htmlCrudo.replace(/\\"/g, '"').replace(/"\]\)<\/script><script>self\.__next_f\.push\(\[1,"/g, '');
@@ -7243,8 +7691,23 @@ function pokebaseLeerConjuntos(htmlCrudo) {
     const items = leerLista('items', ini, hasta);
     const natures = leerLista('natures', ini, hasta);
     const valida = l => Array.isArray(l) && l.length && l.every(x => x && typeof x.percent === 'number' && x.name);
-    if (valida(moves) && valida(items) && valida(natures)) conjuntos.push({ moves, items, natures });
+    if (valida(moves) && valida(items) && valida(natures)) conjuntos.push({ moves, items, natures, _ini: ini, _hasta: hasta });
   });
+  // Listas extra: cada una se asigna al conjunto (formato) en cuyo tramo de la página aparece; si no cae
+  // dentro de ninguno pero hay tantas como conjuntos, se asignan en orden.
+  try {
+    const genericas = pokebaseListasGenericas(h, 0, null).filter(g => !['moves', 'items', 'natures'].includes(g.clave));
+    const asignar = (regex, campo) => {
+      const globales = genericas.filter(g => regex.test(g.clave));
+      conjuntos.forEach((c, n) => {
+        let g = globales.find(x => x.pos >= c._ini && x.pos < c._hasta);
+        if (!g && globales.length === conjuntos.length) g = globales[n];
+        if (g) c[campo] = g.lista;
+      });
+    };
+    asignar(POKEBASE_RE_HABILIDADES, 'abilities');
+    asignar(POKEBASE_RE_EQUIPO, 'equipoLista');
+  } catch (e) { /* si algo falla, quedan solo los datos de siempre */ }
 
   // ¿Cuál de los dos formatos muestra la página por defecto? Se lee del selector
   // «Ranked format» (el botón con aria-selected="true") y se compara el primer objeto
@@ -7274,6 +7737,13 @@ function pokebaseConstruirBuild(conjunto) {
     naturaleza: nat ? (translateNatureIfEnglish(nat.name) || nat.name) : '',
     objeto: obj ? (translateItemIfEnglish(obj.name) || obj.name) : ''
   };
+  // Opcionales: solo si la página trae esas listas (la habilidad queda en inglés y se traduce después).
+  if (Array.isArray(conjunto.abilities) && conjunto.abilities.length) { const h0 = pokebaseOrdenados(conjunto.abilities)[0]; if (pokebaseNombreDe(h0)) resultado.habilidad = pokebaseNombreDe(h0); }
+  if (Array.isArray(conjunto.equipoLista) && conjunto.equipoLista.length) {
+    const archivos = [];
+    pokebaseOrdenados(conjunto.equipoLista).forEach(o => { const a = archivoEquipoDesdeNombreEn(pokebaseNombreDe(o)); if (a && !archivos.includes(a)) archivos.push(a); });
+    if (archivos.length) resultado.equipo = archivos.slice(0, 5);
+  }
   [1, 2, 3, 4].forEach(i => {
     const a = ataques[i - 1];
     if (a) {
@@ -7322,6 +7792,7 @@ async function championsObtenerSugerenciaPokebase(name) {
     doubles = pokebaseConstruirBuild(conjuntos[1]);
     aviso = 'No se pudo confirmar cuál conjunto es Singles y cuál Doubles; se asumió el orden de la página.';
   }
+  for (const b of [singles, doubles]) { if (b && b.habilidad) b.habilidad = await habilidadEnEspanol(name, b.habilidad); }
   return { singles, doubles, url: urlUsada, aviso };
 }
 
@@ -7333,8 +7804,8 @@ async function championsSugerirUno(name) {
   try {
     showToast('🪄 Leyendo PokéBase para ' + name + '…');
     const { singles, doubles, aviso } = await championsObtenerSugerenciaPokebase(name);
-    if (singles) dataChampions[name] = { ...EMPTY_CHAMPIONS(), ...singles, ...(dataChampions[name] && dataChampions[name].equipo ? { equipo: dataChampions[name].equipo } : {}) };
-    if (doubles) dataChampionsDoubles[name] = { ...EMPTY_CHAMPIONS(), ...doubles, ...(dataChampionsDoubles[name] && dataChampionsDoubles[name].equipo ? { equipo: dataChampionsDoubles[name].equipo } : {}) };
+    if (singles) dataChampions[name] = { ...EMPTY_CHAMPIONS(), ...singles, ...(dataChampions[name] && dataChampions[name].equipo ? { equipo: dataChampions[name].equipo } : {}), ...(dataChampions[name] && dataChampions[name].habilidad ? { habilidad: dataChampions[name].habilidad } : {}) };
+    if (doubles) dataChampionsDoubles[name] = { ...EMPTY_CHAMPIONS(), ...doubles, ...(dataChampionsDoubles[name] && dataChampionsDoubles[name].equipo ? { equipo: dataChampionsDoubles[name].equipo } : {}), ...(dataChampionsDoubles[name] && dataChampionsDoubles[name].habilidad ? { habilidad: dataChampionsDoubles[name].habilidad } : {}) };
     persistAll();
     renderTableChampions();
     if (aviso) console.warn(name + ': ' + aviso);
@@ -7369,8 +7840,9 @@ async function championsSugerirVacios() {
       if (aviso) { dudosos++; console.warn(name + ': ' + aviso); } // se aplica igual, pero se cuenta para que lo revises
       const faltaSingles = championsEsVacio(dataChampions[name] || EMPTY_CHAMPIONS());
       const faltaDoubles = championsEsVacio(dataChampionsDoubles[name] || EMPTY_CHAMPIONS());
-      if (faltaSingles && singles) { dataChampions[name] = { ...EMPTY_CHAMPIONS(), ...dataChampions[name], ...singles }; completados++; }
-      if (faltaDoubles && doubles) { dataChampionsDoubles[name] = { ...EMPTY_CHAMPIONS(), ...dataChampionsDoubles[name], ...doubles }; completados++; }
+      const conservar = prev => ({ ...(prev && prev.habilidad ? { habilidad: prev.habilidad } : {}), ...(prev && prev.equipo && prev.equipo.length ? { equipo: prev.equipo } : {}) });
+      if (faltaSingles && singles) { dataChampions[name] = { ...EMPTY_CHAMPIONS(), ...dataChampions[name], ...singles, ...conservar(dataChampions[name]) }; completados++; }
+      if (faltaDoubles && doubles) { dataChampionsDoubles[name] = { ...EMPTY_CHAMPIONS(), ...dataChampionsDoubles[name], ...doubles, ...conservar(dataChampionsDoubles[name]) }; completados++; }
     } catch (e) {
       fallos++;
       console.log('Sin sugerencia para', name, e);
@@ -9002,6 +9474,8 @@ function showMode(mode) {
 function renderCurrentTable() {
   const btnDesc = document.getElementById('btn-desc-auto');
   if (btnDesc) btnDesc.style.display = currentDatosMode === 'tcg' ? '' : 'none';   // solo en TCG Pocket
+  const btnPF = document.getElementById('btn-probar-fuentes');
+  if (btnPF) btnPF.style.display = currentDatosMode === 'champions' ? '' : 'none';   // solo en Champions
   const torneosCheck = document.getElementById('torneos-en-reparacion-check');
   if (torneosCheck) torneosCheck.checked = getModoEnReparacion('torneos');
   const truequesCheck = document.getElementById('trueques-en-reparacion-check');
@@ -9034,6 +9508,7 @@ function renderTableChampions() {
       <td style="color:var(--muted);font-size:0.8rem">${i+1}</td>
       <td class="name-cell-td"><input class="editable-cell name-cell" data-original-name="${esc(name)}" value="${esc(name)}" placeholder="Nombre"><button type="button" class="btn-nombre-mostrar" title="Nombre a mostrar en Consulta" onclick="editarNombreMostrar('${esc(name).replace(/'/g,"\\'")}')">🈂️</button></td>
       <td><input class="editable-cell nature-input" list="suggest-champions-naturaleza" data-pokemon="${esc(name)}" data-field="naturaleza" value="${esc(d.naturaleza)}" placeholder="Ej: Jolly"></td>
+      <td><input class="editable-cell habilidad-input" list="suggest-champions-habilidad" data-pokemon="${esc(name)}" data-field="habilidad" value="${esc(d.habilidad || '')}" placeholder="Ej: Intimidación" autocomplete="off"></td>
       <td>
         <input class="editable-cell item-input" list="suggest-champions-objeto" data-pokemon="${esc(name)}" data-field="objeto" value="${esc(d.objeto)}" placeholder="Ej: Choice Band">
         <span class="item-icon-wrap">${itemIconHTML(d.objeto)}</span>
@@ -9098,6 +9573,7 @@ function renderTableChampions() {
   bindNameCellEvents(tbody);
   bindMoveTranslationBlur(tbody);
   bindNatureItemTranslationBlur(tbody);
+  enlazarDescripcionesDatos(tbody);
   rebuildChampionsSuggestions();
   renderLitePaginationBar('champions', tbody, page, totalPages);
 }
