@@ -1215,6 +1215,12 @@
   .visor-panel .carta-detalle-ataque-header strong { font-weight: 800; font-style: italic; color: var(--white); }
   .visor-panel .carta-detalle-ataque-dano { margin-left: auto; font-weight: 800; font-size: 0.88rem; color: var(--yellow); }
   .visor-panel .carta-detalle-ataque-efecto { font-size: 0.84rem; line-height: 1.45; color: var(--text); }
+  /* Habilidad: etiqueta roja como en la carta + nombre en rojo */
+  .hab-etiqueta { display: inline-block; flex: 0 0 auto; background: #D32F2F; color: #fff; font-size: 0.62rem; font-weight: 800; font-style: italic; letter-spacing: 0.5px; text-transform: uppercase; line-height: 1.2; padding: 3px 8px 3px; border-radius: 3px; box-shadow: inset 0 1px 0 rgba(255,255,255,0.28), 0 1px 2px rgba(0,0,0,0.45); }
+  .visor-panel .carta-detalle-ataque-header strong.hab-nombre, .hab-vista .hab-nombre { color: #FF5A5A; font-weight: 800; font-style: italic; }
+  .visor-panel .carta-detalle-habilidad { border-left-color: #D32F2F; }
+  .hab-vista { display: flex; align-items: center; gap: 8px; margin: 2px 0 6px; }
+  .hab-vista:empty { display: none; }
   @media (max-width: 760px) {
     #modal-carta-detalle { align-items: flex-start; overflow-y: auto; }
     .visor-carta { flex-direction: column; gap: 14px; max-height: none; align-items: center; }
@@ -10776,12 +10782,37 @@ document.addEventListener('keydown', e => {
 // SOLO aparece si el modal se abrió desde Datos (mazoEditingMode del admin),
 // nunca desde Consulta — así ningún visitante puede cambiar información,
 // sin importar si su navegador tiene o no la contraseña de admin guardada.
+// Una habilidad es un bloque cuyo nombre empieza por «Habilidad» (o «Ability»): «Habilidad», «Habilidad - Pulso Legendario»,
+// «Habilidad: Pulso Legendario»… Se dibuja como en la carta: etiqueta roja «Habilidad» y el nombre en letras rojas.
+function partirHabilidad(nombre) {
+  const m = String(nombre || '').match(/^\s*(?:habilidad|ability)(?![a-záéíóúñ])\s*(?:[-–—:·|]\s*)?(.*)$/i);
+  return m ? { nombre: m[1].trim() } : null;
+}
+function cabeceraHabilidadHTML(h) {
+  return `<span class="hab-etiqueta">Habilidad</span>${h.nombre ? `<strong class="hab-nombre">${textoConSimbolos(h.nombre)}</strong>` : ''}`;
+}
+function actualizarVistaHabilidad(i) {          // vista previa mientras se escribe en el editor de un ataque
+  const inp = document.getElementById(`carta-detalle-ataque-nombre-${i}`), vista = document.getElementById(`carta-detalle-ataque-vista-${i}`);
+  if (!inp || !vista) return;
+  const h = partirHabilidad(inp.value);
+  vista.innerHTML = h ? cabeceraHabilidadHTML(h) : '';
+}
+function agregarHabilidadManualCarta() {        // la habilidad va arriba del todo, como en la carta
+  const carta = obtenerCartaDetalleActual();
+  if (!carta) return;
+  if (!Array.isArray(carta.ataques)) carta.ataques = [];
+  carta.ataques.unshift({ name: 'Habilidad', nombreEs: 'Habilidad - ', damage: '', effect: '', effectEs: '' });
+  persistAll();
+  renderCartaDetalleAtaques(carta);
+  editarAtaqueCarta(0);
+  setTimeout(() => { const el = document.getElementById('carta-detalle-ataque-nombre-0'); if (el) { el.focus(); el.setSelectionRange(el.value.length, el.value.length); } }, 30);
+}
 function renderCartaDetalleAtaques(carta) {
   const cont = document.getElementById('carta-detalle-ataques');
   const ataques = Array.isArray(carta.ataques) ? carta.ataques : [];
   const permitirEditar = !!(cartaDetalleActual && cartaDetalleActual.permitirEditar);
   const botonAgregar = permitirEditar
-    ? `<button type="button" class="btn btn-primary" style="width:100%;margin-top:6px;padding:6px;font-size:0.75rem" onclick="agregarAtaqueManualCarta()">➕ Agregar ataque</button>`
+    ? `<div style="display:flex;gap:6px;margin-top:6px"><button type="button" class="btn btn-primary" style="flex:1;padding:6px;font-size:0.75rem;justify-content:center" onclick="agregarAtaqueManualCarta()">➕ Agregar ataque</button><button type="button" class="btn btn-primary" style="flex:1;padding:6px;font-size:0.75rem;justify-content:center" onclick="agregarHabilidadManualCarta()">➕ Agregar habilidad</button></div>`
     : '';
   if (!ataques.length) {
     const hayDescripcion = !!(carta.descripcion && String(carta.descripcion).trim());
@@ -10790,12 +10821,13 @@ function renderCartaDetalleAtaques(carta) {
   }
   cont.innerHTML = ataques.map((a, i) => {
     const nombre = a.nombreEs || a.name || '';
-    const dano = (a.damage !== undefined && a.damage !== null && a.damage !== '') ? `<span class="carta-detalle-ataque-dano">${esc(String(a.damage))} de daño</span>` : '';
+    const dano = (a.damage !== undefined && a.damage !== null && a.damage !== '') ? `<span class="carta-detalle-ataque-dano">${esc(String(a.damage))}</span>` : '';
     const efectoTexto = a.effectEs || (a.effect ? traducirTextoAtaqueTcg(a.effect) : '');
     if (!permitirEditar && !nombre && !dano && !efectoTexto) return '';   // ataque vacío: no se muestra a quien solo mira
-    return `<div class="carta-detalle-ataque" id="carta-detalle-ataque-${i}">
+    const hab = partirHabilidad(nombre);
+    return `<div class="carta-detalle-ataque${hab ? ' carta-detalle-habilidad' : ''}" id="carta-detalle-ataque-${i}">
       <div class="carta-detalle-ataque-header">
-        ${nombre ? `<strong>${textoConSimbolos(nombre).replace(/(<img class="tcg-energy-inline"[^>]*>)(?=[^<\s])/g, '$1 ')}</strong>` : ''}${dano}
+        ${hab ? cabeceraHabilidadHTML(hab) : (nombre ? `<strong>${textoConSimbolos(nombre).replace(/(<img class="tcg-energy-inline"[^>]*>)(?=[^<\s])/g, '$1 ')}</strong>` : '')}${dano}
         ${permitirEditar ? `<button type="button" class="btn-editar-ataque" title="Editar este ataque" onclick="editarAtaqueCarta(${i})">✏️</button><button type="button" class="btn-editar-ataque btn-eliminar-ataque" title="Eliminar este ataque" onclick="eliminarAtaqueCarta(${i})">🗑️</button>` : ''}
       </div>
       ${efectoTexto ? `<div class="carta-detalle-ataque-efecto" id="carta-detalle-ataque-efecto-${i}">${textoConSimbolos(efectoTexto)}</div>` : ''}
@@ -10888,7 +10920,8 @@ function editarAtaqueCarta(i) {
   if (!bloque) return;
   bloque.innerHTML = `
     ${paletaAtaqueHTML(i)}
-    <input type="text" class="carta-detalle-ataque-input" id="carta-detalle-ataque-nombre-${i}" placeholder="Nombre del ataque (puedes poner símbolos, ej.: {W}{C} Cola Destructora)" value="${esc(nombreActual)}" onfocus="window._ataqueCampoFoco=this.id">
+    <input type="text" class="carta-detalle-ataque-input" id="carta-detalle-ataque-nombre-${i}" placeholder="Nombre del ataque (símbolos: {W}{C} Cola Destructora). Para una habilidad escribe: Habilidad - Nombre" value="${esc(nombreActual)}" oninput="actualizarVistaHabilidad(${i})" onfocus="window._ataqueCampoFoco=this.id">
+    <div class="hab-vista" id="carta-detalle-ataque-vista-${i}"></div>
     <input type="text" class="carta-detalle-ataque-input" id="carta-detalle-ataque-dano-${i}" placeholder="Daño (opcional)" value="${esc(String(danoActual))}">
     <textarea class="carta-detalle-ataque-textarea" id="carta-detalle-ataque-textarea-${i}" placeholder="Efecto del ataque (opcional). Símbolos: {D}, {R}, {W}…" onfocus="window._ataqueCampoFoco=this.id">${esc(efectoActual)}</textarea>
     <div class="modal-btns" style="justify-content:flex-start;margin-top:6px">
@@ -10897,6 +10930,7 @@ function editarAtaqueCarta(i) {
       <button type="button" class="btn" style="padding:4px 10px;font-size:0.72rem;background:#c0392b;color:#fff;margin-left:auto" onclick="eliminarAtaqueCarta(${i})">🗑️ Eliminar</button>
     </div>
   `;
+  actualizarVistaHabilidad(i);
 }
 
 // Elimina un ataque de la carta (por ejemplo, uno agregado por error).
