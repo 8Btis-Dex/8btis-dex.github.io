@@ -4316,7 +4316,7 @@
   <div id="mazo-editor-template">
     <div class="mazo-cards-list" id="mazo-cards-list"></div>
     <div class="mazo-add-card-row">
-      <input type="text" id="mazo-add-pokemon-input" placeholder="Buscar Pokémon, Entrenador u Objeto..." list="pokemon-datalist-mazos" oninput="onMazoPokemonInput()">
+      <input type="text" id="mazo-add-pokemon-input" placeholder="Buscar Pokémon, Entrenador u Objeto (en español o en inglés)..." list="pokemon-datalist-mazos" oninput="onMazoPokemonInput()">
       <select id="mazo-add-carta-select" style="display:none"></select>
       <button class="btn btn-primary" onclick="addCardToMazo()">➕ Agregar</button>
     </div>
@@ -11959,12 +11959,24 @@ function ensurePokemonDatalistMazos(mode) {
   if (existing) existing.remove();
   const datalist = document.createElement('datalist');
   datalist.id = 'pokemon-datalist-mazos';
+  // Cada sugerencia lleva el «Nombre a mostrar en Consulta» (el que ve el visitante); si el nombre original es distinto
+  // (por ejemplo, en inglés), va como etiqueta gris y también se puede escribir para buscar.
   getMazosPokemonList(mode).forEach(name => {
+    const mostrar = traducirNombrePokemon(name) || name;
     const opt = document.createElement('option');
-    opt.value = name;
+    opt.value = mostrar;
+    if (normDesc(mostrar) !== normDesc(name)) opt.label = name;
     datalist.appendChild(opt);
   });
   document.body.appendChild(datalist);
+}
+// Convierte lo escrito en el buscador de cartas del mazo en el nombre real (interno) del Pokémon: acepta el nombre a
+// mostrar (español) o el original, sin importar mayúsculas ni tildes.
+function resolverNombrePokemonMazo(texto, mode) {
+  const q = normDesc(texto);
+  if (!q) return null;
+  const lista = getMazosPokemonList(mode);
+  return lista.find(p => normDesc(p) === q) || lista.find(p => normDesc(traducirNombrePokemon(p)) === q) || null;
 }
 
 function openMazoCardsModal(idx, mode) {
@@ -12026,7 +12038,7 @@ function onMazoPokemonInput() {
   const input = document.getElementById('mazo-add-pokemon-input');
   const select = document.getElementById('mazo-add-carta-select');
   const tcgData = getMazosTcgData(mazoEditingMode);
-  const name = getMazosPokemonList(mazoEditingMode).find(p => p.toLowerCase() === input.value.trim().toLowerCase());
+  const name = resolverNombrePokemonMazo(input.value, mazoEditingMode);
   if (!name || !tcgData[name] || !Array.isArray(tcgData[name].cartas) || !tcgData[name].cartas.length) {
     select.style.display = 'none';
     select.innerHTML = '';
@@ -12041,7 +12053,7 @@ function addCardToMazo() {
   if (!mazo) return;
   const input = document.getElementById('mazo-add-pokemon-input');
   const select = document.getElementById('mazo-add-carta-select');
-  const name = getMazosPokemonList(mazoEditingMode).find(p => p.toLowerCase() === input.value.trim().toLowerCase());
+  const name = resolverNombrePokemonMazo(input.value, mazoEditingMode);
   if (!name) { showToast('❌ Elige un Pokémon, Entrenador u Objeto válido de la lista', true); return; }
   if (select.style.display === 'none' || !select.value) { showToast('❌ Esa carta no tiene variantes registradas', true); return; }
   if (mazo.cartas.length >= MAZO_MAX_CARTAS) { showToast(`⚠️ Este mazo ya tiene el máximo de ${MAZO_MAX_CARTAS} cartas`, true); return; }
@@ -12055,12 +12067,10 @@ function addCardToMazo() {
   mazo.cartas.push({ pokemon: name, id: carta.id, idx });
   if (!Number.isInteger(mazo.principal)) mazo.principal = 0;
   persistAll();
-  input.value = '';
-  select.style.display = 'none';
-  select.innerHTML = '';
+  // El nombre escrito y la variante elegida NO se borran: así se puede agregar otra copia igual. Se cambian al escribir otra carta.
   renderMazoCardsList();
   renderMazos(mazoEditingMode);
-  showToast('✅ Carta agregada al mazo');
+  showToast(`✅ Carta agregada al mazo (copias de esta carta: ${already + 1}/2)`);
 }
 
 function removeCardFromMazo(i) {
