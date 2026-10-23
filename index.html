@@ -14148,8 +14148,8 @@ function trueqeNormWa(v) { return (v || '').replace(/\D/g, ''); }
 // expansión y logo de la expansión) consultando la misma API que ya usa el
 // resto de la app. Se guarda en localStorage para no volver a descargarlo
 // cada vez que se abre la sección de trueques.
-const TRUEQUE_CARD_INDEX_CACHE_KEY = 'trueque_card_index_v10';
-try { localStorage.removeItem('trueque_card_index_v3'); localStorage.removeItem('trueque_card_index_v4'); localStorage.removeItem('trueque_card_index_v5'); localStorage.removeItem('trueque_card_index_v6'); localStorage.removeItem('trueque_card_index_v7'); localStorage.removeItem('trueque_card_index_v8'); localStorage.removeItem('trueque_card_index_v9'); } catch (e) { /* cachés viejos */ }
+const TRUEQUE_CARD_INDEX_CACHE_KEY = 'trueque_card_index_v11';
+try { localStorage.removeItem('trueque_card_index_v3'); localStorage.removeItem('trueque_card_index_v4'); localStorage.removeItem('trueque_card_index_v5'); localStorage.removeItem('trueque_card_index_v6'); localStorage.removeItem('trueque_card_index_v7'); localStorage.removeItem('trueque_card_index_v8'); localStorage.removeItem('trueque_card_index_v9'); localStorage.removeItem('trueque_card_index_v10'); } catch (e) { /* cachés viejos */ }
 const TRUEQUE_CARD_INDEX_MAX_AGE = 1000 * 60 * 60 * 24 * 3; // 3 días
 let TRUEQUE_CARD_INDEX = null; // null = todavía no cargado
 let trueqeCardIndexLoading = null; // Promise en curso, para no duplicar pedidos
@@ -14190,6 +14190,35 @@ const TRUEQUE_RAREZAS = {
   SHEX: { sim: '✦✦',   costo: 30000 }
 };
 const TRUEQUE_NO_CAMBIABLES = ['IM', 'CR'];   // 3 estrellas y corona no se cambian (las promo se descartan por expansión)
+
+// ── RAREZAS CONFIRMADAS A MANO (mandan sobre lo que digan las fuentes automáticas) ──
+// Cada tramo es [desde, hasta, rareza] con el número de carta dentro de la expansión.
+//   SAR = ★★ · SH = ✦ · SHEX = ✦✦ · CR = corona (no se cambia).
+// Se identifica la expansión por su código o, si no se conoce, por palabras de su nombre.
+const TRUEQUE_RAREZA_MANUAL = [
+  { id: 'A1',  tramos: [[265, 265, 'SAR']] },
+  { id: 'B2a', tramos: [[119, 125, 'SH'], [126, 129, 'SHEX'], [130, 131, 'CR']] },
+  { id: 'A4b', tramos: [[360, 372, 'SAR'], [377, 378, 'SHEX']] },
+  { id: 'B2b', tramos: [[76, 80, 'SAR'], [87, 110, 'SH'], [111, 115, 'SHEX'], [116, 116, 'CR']] },
+  { id: 'B3',  tramos: [[180, 189, 'SAR'], [205, 224, 'SH'], [225, 232, 'SHEX'], [233, 234, 'CR']] },
+  { id: 'B3a', tramos: [[81, 85, 'SAR'], [94, 103, 'SH'], [104, 107, 'SHEX'], [108, 109, 'CR']] },
+  { id: 'B3b', tramos: [[78, 82, 'SAR'], [91, 100, 'SH'], [101, 104, 'SHEX'], [105, 105, 'CR']] },
+  { id: 'B4',  tramos: [[180, 189, 'SAR'], [204, 223, 'SH'], [224, 231, 'SHEX'], [232, 233, 'CR']] },
+  { nombre: [/rocket/i], tramos: [[79, 84, 'SAR'], [95, 104, 'SH'], [105, 108, 'SHEX'], [109, 109, 'CR']] },            // Team Rocket's
+  { nombre: [/deluxe/i, /mega/i], tramos: [[409, 420, 'SAR'], [426, 427, 'SHEX'], [428, 429, 'CR']] }                  // Deluxe Pack: Mega
+];
+function trueqeRarezaManual(setId, nombres, num) {
+  if (isNaN(num)) return '';
+  const k = trueqeSetKey(setId);
+  const txt = (nombres || []).filter(Boolean).join(' | ');
+  for (const e of TRUEQUE_RAREZA_MANUAL) {
+    const coincide = e.id ? (trueqeSetKey(e.id) === k) : (txt && e.nombre.every(r => r.test(txt)));
+    if (!coincide) continue;
+    const t = e.tramos.find(x => num >= x[0] && num <= x[1]);
+    if (t) return t[2];
+  }
+  return '';
+}
 let TRUEQUE_PD_RAR = new Map();
 let TRUEQUE_PD_REC = new Map();               // "codigoSet|número" -> ficha de PocketDecks (ataques, habilidad, texto)               // "codigoSet|número" -> rareza (texto de PocketDecks)
 let TRUEQUE_RAR_LOOKUP = null;                // "codigoSet|número" -> código de rareza (desde el índice)
@@ -14233,6 +14262,8 @@ function trueqePolvoHtml(n) {
 // Rareza de una carta: la que trae guardada o, si es una publicación vieja, la del índice de cartas.
 function trueqeRarezaDe(card) {
   if (!card) return '';
+  const man = trueqeRarezaManual(card.setId, [card.setName], parseInt(card.localId, 10));
+  if (man) return man;
   if (card.rarity) return card.rarity;
   if (!TRUEQUE_CARD_INDEX || !TRUEQUE_CARD_INDEX.length) return '';
   if (!TRUEQUE_RAR_LOOKUP) {
@@ -14350,7 +14381,7 @@ async function trueqeBuildCardIndex() {
       }
       // Rareza: la de la carta, o la del respaldo, o la de PocketDecks.
       const num = parseInt(card.localId, 10);
-      const rarity = trueqeRarezaCodigo(card.rarity) ||
+      const rarity = trueqeRarezaManual(s.id, [s.name, setNameEs], num) || trueqeRarezaCodigo(card.rarity) ||
         ((flibRar.get(s.id) || new Map()).get(num)) ||
         trueqeRarezaCodigo(TRUEQUE_PD_RAR.get(trueqeSetKey(s.id) + '|' + num));
       if (TRUEQUE_NO_CAMBIABLES.includes(rarity)) return;   // corona y 3 estrellas no se cambian
@@ -14377,11 +14408,12 @@ async function trueqeBuildCardIndex() {
     if (nombres.has(setNameEs)) return;
     nombres.add(setNameEs);
     g.cards.sort((a, b) => a.num - b.num).forEach(c => {
-      if (TRUEQUE_NO_CAMBIABLES.includes(c.rar)) return;
+      const rarMan = trueqeRarezaManual(g.code, [g.name, setNameEs], c.num) || c.rar;
+      if (TRUEQUE_NO_CAMBIABLES.includes(rarMan)) return;
       index.push({
         name: c.name,
         image: c.image,
-        rarity: c.rar || '',
+        rarity: rarMan || '',
         setId: g.code,
         setName: setNameEs,
         setLogo: trueqeSetIconUrl(g.code),
