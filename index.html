@@ -1238,11 +1238,12 @@
   .btn.btn-contorno { background: transparent; border: 1px solid var(--yellow); color: var(--yellow); padding: 8px 18px; transition: background 0.15s, color 0.15s, transform 0.15s; }
   .btn.btn-contorno:hover { background: var(--yellow); color: var(--black); transform: translateY(-1px); }
 
-  /* Cabecera con el logo y las letras de imagen. Logo (pokebola + 8 BITS + Pokémon): caja de 180 × 200 px en PC y 150 px en móvil, ajustado con object-fit: contain. */
+  /* Cabecera con el logo y las letras de imagen. Logo (pokebola + 8 BITS + Pokémon): caja de 140 × 260 px en PC y 96 × 178 px en móvil (object-fit: contain); título pegado al logo. */
   .site-title-logo { font-size: 0; line-height: 0; -webkit-text-stroke: 0; }
   .site-title-logo::before { display: none; }
   .site-title-logo img { display: block; width: min(100%, 380px); height: auto; margin: 0 auto; }
-  @media (min-width: 601px) { header .header-inner .pokeball-icon { width: 180px; height: 200px; } header .header-inner { gap: 32px; } }
+  @media (min-width: 601px) { header .header-inner .pokeball-icon { width: 140px; height: 260px; } header .header-inner { gap: 14px; justify-content: center; } header .header-text { flex: 0 1 380px; } }
+  @media (max-width: 600px) { header .header-inner .pokeball-icon { width: 96px; height: 178px; } header .header-inner { gap: 12px; } }
 
   /* MAZOS — Consulta */
   .mazo-row {
