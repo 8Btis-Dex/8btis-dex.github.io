@@ -3506,6 +3506,27 @@
   .tgo-offer.multi { flex-direction: column; align-items: stretch; gap: 6px; }
   .tgo-offer.multi .o-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(64px, 84px)); gap: 8px; }
   .tgo-offer.multi.done .o-cards { opacity: 0.55; }
+  .trueque-chip .chip-n, .trade-mini .pair-n { flex: 0 0 auto; min-width: 18px; height: 18px; padding: 0 4px; border-radius: 9px; background: var(--purple); color: #fff;
+    font-size: 0.68rem; font-weight: 800; display: flex; align-items: center; justify-content: center; }
+  .trade-mini.pair { position: relative; }
+  .trade-mini .pair-n { position: absolute; top: 3px; left: 3px; z-index: 1; box-shadow: 0 1px 4px rgba(0,0,0,0.6); }
+  .tgo-offer .o-pair { font-size: 0.68rem; color: var(--muted); font-weight: 600; margin-left: 4px; }
+  /* ── Rareza y costo en polvo iris (TCG Pocket) ── */
+  .polvo { display: inline-flex; align-items: center; gap: 4px; font-weight: 800; color: #9fe8e0; white-space: nowrap; }
+  .polvo-ico { height: 1.25em; width: auto; vertical-align: middle; }
+  .tgo-tile .t-rar { font-size: 0.62rem; color: #ffd75e; line-height: 1; margin-top: 1px; }
+  .tgo-offer .o-cost { font-size: 0.74rem; margin: 2px 0 4px; color: var(--muted); }
+  .x-cost { margin-top: 8px; font-size: 0.78rem; }
+  .trueque-chip .chip-rar, .dd-rar { color: #ffd75e; font-weight: 800; font-size: 0.7rem; }
+  .trueque-chip.mismatch { border-color: #e57373; background: rgba(229,115,115,0.12); }
+  .trueque-req-note { grid-column: 1 / -1; font-size: 0.74rem; padding: 6px 8px; border-radius: 8px; background: rgba(155,89,182,0.18); border: 1px solid rgba(155,89,182,0.5); }
+  .trueque-costo:empty { display: none; }
+  .trueque-costo { margin: 8px 0; padding: 8px 10px; border-radius: 10px; background: rgba(0,0,0,0.25); border: 1px solid rgba(159,232,224,0.35); font-size: 0.8rem; }
+  .trueque-costo .cr-title { font-weight: 800; margin-bottom: 4px; }
+  .trueque-costo .cr-fila { padding: 2px 0; }
+  .trueque-costo .cr-fila.mal { color: #ff8a80; font-weight: 700; }
+  .trueque-costo .cr-fila.pend { color: var(--muted); }
+  .trueque-costo .cr-total { margin-top: 4px; padding-top: 4px; border-top: 1px solid rgba(255,255,255,0.12); font-weight: 800; }
   .vo-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 8px 4px; border-top: 1px solid rgba(255,255,255,0.08); font-size: 0.85rem; }
   .vo-row .vo-ico { width: 32px; height: 32px; object-fit: contain; flex: 0 0 auto; }
   .vo-row .vo-none { display: inline-flex; align-items: center; justify-content: center; border-radius: 6px; background: rgba(255,255,255,0.08); color: var(--muted); }
@@ -4059,6 +4080,7 @@
           <span id="trueque-admin-como-wrap" style="display:none"> · Publicar como <select id="trueque-admin-como" class="trueque-input" style="width:auto;display:inline-block;padding:4px 8px" onchange="adminElegirIdentidad(this.value)"></select></span>
         </div>
         <h3>➕ Publicar intercambio <button type="button" class="trueque-refresh-btn" onclick="trueqeRefrescarIndice()" title="Vuelve a descargar las cartas y expansiones">↻ Actualizar cartas</button></h3>
+        <div class="trueque-chosen-empty" style="margin:0 0 8px">Puedes elegir varias cartas: la 1.ª que buscas se cambia por la 1.ª que ofreces, la 2.ª por la 2.ª, y así sucesivamente.</div>
         <div class="trueque-side busca">
           <div class="trueque-side-title">🔍 Qué busco</div>
           <div class="trueque-chosen" id="trueque-chosen-busca"></div>
@@ -4087,6 +4109,7 @@
             <div class="trueque-dd-grid" id="trueque-dd-grid-ofrece"></div>
           </div>
         </div>
+        <div id="trueque-costo-resumen" class="trueque-costo"></div>
         <input class="trueque-input" id="trueque-card-notes" type="text" placeholder="Notas (opcional)">
         <button class="btn btn-primary" onclick="trueqeAgregarCarta()">Publicar</button>
       </div>
@@ -14109,8 +14132,8 @@ function trueqeNormWa(v) { return (v || '').replace(/\D/g, ''); }
 // expansión y logo de la expansión) consultando la misma API que ya usa el
 // resto de la app. Se guarda en localStorage para no volver a descargarlo
 // cada vez que se abre la sección de trueques.
-const TRUEQUE_CARD_INDEX_CACHE_KEY = 'trueque_card_index_v6';
-try { localStorage.removeItem('trueque_card_index_v3'); localStorage.removeItem('trueque_card_index_v4'); localStorage.removeItem('trueque_card_index_v5'); } catch (e) { /* cachés viejos */ }
+const TRUEQUE_CARD_INDEX_CACHE_KEY = 'trueque_card_index_v7';
+try { localStorage.removeItem('trueque_card_index_v3'); localStorage.removeItem('trueque_card_index_v4'); localStorage.removeItem('trueque_card_index_v5'); localStorage.removeItem('trueque_card_index_v6'); } catch (e) { /* cachés viejos */ }
 const TRUEQUE_CARD_INDEX_MAX_AGE = 1000 * 60 * 60 * 24 * 3; // 3 días
 let TRUEQUE_CARD_INDEX = null; // null = todavía no cargado
 let trueqeCardIndexLoading = null; // Promise en curso, para no duplicar pedidos
@@ -14136,6 +14159,94 @@ function trueqeSetKey(code) {
   return k;
 }
 
+// ── RAREZA Y COSTO EN POLVO IRIS ───────────────────────────────────────────
+// Solo se pueden cambiar cartas de la misma rareza. Las de corona, las de 3 estrellas y
+// las promo no se pueden cambiar. Cada cambio cuesta polvo iris según la rareza.
+const TRUEQUE_POLVO_ICON = 'data:image/png;base64,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';
+const TRUEQUE_RAREZAS = {
+  C:    { sim: '♦',    costo: 0 },
+  U:    { sim: '♦♦',   costo: 0 },
+  R:    { sim: '♦♦♦',  costo: 1200 },
+  RR:   { sim: '♦♦♦♦', costo: 5000 },
+  AR:   { sim: '★',    costo: 4000 },
+  SAR:  { sim: '★★',   costo: 25000 },
+  SH:   { sim: '✦',    costo: 10000 },
+  SHEX: { sim: '✦✦',   costo: 30000 }
+};
+const TRUEQUE_NO_CAMBIABLES = ['IM', 'CR'];   // 3 estrellas y corona
+let TRUEQUE_PD_RAR = new Map();               // "codigoSet|número" -> rareza (texto de PocketDecks)
+let TRUEQUE_RAR_LOOKUP = null;                // "codigoSet|número" -> código de rareza (desde el índice)
+
+function trueqeRarezaCodigo(raw) {
+  const s = String(raw == null ? '' : raw).trim();
+  if (!s) return '';
+  if (/^(C|U|R|RR|AR|SAR|IM|SH|SHEX|CR)$/.test(s)) return s;
+  const l = s.toLowerCase();
+  if (/♛|crown|corona/.test(l)) return 'CR';
+  const brillos = (s.match(/[✵✦✶✴✷]/g) || []).length;
+  if (brillos >= 2 || /two shiny|2 shiny|double shiny|shiny super|dos brillo|brillo doble/.test(l)) return 'SHEX';
+  if (brillos === 1 || /shiny|brillo/.test(l)) return 'SH';
+  const estrellas = (s.match(/[☆★]/g) || []).length;
+  if (estrellas >= 3 || /three star|3 star|immersive|tres estrella/.test(l)) return 'IM';
+  if (estrellas === 2 || /two star|2 star|special art|super rare|dos estrella/.test(l)) return 'SAR';
+  if (estrellas === 1 || /one star|1 star|art rare|una estrella/.test(l)) return 'AR';
+  const rombos = (s.match(/[◊♦◇♢]/g) || []).length;
+  if (rombos >= 4 || /four diamond|4 diamond|double rare|cuatro diamante/.test(l)) return 'RR';
+  if (rombos === 3 || /three diamond|3 diamond|tres diamante/.test(l)) return 'R';
+  if (rombos === 2 || /two diamond|2 diamond|uncommon|dos diamante/.test(l)) return 'U';
+  if (rombos === 1 || /one diamond|1 diamond|common|un diamante/.test(l)) return 'C';
+  return '';
+}
+function trueqeEsPromo(setId) {
+  const k = trueqeSetKey(setId);
+  return k === 'pa' || k === 'pb' || /^promo/i.test(String(setId || ''));
+}
+function trueqeSim(code) { return TRUEQUE_RAREZAS[code] ? TRUEQUE_RAREZAS[code].sim : '?'; }
+function trueqePolvoHtml(n) {
+  return `<span class="polvo"><img class="polvo-ico" src="${TRUEQUE_POLVO_ICON}" alt="Polvo Iris" title="Polvo Iris">${Number(n).toLocaleString('es-AR')}</span>`;
+}
+// Rareza de una carta: la que trae guardada o, si es una publicación vieja, la del índice de cartas.
+function trueqeRarezaDe(card) {
+  if (!card) return '';
+  if (card.rarity) return card.rarity;
+  if (!TRUEQUE_CARD_INDEX || !TRUEQUE_CARD_INDEX.length) return '';
+  if (!TRUEQUE_RAR_LOOKUP) {
+    TRUEQUE_RAR_LOOKUP = new Map();
+    TRUEQUE_CARD_INDEX.forEach(c => {
+      const n = parseInt(c.localId, 10);
+      if (c.rarity && !isNaN(n)) TRUEQUE_RAR_LOOKUP.set(trueqeSetKey(c.setId) + '|' + n, c.rarity);
+    });
+  }
+  const n = parseInt(card.localId, 10);
+  return isNaN(n) ? '' : (TRUEQUE_RAR_LOOKUP.get(trueqeSetKey(card.setId) + '|' + n) || '');
+}
+// Rarezas del respaldo (pokemon-tcg-pocket-database): las cartas de TCGdex no traen la rareza en el listado del set.
+async function trueqeFlibRarezas(setId) {
+  const m = new Map();
+  try {
+    const data = await fetchJson(FLIB_CARDS_URL(setId));
+    if (Array.isArray(data)) data.forEach(c => {
+      const n = parseInt(c.number, 10), code = trueqeRarezaCodigo(c.rarity);
+      if (!isNaN(n) && code) m.set(n, code);
+    });
+  } catch (e) { /* sin rarezas de esta fuente: se intenta con PocketDecks */ }
+  return m;
+}
+// Costo de una publicación (pares 1.ª con 1.ª, 2.ª con 2.ª...) para mostrar en «Mis publicaciones».
+function trueqeCostoPostHtml(t) {
+  const n = t.busca.length;
+  if (!n || n !== t.ofrece.length) return '';
+  const partes = []; let total = 0;
+  for (let i = 0; i < n; i++) {
+    const r = TRUEQUE_RAREZAS[trueqeRarezaDe(t.busca[i]) || trueqeRarezaDe(t.ofrece[i])];
+    if (!r) continue;
+    total += r.costo;
+    partes.push(`${n > 1 ? (i + 1) + ') ' : ''}${r.sim} ${trueqePolvoHtml(r.costo)}`);
+  }
+  if (!partes.length) return '';
+  return `<div class="x-cost">💎 Costo del cambio: ${partes.join(' · ')}${n > 1 ? ` · <b>Total</b> ${trueqePolvoHtml(total)}` : ''}</div>`;
+}
+
 function trueqeSetIconUrl(setId) {
   const k = trueqeSetKey(setId);
   return k ? setCodeAIconoUrl(k) : '';
@@ -14144,6 +14255,7 @@ function trueqeSetIconUrl(setId) {
 // Arma el mapa de imágenes y devuelve las cartas de Pokémon agrupadas por set.
 function trueqeBuildPdMap(pd) {
   const map = new Map();
+  const rarMap = new Map();
   const groups = new Map();
   (pd || []).forEach(c => {
     if (!c || !c.image_png || !c.name) return;
@@ -14153,13 +14265,15 @@ function trueqeBuildPdMap(pd) {
     const key = trueqeSetKey(code);
     if (!key || isNaN(num)) return;
     map.set(key + '|' + num, c.image_png);
+    rarMap.set(key + '|' + num, c.rarity || '');
     // Solo cartas de Pokémon (las de Entrenador no tienen ataques ni se intercambian).
     if (attacksObjetoAArray(c.attacks).length > 0) {
       if (!groups.has(key)) groups.set(key, { code, name: c.set_name, cards: [] });
-      groups.get(key).cards.push({ name: c.name, image: c.image_png, num });
+      groups.get(key).cards.push({ name: c.name, image: c.image_png, num, rar: trueqeRarezaCodigo(c.rarity) });
     }
   });
   TRUEQUE_PD_MAP = map;
+  TRUEQUE_PD_RAR = rarMap;
   return groups;
 }
 
@@ -14183,10 +14297,13 @@ async function trueqeBuildCardIndex() {
 
   const sets = await fetchTcgPocketSetsFromApi();
   if (!sets.length && !groups.size) complete = false;
+  // Rarezas por expansión (en paralelo): las promo no se cambian, así que se omiten.
+  const flibRar = new Map(await Promise.all(sets.filter(x => !trueqeEsPromo(x.id)).map(async x => [x.id, await trueqeFlibRarezas(x.id)])));
   const usados = new Set();   // sets (por código) que ya aportaron cartas
   const nombres = new Set();  // nombres de expansión ya presentes
 
   for (const s of sets) {
+    if (trueqeEsPromo(s.id)) continue;   // las cartas promo no se pueden cambiar
     let cards = [];
     for (let intento = 0; intento < 2 && !cards.length; intento++) {
       try { cards = await fetchTcgPocketSetCards(s.id); } catch (e) { cards = []; }
@@ -14203,9 +14320,16 @@ async function trueqeBuildCardIndex() {
       if (!image || /pokemon-tcg-pocket-database/.test(image)) {
         image = trueqePdImage(s.id, card.localId) || image;
       }
+      // Rareza: la de la carta, o la del respaldo, o la de PocketDecks.
+      const num = parseInt(card.localId, 10);
+      const rarity = trueqeRarezaCodigo(card.rarity) ||
+        ((flibRar.get(s.id) || new Map()).get(num)) ||
+        trueqeRarezaCodigo(TRUEQUE_PD_RAR.get(trueqeSetKey(s.id) + '|' + num));
+      if (TRUEQUE_NO_CAMBIABLES.includes(rarity)) return;   // corona y 3 estrellas no se cambian
       index.push({
         name: card.name,
         image,
+        rarity: rarity || '',
         setId: s.id,
         setName: setNameEs,
         setLogo: s.logo ? `${s.logo}.png` : trueqeSetIconUrl(s.id),
@@ -14220,13 +14344,16 @@ async function trueqeBuildCardIndex() {
   // Expansiones que solo conoce PocketDecks (las más nuevas): se agregan completas.
   groups.forEach((g, key) => {
     if (usados.has(key)) return;
+    if (trueqeEsPromo(g.code)) return;
     const setNameEs = traducirExpansionTcgApi(g.name) || g.name || g.code;
     if (nombres.has(setNameEs)) return;
     nombres.add(setNameEs);
     g.cards.sort((a, b) => a.num - b.num).forEach(c => {
+      if (TRUEQUE_NO_CAMBIABLES.includes(c.rar)) return;
       index.push({
         name: c.name,
         image: c.image,
+        rarity: c.rar || '',
         setId: g.code,
         setName: setNameEs,
         setLogo: trueqeSetIconUrl(g.code),
@@ -14491,22 +14618,35 @@ function trueqePickerUpdateToggle(side) {
   btn.textContent = (abierto ? '▴ Ocultar cartas' : '▾ Ver cartas de la expansión');
 }
 
+// Rareza que debe tener la próxima carta de este lado: la de la carta del mismo número del otro lado.
+function trueqeRarezaRequerida(side) {
+  const otro = side === 'busca' ? 'ofrece' : 'busca';
+  const i = trueqeSel[side].length;
+  const c = trueqeSel[otro][i];
+  return c ? { idx: i, rar: c.rarity || '' } : null;
+}
+
 function trueqePickerRender(side) {
   const exp = document.getElementById('trueque-exp-' + side).value;
   const grid = document.getElementById('trueque-dd-grid-' + side);
   if (!exp || !TRUEQUE_CARD_INDEX) { grid.innerHTML = ''; return; }
+  const scroll = grid.scrollTop;
   const q = trueqeNormalizeSearch(document.getElementById('trueque-dd-search-' + side).value);
+  const req = trueqeRarezaRequerida(side);
   const view = TRUEQUE_CARD_INDEX.filter(c =>
-    c.setName === exp && (!q || trueqeNormalizeSearch(c.name).includes(q))
+    c.setName === exp && (!q || trueqeNormalizeSearch(c.name).includes(q)) && (!req || !req.rar || c.rarity === req.rar)
   );
   trueqePickerView[side] = view;
   const chosen = new Set(trueqeSel[side].map(trueqeCardKey));
-  grid.innerHTML = view.length ? view.map((c, i) => `
+  const aviso = (req && req.rar && TRUEQUE_RAREZAS[req.rar])
+    ? `<div class="trueque-req-note">Solo cartas de rareza <b>${trueqeSim(req.rar)}</b>, para cambiar por la carta ${req.idx + 1} del otro lado. Costo: ${trueqePolvoHtml(TRUEQUE_RAREZAS[req.rar].costo)}</div>` : '';
+  grid.innerHTML = aviso + (view.length ? view.map((c, i) => `
     <div class="trueque-dd-item${chosen.has(trueqeCardKey(c)) ? ' sel' : ''}" title="${trueqeEsc(c.name)}" onclick="trueqePickerToggleCard('${side}', ${i}, this)">
       ${trueqeImgHtml(c, true)}
-      <div class="dd-name">${c.localId ? '#' + trueqeEsc(String(c.localId)) + ' ' : ''}${trueqeEsc(c.name)}</div>
+      <div class="dd-name">${c.localId ? '#' + trueqeEsc(String(c.localId)) + ' ' : ''}${trueqeEsc(c.name)}${c.rarity ? ` <span class="dd-rar">${trueqeSim(c.rarity)}</span>` : ''}</div>
     </div>
-  `).join('') : '<div class="trueque-autocomplete-empty" style="grid-column:1/-1">No hay cartas con ese nombre en esta expansión.</div>';
+  `).join('') : `<div class="trueque-autocomplete-empty" style="grid-column:1/-1">${req && req.rar ? 'No hay cartas de esa rareza en esta expansión.' : 'No hay cartas con ese nombre en esta expansión.'}</div>`);
+  grid.scrollTop = scroll;
 }
 
 function trueqePickerToggleCard(side, i, el) {
@@ -14521,6 +14661,11 @@ function trueqePickerToggleCard(side, i, el) {
   } else {
     if (list.length >= TRUEQUE_MAX_POR_LADO) {
       showToast('⚠️ Máximo ' + TRUEQUE_MAX_POR_LADO + ' cartas en cada lado', true);
+      return;
+    }
+    const req = trueqeRarezaRequerida(side);
+    if (req && req.rar && card.rarity !== req.rar) {
+      showToast(`⚠️ Esa carta no es de rareza ${trueqeSim(req.rar)}: solo se cambian cartas de la misma rareza.`, true);
       return;
     }
     const im = el && el.querySelector('img');
@@ -14542,16 +14687,53 @@ function trueqeRenderChosen(side) {
   const el = document.getElementById('trueque-chosen-' + side);
   if (!el) return;
   const list = trueqeSel[side];
-  el.innerHTML = list.length ? list.map((c, i) => `
-    <div class="trueque-chip">
+  const otroLado = side === 'busca' ? 'ofrece' : 'busca';
+  el.innerHTML = list.length ? list.map((c, i) => {
+    const par = trueqeSel[otroLado][i];
+    const mal = par && c.rarity && par.rarity && par.rarity !== c.rarity;
+    return `
+    <div class="trueque-chip${mal ? ' mismatch' : ''}">
+      <span class="chip-n">${i + 1}</span>
       ${trueqeImgHtml(c, false, 'thumb')}
       <div>
-        <div class="chip-name">${trueqeEsc(c.name)}</div>
+        <div class="chip-name">${trueqeEsc(c.name)} ${c.rarity ? `<span class="chip-rar">${trueqeSim(c.rarity)}</span>` : ''}</div>
         <div class="chip-set">${trueqeSetBadgeHtml(c.setLogo, c.setId)}${trueqeEsc(c.setName)}</div>
       </div>
       <button type="button" aria-label="Quitar" onclick="trueqeQuitarCarta('${side}', ${i})">✕</button>
     </div>
-  `).join('') : '<div class="trueque-chosen-empty">Aún no añadiste ninguna carta.</div>';
+  `; }).join('') : '<div class="trueque-chosen-empty">Aún no añadiste ninguna carta.</div>';
+  // La rareza que pide cada lado depende del otro: se actualizan ambos selectores y el resumen de costo.
+  [otroLado, side].forEach(sd => {
+    const pnl = document.getElementById('trueque-dd-panel-' + sd);
+    if (pnl && pnl.style.display !== 'none') trueqePickerRender(sd);
+  });
+  trueqeRenderResumen();
+}
+
+function trueqeRenderResumen() {
+  const el = document.getElementById('trueque-costo-resumen');
+  if (!el) return;
+  const b = trueqeSel.busca, o = trueqeSel.ofrece;
+  const n = Math.max(b.length, o.length);
+  if (!n) { el.innerHTML = ''; return; }
+  let total = 0;
+  const filas = [];
+  for (let i = 0; i < n; i++) {
+    const cb = b[i], co = o[i];
+    if (cb && co) {
+      if (cb.rarity && co.rarity && cb.rarity !== co.rarity) {
+        filas.push(`<div class="cr-fila mal">${i + 1} · ✖ ${trueqeSim(cb.rarity)} ≠ ${trueqeSim(co.rarity)}: deben ser de la misma rareza (quita una y elige otra)</div>`);
+      } else {
+        const code = cb.rarity || co.rarity;
+        const r = TRUEQUE_RAREZAS[code];
+        if (r) total += r.costo;
+        filas.push(`<div class="cr-fila">${i + 1} · ${r ? r.sim + ' · ' + trueqePolvoHtml(r.costo) : 'costo no disponible'}</div>`);
+      }
+    } else {
+      filas.push(`<div class="cr-fila pend">${i + 1} · falta la carta que ${cb ? 'ofreces' : 'buscas'}</div>`);
+    }
+  }
+  el.innerHTML = `<div class="cr-title">💎 Costo de cada cambio</div>${filas.join('')}${total > 0 ? `<div class="cr-total">Total: ${trueqePolvoHtml(total)}</div>` : ''}`;
 }
 
 function trueqeResetForm() {
@@ -14654,10 +14836,22 @@ async function trueqeAgregarCarta() {
   if (!trueqeUser || !window._fbDb) return;
   if (!trueqeSel.busca.length) { showToast('⚠️ Añade al menos una carta que buscas', true); return; }
   if (!trueqeSel.ofrece.length) { showToast('⚠️ Añade al menos una carta que ofreces a cambio', true); return; }
+  if (trueqeSel.busca.length !== trueqeSel.ofrece.length) {
+    showToast(`⚠️ Elige la misma cantidad de cartas en cada lado (buscas ${trueqeSel.busca.length}, ofreces ${trueqeSel.ofrece.length}): la 1.ª que buscas se cambia por la 1.ª que ofreces, y así con las demás.`, true);
+    return;
+  }
+  for (let i = 0; i < trueqeSel.busca.length; i++) {
+    const rb = trueqeSel.busca[i].rarity, ro = trueqeSel.ofrece[i].rarity;
+    if (rb && ro && rb !== ro) {
+      showToast(`⚠️ El par ${i + 1} no es de la misma rareza (buscas ${trueqeSim(rb)}, ofreces ${trueqeSim(ro)}). Solo se cambian cartas de la misma rareza.`, true);
+      return;
+    }
+  }
   const notas = document.getElementById('trueque-card-notes').value.trim();
   const pack = c => ({
     name: c.name,
     image: c.image,
+    rarity: c.rarity || '',
     setId: c.setId || '',
     setName: c.setName,
     setLogo: c.setLogo || '',
@@ -14756,10 +14950,12 @@ function trueqeMiniCardsHtml(list) {
 
 function trueqeSleeveHtml(c, showDelete, esAdmin) {
   const t = trueqeNormCard(c);
-  const mk = x => ({
+  const pares = t.busca.length > 1 && t.busca.length === t.ofrece.length;
+  const mk = (x, i) => ({
     nombre: x.name,
     mini: trueqeImgHtml(x, true, 'x-t'),
-    grande: `<div class="trade-mini" title="${trueqeEsc(x.name)}">
+    grande: `<div class="trade-mini${pares ? ' pair' : ''}" title="${trueqeEsc(x.name)}">
+      ${pares ? `<span class="pair-n">${i + 1}</span>` : ''}
       ${trueqeImgHtml(x, true)}
       <div class="tm-name">${trueqeEsc(x.name)}</div>
       ${x.setName ? `<div class="tm-set">${trueqeEsc(x.setName)}</div>` : ''}
@@ -14771,7 +14967,7 @@ function trueqeSleeveHtml(c, showDelete, esAdmin) {
     busca: t.busca.map(mk),
     ofrece: t.ofrece.map(mk),
     notas: c.notas ? trueqeEsc(c.notas) : '',
-    extra: contactoPublicoHtml(c),
+    extra: trueqeCostoPostHtml(t) + contactoPublicoHtml(c),
     borrar: showDelete ? `${tgoDoneBtnHtml(c, 'trueqeToggleRealizado')}<button class="trueque-delete-btn" onclick="trueqeEliminarCarta('${c.id}')">${esAdmin ? '✕ Eliminar (admin)' : '🗑️ Eliminar (ya se cerró el trueque)'}</button>` : ''
   });
 }
@@ -14828,7 +15024,7 @@ function trueqeGroups(posts, side) {
       if (vistas.has(k)) return;
       vistas.add(k);
       if (!m.has(k)) m.set(k, { key: k, card, side, posts: [] });
-      m.get(k).posts.push(x);
+      m.get(k).posts.push({ c: x.c, t: x.t, i: (x.t[side] || []).indexOf(card) });
     });
   });
   return [...m.values()];
@@ -14839,6 +15035,7 @@ function trueqeTileHtml(g) {
   return `<button type="button" class="tgo-tile" data-key="${trueqeEsc(g.key)}" onclick="trueqeToggleTile(this)" title="${trueqeEsc(titulo)}" aria-expanded="false">
     ${trueqeImgHtml(g.card, true, 'tile-card')}${n > 1 ? `<span class="t-count">${n}</span>` : ''}${g.posts.every(x => x.c.realizado) ? '<span class="t-done" title="Realizado">✓</span>' : ''}
     <span class="t-name">${trueqeEsc(g.card.name)}</span>
+    ${trueqeRarezaDe(g.card) ? `<span class="t-rar">${trueqeSim(trueqeRarezaDe(g.card))}</span>` : ''}
   </button>`;
 }
 function trueqePanelHtml(g) {
@@ -14850,17 +15047,23 @@ function trueqePanelHtml(g) {
       <div class="tm-name">${trueqeEsc(x.name)}</div>
       ${x.setName ? `<div class="tm-set">${trueqeEsc(x.setName)}</div>` : ''}
     </div>`;
-  const ofertas = g.posts.map(({ c, t }) => {
+  const ofertas = g.posts.map(({ c, t, i }) => {
+    // Si ambos lados tienen la misma cantidad, la carta N de un lado se cambia por la N del otro.
+    const pareado = t.busca.length === t.ofrece.length && t[otro][i];
+    const cartas = pareado ? [t[otro][i]] : t[otro];
+    const rr = TRUEQUE_RAREZAS[trueqeRarezaDe(g.card)];
+    const costoLinea = rr ? `<div class="o-cost">${rr.sim} · Costo del cambio: ${trueqePolvoHtml(rr.costo)}</div>` : '';
     const esMia = !!(trueqeUser && c.userId === trueqeUser.id);
     const botones = ((esMia || trueqeAdminUnlocked) ? tgoDoneBtnHtml(c, 'trueqeToggleRealizado') : '') +
       (trueqeAdminUnlocked ? `<button class="trueque-delete-btn" onclick="trueqeEliminarCarta('${c.id}')">✕ Eliminar (admin)</button>` : '');
     return `<div class="tgo-offer multi${c.realizado ? ' done' : ''}">
       <div class="o-info">
-        <div class="o-lbl">${lbl}</div>
+        <div class="o-lbl">${lbl}${pareado && t[g.side].length > 1 ? `<span class="o-pair">· carta ${i + 1} de ${t[g.side].length}</span>` : ''}</div>
         <div class="o-who">${banderaHtml(c.userPais)}👤 ${trueqeEsc(c.userNombre)}</div>
+        ${costoLinea}
         ${c.realizado ? '<div class="tgo-done-tag">✅ Realizado</div>' : ''}
       </div>
-      <div class="o-cards">${t[otro].length ? t[otro].map(mini).join('') : '<div class="trade-none">—</div>'}</div>
+      <div class="o-cards">${cartas.length ? cartas.map(mini).join('') : '<div class="trade-none">—</div>'}</div>
       <div class="o-info">
         ${c.notas ? `<div class="x-notes">${trueqeEsc(c.notas)}</div>` : ''}
         ${contactoPublicoHtml(c)}
@@ -14907,6 +15110,15 @@ window.addEventListener('resize', () => {
   window._trueqeRzT = setTimeout(() => { if (trueqeOpenKey) trueqePlacePanel(); }, 120);
 });
 
+let trueqeRarTried = false;
+function trueqeAsegurarRarezas() {
+  if (trueqeRarTried || TRUEQUE_CARD_INDEX) return;
+  const falta = trueqeCards.some(c => { const t = trueqeNormCard(c); return [...t.busca, ...t.ofrece].some(x => !x.rarity); });
+  if (!falta) return;
+  trueqeRarTried = true;
+  trueqeGetCardIndex().then(() => { TRUEQUE_RAR_LOOKUP = null; trueqeRenderBinder(); trueqeRenderMine(); }).catch(() => {});
+}
+
 function trueqeRenderBinder() {
   const term = trueqeNormalizeSearch(document.getElementById('trueque-search').value || '');
   const side = trueqeFilter === 'ofrece' ? 'ofrece' : 'busca';
@@ -14923,6 +15135,7 @@ function trueqeRenderBinder() {
     binder.innerHTML = `<div class="tgo-wall-hint">${side === 'busca' ? 'Toca una carta para ver quién la busca y qué ofrece a cambio.' : 'Toca una carta para ver quién la ofrece y qué busca a cambio.'}</div>` +
       `<div class="tgo-wall tcg-wall">${groups.map(trueqeTileHtml).join('')}</div>`;
     trueqePlacePanel();
+    trueqeAsegurarRarezas();
   } else {
     trueqeGroupsMap = new Map();
     trueqeOpenKey = null;
