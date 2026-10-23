@@ -3527,6 +3527,14 @@
   .trueque-costo .cr-fila.mal { color: #ff8a80; font-weight: 700; }
   .trueque-costo .cr-fila.pend { color: var(--muted); }
   .trueque-costo .cr-total { margin-top: 4px; padding-top: 4px; border-top: 1px solid rgba(255,255,255,0.12); font-weight: 800; }
+  .trade-mini.clickable { cursor: pointer; transition: transform .12s; }
+  .trade-mini.clickable:hover { transform: translateY(-2px); }
+  .trueque-chip .chip-ver { cursor: pointer; display: flex; }
+  .tgo-panel .tp-hint { font-size: 0.72rem; color: var(--muted); margin: -2px 0 6px; }
+  .tgo-panel .tp-ver { background: none; border: 1px solid rgba(255,255,255,0.2); color: #fff; border-radius: 6px; padding: 2px 8px; cursor: pointer; font-size: 0.72rem; }
+  .tgo-panel .tp-ver:hover { background: rgba(255,255,255,0.08); }
+  .tgo-panel .tp-btns { margin-left: auto; display: flex; gap: 6px; }
+  .tgo-panel .tp-btns .tp-close { margin-left: 0; }
   .vo-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 8px 4px; border-top: 1px solid rgba(255,255,255,0.08); font-size: 0.85rem; }
   .vo-row .vo-ico { width: 32px; height: 32px; object-fit: contain; flex: 0 0 auto; }
   .vo-row .vo-none { display: inline-flex; align-items: center; justify-content: center; border-radius: 6px; background: rgba(255,255,255,0.08); color: var(--muted); }
@@ -4080,6 +4088,7 @@
           <span id="trueque-admin-como-wrap" style="display:none"> · Publicar como <select id="trueque-admin-como" class="trueque-input" style="width:auto;display:inline-block;padding:4px 8px" onchange="adminElegirIdentidad(this.value)"></select></span>
         </div>
         <h3>➕ Publicar intercambio <button type="button" class="trueque-refresh-btn" onclick="trueqeRefrescarIndice()" title="Vuelve a descargar las cartas y expansiones">↻ Actualizar cartas</button></h3>
+        <div id="trueque-rar-aviso" class="trueque-chosen-empty" style="display:none;margin:0 0 8px;color:#ffd75e"></div>
         <div class="trueque-chosen-empty" style="margin:0 0 8px">Puedes elegir varias cartas: la 1.ª que buscas se cambia por la 1.ª que ofreces, la 2.ª por la 2.ª, y así sucesivamente.</div>
         <div class="trueque-side busca">
           <div class="trueque-side-title">🔍 Qué busco</div>
@@ -10750,8 +10759,9 @@ let tcgDescSeq = 0;
 let cartaDetalleActual = null; // { pokemonInterno, cartaId, permitirEditar }
 
 function llenarVisorCarta(pokemonInterno, cartaId, mazoNombre, permitirEditar) {
-  const cartas = (dataTCG[pokemonInterno] && Array.isArray(dataTCG[pokemonInterno].cartas)) ? dataTCG[pokemonInterno].cartas : [];
-  const carta = cartas.find(c => c.id === cartaId);
+  const esTrueque = pokemonInterno === '__trueque__';   // carta de un intercambio (no está en los datos de Pokémon)
+  const cartas = esTrueque ? [] : ((dataTCG[pokemonInterno] && Array.isArray(dataTCG[pokemonInterno].cartas)) ? dataTCG[pokemonInterno].cartas : []);
+  const carta = esTrueque ? TRUEQUE_VISOR[cartaId] : cartas.find(c => c.id === cartaId);
   if (!carta) return null;
 
   cartaDetalleActual = { pokemonInterno, cartaId, permitirEditar: !!permitirEditar };
@@ -10760,10 +10770,11 @@ function llenarVisorCarta(pokemonInterno, cartaId, mazoNombre, permitirEditar) {
   const holo = document.getElementById('carta-detalle-holo');
   if (carta.imagen) { img.src = carta.imagen; img.style.display = ''; holo.style.display = ''; holo.dataset.holo = holoNivel(carta); holo.classList.remove('sin-imagen'); }
   else { img.style.display = 'none'; holo.style.display = 'none'; }
-  document.getElementById('carta-detalle-nombre').textContent = traducirNombrePokemon(pokemonInterno);
+  document.getElementById('carta-detalle-nombre').textContent = esTrueque ? carta.nombre : traducirNombrePokemon(pokemonInterno);
 
   renderCartaDetalleDescripcion(carta);
   renderCartaDetalleAtaques(carta);
+  if (esTrueque) trueqeVisorEstado(carta);
 
   // Sobre de origen: la imagen del sobre de la expansión y su nombre, en una caja del tamaño de un ataque
   const iconoExpansion = iconoDeExpansionPorNombre(carta.expansion);
@@ -14132,8 +14143,8 @@ function trueqeNormWa(v) { return (v || '').replace(/\D/g, ''); }
 // expansión y logo de la expansión) consultando la misma API que ya usa el
 // resto de la app. Se guarda en localStorage para no volver a descargarlo
 // cada vez que se abre la sección de trueques.
-const TRUEQUE_CARD_INDEX_CACHE_KEY = 'trueque_card_index_v7';
-try { localStorage.removeItem('trueque_card_index_v3'); localStorage.removeItem('trueque_card_index_v4'); localStorage.removeItem('trueque_card_index_v5'); localStorage.removeItem('trueque_card_index_v6'); } catch (e) { /* cachés viejos */ }
+const TRUEQUE_CARD_INDEX_CACHE_KEY = 'trueque_card_index_v8';
+try { localStorage.removeItem('trueque_card_index_v3'); localStorage.removeItem('trueque_card_index_v4'); localStorage.removeItem('trueque_card_index_v5'); localStorage.removeItem('trueque_card_index_v6'); localStorage.removeItem('trueque_card_index_v7'); } catch (e) { /* cachés viejos */ }
 const TRUEQUE_CARD_INDEX_MAX_AGE = 1000 * 60 * 60 * 24 * 3; // 3 días
 let TRUEQUE_CARD_INDEX = null; // null = todavía no cargado
 let trueqeCardIndexLoading = null; // Promise en curso, para no duplicar pedidos
@@ -14174,18 +14185,26 @@ const TRUEQUE_RAREZAS = {
   SHEX: { sim: '✦✦',   costo: 30000 }
 };
 const TRUEQUE_NO_CAMBIABLES = ['IM', 'CR'];   // 3 estrellas y corona
-let TRUEQUE_PD_RAR = new Map();               // "codigoSet|número" -> rareza (texto de PocketDecks)
+let TRUEQUE_PD_RAR = new Map();
+let TRUEQUE_PD_REC = new Map();               // "codigoSet|número" -> ficha de PocketDecks (ataques, habilidad, texto)               // "codigoSet|número" -> rareza (texto de PocketDecks)
 let TRUEQUE_RAR_LOOKUP = null;                // "codigoSet|número" -> código de rareza (desde el índice)
 
+let TRUEQUE_RAR_DESC = new Set();   // textos de rareza que no se pudieron reconocer (para diagnosticar)
 function trueqeRarezaCodigo(raw) {
+  const code = trueqeRarezaCodigoBase(raw);
+  const t = String(raw == null ? '' : raw).trim();
+  if (t && !code) TRUEQUE_RAR_DESC.add(t);
+  return code;
+}
+function trueqeRarezaCodigoBase(raw) {
   const s = String(raw == null ? '' : raw).trim();
   if (!s) return '';
   if (/^(C|U|R|RR|AR|SAR|IM|SH|SHEX|CR)$/.test(s)) return s;
   const l = s.toLowerCase();
-  if (/♛|crown|corona/.test(l)) return 'CR';
-  const brillos = (s.match(/[✵✦✶✴✷]/g) || []).length;
-  if (brillos >= 2 || /two shiny|2 shiny|double shiny|shiny super|dos brillo|brillo doble/.test(l)) return 'SHEX';
-  if (brillos === 1 || /shiny|brillo/.test(l)) return 'SH';
+  if (/♛|♕|♔|👑|crown|corona/.test(l)) return 'CR';
+  const brillos = (s.match(/[✵✦✶✴✷✸✹✺✧✨]/g) || []).length;
+  if (brillos >= 2 || /two shiny|2 shiny|double shiny|shiny super|dos shiny|dos brillo|dos variocolor|brillo doble/.test(l)) return 'SHEX';
+  if (brillos === 1 || /shiny|shine|brillo|brillante|variocolor|radiant/.test(l)) return 'SH';
   const estrellas = (s.match(/[☆★]/g) || []).length;
   if (estrellas >= 3 || /three star|3 star|immersive|tres estrella/.test(l)) return 'IM';
   if (estrellas === 2 || /two star|2 star|special art|super rare|dos estrella/.test(l)) return 'SAR';
@@ -14256,6 +14275,7 @@ function trueqeSetIconUrl(setId) {
 function trueqeBuildPdMap(pd) {
   const map = new Map();
   const rarMap = new Map();
+  const recMap = new Map();
   const groups = new Map();
   (pd || []).forEach(c => {
     if (!c || !c.image_png || !c.name) return;
@@ -14266,6 +14286,7 @@ function trueqeBuildPdMap(pd) {
     if (!key || isNaN(num)) return;
     map.set(key + '|' + num, c.image_png);
     rarMap.set(key + '|' + num, c.rarity || '');
+    recMap.set(key + '|' + num, c);
     // Solo cartas de Pokémon (las de Entrenador no tienen ataques ni se intercambian).
     if (attacksObjetoAArray(c.attacks).length > 0) {
       if (!groups.has(key)) groups.set(key, { code, name: c.set_name, cards: [] });
@@ -14274,6 +14295,7 @@ function trueqeBuildPdMap(pd) {
   });
   TRUEQUE_PD_MAP = map;
   TRUEQUE_PD_RAR = rarMap;
+  TRUEQUE_PD_REC = recMap;
   return groups;
 }
 
@@ -14362,8 +14384,36 @@ async function trueqeBuildCardIndex() {
     });
   });
 
-  return { index, complete };
+  // Cartas a las que ninguna fuente les dio rareza: se consulta TCGdex carta por carta (con un tope y pocas a la vez).
+  const sinRar = index.filter(c => !c.rarity && c.setId && c.localId !== '');
+  if (sinRar.length) {
+    const tope = Math.min(sinRar.length, 400);
+    let k = 0;
+    const trabajador = async () => {
+      while (k < tope) {
+        const c = sinRar[k++];
+        const id = String(c.localId);
+        try {
+          const d = await fetchJson(`https://api.tcgdex.net/v2/en/cards/${c.setId}-${/^\d+$/.test(id) ? id.padStart(3, '0') : id}`);
+          const code = trueqeRarezaCodigo(d && d.rarity);
+          if (code) c.rarity = code;
+        } catch (e) { /* esa carta queda sin rareza conocida */ }
+      }
+    };
+    await Promise.all(Array.from({ length: 6 }, trabajador));
+  }
+  // Las de corona y 3 estrellas (recién identificadas) no se cambian.
+  let final = index.filter(c => !TRUEQUE_NO_CAMBIABLES.includes(c.rarity));
+  // Si se pudo identificar la rareza de la mayoría, las que siguen sin rareza se ocultan (no se sabe si se pueden cambiar).
+  TRUEQUE_RAR_OCULTAS = 0;
+  const conocidas = final.filter(c => c.rarity).length;
+  if (final.length && conocidas / final.length >= 0.5) {
+    TRUEQUE_RAR_OCULTAS = final.length - conocidas;
+    final = final.filter(c => c.rarity);
+  }
+  return { index: final, complete };
 }
+let TRUEQUE_RAR_OCULTAS = 0;
 
 async function trueqeGetCardIndex() {
   if (TRUEQUE_CARD_INDEX) return TRUEQUE_CARD_INDEX;
@@ -14508,6 +14558,16 @@ async function trueqeRefrescarIndice() {
   showToast('✅ Cartas actualizadas');
 }
 
+function trueqeMostrarAviso() {
+  const el = document.getElementById('trueque-rar-aviso');
+  if (!el) return;
+  if (TRUEQUE_RAR_OCULTAS > 0) {
+    const vals = [...TRUEQUE_RAR_DESC].slice(0, 6).join(' · ');
+    el.style.display = '';
+    el.textContent = `⚠️ ${TRUEQUE_RAR_OCULTAS} cartas se ocultaron porque no se pudo identificar su rareza.` + (vals ? ` Valores sin reconocer: ${vals}` : '');
+  } else el.style.display = 'none';
+}
+
 let trueqeSets = []; // [{ name, logo }]
 
 function trueqeExpSetLabel(side, texto) {
@@ -14536,6 +14596,7 @@ async function trueqeInitPickers() {
       return;
     }
     trueqeSets = sets;
+    trueqeMostrarAviso();
     sides.forEach(side => {
       trueqeExpSetLabel(side, document.getElementById('trueque-exp-' + side).value || 'Elige una expansión…');
       trueqeExpRenderList(side);
@@ -14618,6 +14679,80 @@ function trueqePickerUpdateToggle(side) {
   btn.textContent = (abierto ? '▴ Ocultar cartas' : '▾ Ver cartas de la expansión');
 }
 
+// ── DESCRIPCIÓN DE LA CARTA Y VISOR ANIMADO (el mismo de Mazos) ───────────────
+// Al agregar una carta a un intercambio se descarga lo que hace (ataques, habilidad, texto) y se
+// guarda con la publicación. Al tocar una carta publicada se abre el visor con la animación.
+const TRUEQUE_VISOR = {};
+let trueqeVisorSeq = 0;
+
+async function trueqeCargarDetalle(card) {
+  const num = parseInt(card.localId, 10);
+  // 1) TCGdex, en español
+  try {
+    const id = String(card.localId);
+    const d = await obtenerCartaTcgdex(`${card.setId}-${/^\d+$/.test(id) ? id.padStart(3, '0') : id}`);
+    if (d && (Array.isArray(d.attacks) || Array.isArray(d.abilities) || d.effect)) {
+      const ataques = [];
+      (d.abilities || []).forEach(a => ataques.push({ name: 'Habilidad: ' + (a.name || ''), nombreEs: 'Habilidad: ' + (a.name || ''), damage: '', effect: a.effect || '', effectEs: a.effect || '' }));
+      (d.attacks || []).forEach(a => ataques.push({ name: a.name || '', nombreEs: a.name || '', damage: a.damage == null ? '' : String(a.damage), effect: a.effect || '', effectEs: a.effect || '' }));
+      return { ataques, descripcion: descripcionDesdeTcgdex(d) || '' };
+    }
+  } catch (e) { /* se prueba con PocketDecks */ }
+  // 2) PocketDecks (expansiones nuevas), traducido
+  try {
+    await trueqeEnsurePdMap();
+    const ref = isNaN(num) ? null : TRUEQUE_PD_REC.get(trueqeSetKey(card.setId) + '|' + num);
+    if (ref) {
+      const ataques = (await ataquesDesdePocketDecks(ref, false, true, true)) || [];
+      const descripcion = (await descripcionDesdePocketDecks(ref)) || '';
+      return { ataques, descripcion };
+    }
+  } catch (e) { /* sin descripción */ }
+  return null;
+}
+function trueqeImagenGrande(card) {
+  const u = card.image || (trueqeImageCandidates(card).find(Boolean) || '');
+  return u.replace('/low.webp', '/high.webp');
+}
+function trueqeRegVisor(card) {
+  const id = 'tq' + (++trueqeVisorSeq);
+  delete TRUEQUE_VISOR['tq' + (trueqeVisorSeq - 900)];
+  const d = card.detalle;
+  TRUEQUE_VISOR[id] = { id, ref: card, nombre: card.name, imagen: trueqeImagenGrande(card), rareza: trueqeRarezaDe(card),
+    expansion: card.setName || '', ataques: d ? (d.ataques || []) : [], descripcion: d ? (d.descripcion || '') : '', cargado: !!d };
+  return id;
+}
+// Registra una lista de cartas para poder pasar de una a otra con ‹ › en el visor.
+function trueqeRegLista(lista) {
+  const ids = lista.map(trueqeRegVisor);
+  const ctx = registrarContextoCartas(ids.map(id => ({ pokemon: '__trueque__', id })));
+  return { ids, ctx };
+}
+function trueqeAbrirVisor(id, el, ctx, idx) {
+  abrirCartaDetalle('__trueque__', id, '', false, el, ctx, idx);
+}
+// Mientras la descripción no está (publicaciones viejas) se pide en el momento y se completa el visor.
+function trueqeVisorEstado(carta) {
+  const cont = document.getElementById('carta-detalle-ataques');
+  if (!cont) return;
+  const aviso = t => { cont.innerHTML = `<div style="font-size:0.8rem;color:var(--muted);font-style:italic;margin-bottom:6px">${t}</div>`; };
+  if (!carta.cargado) {
+    aviso('⏳ Cargando descripción…');
+    if (!carta._pidiendo) {
+      carta._pidiendo = true;
+      Promise.resolve(carta.ref._det || trueqeCargarDetalle(carta.ref)).then(d => {
+        carta.cargado = true;
+        if (d) { carta.ataques = d.ataques || []; carta.descripcion = d.descripcion || ''; } else carta.fallo = true;
+        if (cartaDetalleActual && cartaDetalleActual.cartaId === carta.id) {
+          renderCartaDetalleDescripcion(carta); renderCartaDetalleAtaques(carta); trueqeVisorEstado(carta);
+        }
+      }).catch(() => { carta.cargado = true; carta.fallo = true; });
+    }
+  } else if (!carta.ataques.length && !carta.descripcion) {
+    aviso(carta.fallo ? 'No se pudo cargar la descripción de esta carta.' : 'Esta carta no tiene ataques ni texto.');
+  }
+}
+
 // Rareza que debe tener la próxima carta de este lado: la de la carta del mismo número del otro lado.
 function trueqeRarezaRequerida(side) {
   const otro = side === 'busca' ? 'ofrece' : 'busca';
@@ -14670,7 +14805,10 @@ function trueqePickerToggleCard(side, i, el) {
     }
     const im = el && el.querySelector('img');
     const funciona = im && im.complete && im.naturalWidth > 0 ? im.src : '';
-    list.push(funciona ? { ...card, image: funciona } : card);
+    const entrada = funciona ? { ...card, image: funciona } : { ...card };
+    list.push(entrada);
+    // Se descarga lo que hace la carta (ataques, habilidad, texto) para guardarlo con el intercambio.
+    entrada._det = trueqeCargarDetalle(entrada).then(d => { if (d) entrada.detalle = d; return d; }).catch(() => null);
     if (el) el.classList.add('sel');
   }
   trueqeRenderChosen(side);
@@ -14694,7 +14832,7 @@ function trueqeRenderChosen(side) {
     return `
     <div class="trueque-chip${mal ? ' mismatch' : ''}">
       <span class="chip-n">${i + 1}</span>
-      ${trueqeImgHtml(c, false, 'thumb')}
+      <span class="chip-ver" onclick="trueqeAbrirVisor('${trueqeRegVisor(c)}', this)" title="Ver la carta y lo que hace">${trueqeImgHtml(c, false, 'thumb')}</span>
       <div>
         <div class="chip-name">${trueqeEsc(c.name)} ${c.rarity ? `<span class="chip-rar">${trueqeSim(c.rarity)}</span>` : ''}</div>
         <div class="chip-set">${trueqeSetBadgeHtml(c.setLogo, c.setId)}${trueqeEsc(c.setName)}</div>
@@ -14847,10 +14985,17 @@ async function trueqeAgregarCarta() {
       return;
     }
   }
+  // Si alguna descripción todavía se está descargando, se espera un momento (máx. 8 s).
+  const pendientes = [...trueqeSel.busca, ...trueqeSel.ofrece].filter(c => c._det && !c.detalle).map(c => c._det);
+  if (pendientes.length) {
+    showToast('⏳ Cargando la descripción de las cartas…');
+    await Promise.race([Promise.all(pendientes), new Promise(r => setTimeout(r, 8000))]);
+  }
   const notas = document.getElementById('trueque-card-notes').value.trim();
   const pack = c => ({
     name: c.name,
     image: c.image,
+    detalle: c.detalle ? JSON.parse(JSON.stringify(c.detalle)) : null,
     rarity: c.rarity || '',
     setId: c.setId || '',
     setName: c.setName,
@@ -14951,10 +15096,11 @@ function trueqeMiniCardsHtml(list) {
 function trueqeSleeveHtml(c, showDelete, esAdmin) {
   const t = trueqeNormCard(c);
   const pares = t.busca.length > 1 && t.busca.length === t.ofrece.length;
-  const mk = (x, i) => ({
+  const regB = trueqeRegLista(t.busca), regO = trueqeRegLista(t.ofrece);
+  const mk = (x, i, reg) => ({
     nombre: x.name,
     mini: trueqeImgHtml(x, true, 'x-t'),
-    grande: `<div class="trade-mini${pares ? ' pair' : ''}" title="${trueqeEsc(x.name)}">
+    grande: `<div class="trade-mini clickable${pares ? ' pair' : ''}" title="${trueqeEsc(x.name)} · toca para verla en grande" onclick="trueqeAbrirVisor('${reg.ids[i]}', this, '${reg.ctx}', ${i})">
       ${pares ? `<span class="pair-n">${i + 1}</span>` : ''}
       ${trueqeImgHtml(x, true)}
       <div class="tm-name">${trueqeEsc(x.name)}</div>
@@ -14964,8 +15110,8 @@ function trueqeSleeveHtml(c, showDelete, esAdmin) {
   return xFilaHtml({
     cls: c.realizado ? 'x-done' : '',
     quien: `${c.realizado ? '✅ ' : ''}${banderaHtml(c.userPais)}👤 ${trueqeEsc(c.userNombre)}`,
-    busca: t.busca.map(mk),
-    ofrece: t.ofrece.map(mk),
+    busca: t.busca.map((x, i) => mk(x, i, regB)),
+    ofrece: t.ofrece.map((x, i) => mk(x, i, regO)),
     notas: c.notas ? trueqeEsc(c.notas) : '',
     extra: trueqeCostoPostHtml(t) + contactoPublicoHtml(c),
     borrar: showDelete ? `${tgoDoneBtnHtml(c, 'trueqeToggleRealizado')}<button class="trueque-delete-btn" onclick="trueqeEliminarCarta('${c.id}')">${esAdmin ? '✕ Eliminar (admin)' : '🗑️ Eliminar (ya se cerró el trueque)'}</button>` : ''
@@ -15042,7 +15188,7 @@ function trueqePanelHtml(g) {
   const n = g.posts.length;
   const otro = g.side === 'busca' ? 'ofrece' : 'busca';
   const lbl = g.side === 'busca' ? '🎁 OFRECE A CAMBIO' : '🔍 BUSCA A CAMBIO';
-  const mini = x => `<div class="trade-mini" title="${trueqeEsc(x.name)}">
+  const mini = (x, k, reg) => `<div class="trade-mini clickable" title="${trueqeEsc(x.name)} · toca para verla en grande" onclick="trueqeAbrirVisor('${reg.ids[k]}', this, '${reg.ctx}', ${k})">
       ${trueqeImgHtml(x, true)}
       <div class="tm-name">${trueqeEsc(x.name)}</div>
       ${x.setName ? `<div class="tm-set">${trueqeEsc(x.setName)}</div>` : ''}
@@ -15051,6 +15197,7 @@ function trueqePanelHtml(g) {
     // Si ambos lados tienen la misma cantidad, la carta N de un lado se cambia por la N del otro.
     const pareado = t.busca.length === t.ofrece.length && t[otro][i];
     const cartas = pareado ? [t[otro][i]] : t[otro];
+    const reg = trueqeRegLista(cartas);
     const rr = TRUEQUE_RAREZAS[trueqeRarezaDe(g.card)];
     const costoLinea = rr ? `<div class="o-cost">${rr.sim} · Costo del cambio: ${trueqePolvoHtml(rr.costo)}</div>` : '';
     const esMia = !!(trueqeUser && c.userId === trueqeUser.id);
@@ -15063,7 +15210,7 @@ function trueqePanelHtml(g) {
         ${costoLinea}
         ${c.realizado ? '<div class="tgo-done-tag">✅ Realizado</div>' : ''}
       </div>
-      <div class="o-cards">${cartas.length ? cartas.map(mini).join('') : '<div class="trade-none">—</div>'}</div>
+      <div class="o-cards">${cartas.length ? cartas.map((x, k) => mini(x, k, reg)).join('') : '<div class="trade-none">—</div>'}</div>
       <div class="o-info">
         ${c.notas ? `<div class="x-notes">${trueqeEsc(c.notas)}</div>` : ''}
         ${contactoPublicoHtml(c)}
@@ -15071,9 +15218,13 @@ function trueqePanelHtml(g) {
       </div>
     </div>`;
   }).join('');
+  const cartaVer = g.posts.map(x => x.t[g.side][x.i]).find(c => c && c.detalle) || g.card;
+  const regVer = trueqeRegLista([cartaVer]);
   return `<div class="tp-head"><span>${g.side === 'busca' ? '🔍' : '🎁'} <b>${trueqeEsc(g.card.name)}</b></span>
       <span class="x-more">${g.card.setName ? trueqeEsc(g.card.setName) + ' · ' : ''}${n} ${n === 1 ? 'oferta' : 'ofertas'}</span>
-      <button type="button" class="tp-close" onclick="trueqeClosePanel()">Cerrar ✕</button></div>${ofertas}`;
+      <span class="tp-btns"><button type="button" class="tp-ver" onclick="trueqeAbrirVisor('${regVer.ids[0]}', document.querySelector('.tgo-tile.open'), '${regVer.ctx}', 0)">👁 Ver carta</button>
+      <button type="button" class="tp-close" onclick="trueqeClosePanel()">Cerrar ✕</button></span></div>
+    <div class="tp-hint">Toca una carta para verla en grande y ver qué hace.</div>${ofertas}`;
 }
 function trueqeToggleTile(btn) {
   const key = btn.dataset.key;
