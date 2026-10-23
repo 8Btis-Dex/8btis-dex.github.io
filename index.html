@@ -3485,6 +3485,18 @@
   .tgo-offer .x-notes { margin-top: 4px; }
   .tgo-offer .owner-code { margin-top: 6px; }
   @media (max-width: 560px) { .tgo-offer { gap: 8px; } .tgo-offer .x-gocard { width: 84px; } }
+  /* ── Intercambio realizado (tilde verde que pone quien publica) ── */
+  .x-row.x-done { border-color: rgba(76,175,80,0.65); }
+  .x-row.x-done .x-who { color: #8ce08f; }
+  .tgo-done-btn { display: block; width: 100%; margin: 8px 0 0; padding: 6px 8px; text-align: center; border-radius: 8px; cursor: pointer; font: inherit; font-size: 0.78rem; font-weight: 700;
+    background: rgba(76,175,80,0.12); border: 1px solid rgba(76,175,80,0.55); color: #8ce08f; }
+  .tgo-done-btn:hover { background: rgba(76,175,80,0.25); }
+  .tgo-done-btn.on { background: #2e7d32; border-color: #4caf50; color: #fff; }
+  .tgo-done-tag { display: inline-block; margin: 2px 0 4px; padding: 1px 8px; border-radius: 10px; font-size: 0.7rem; font-weight: 800;
+    background: rgba(76,175,80,0.22); color: #8ce08f; border: 1px solid rgba(76,175,80,0.5); }
+  .tgo-offer.done .o-give { opacity: 0.55; }
+  .tgo-tile .t-done { position: absolute; left: 4px; top: 54%; width: 19px; height: 19px; border-radius: 50%; background: #2e7d32; color: #fff;
+    font-size: 0.7rem; display: flex; align-items: center; justify-content: center; box-shadow: 0 1px 4px rgba(0,0,0,0.6); }
   .vo-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 8px 4px; border-top: 1px solid rgba(255,255,255,0.08); font-size: 0.85rem; }
   .vo-row .vo-ico { width: 32px; height: 32px; object-fit: contain; flex: 0 0 auto; }
   .vo-row .vo-none { display: inline-flex; align-items: center; justify-content: center; border-radius: 6px; background: rgba(255,255,255,0.08); color: var(--muted); }
@@ -15408,12 +15420,13 @@ function tgoCardHtml(c, showDelete, esAdmin) {
   const busca = tgoItemFila({ pokemon: c.pokemon, slug: c.slug, nombreEs: c.nombreEs, shiny: c.shiny, dinamax: c.dinamax, imagen: c.imagen });
   const ofrece = c.ofrece && c.ofrece.pokemon ? [tgoItemFila(c.ofrece)] : [];
   return xFilaHtml({
-    quien: `${banderaHtml(c.userPais)}👤 ${tgoEsc(c.userNombre)}`,
+    cls: c.realizado ? 'x-done' : '',
+    quien: `${c.realizado ? '✅ ' : ''}${banderaHtml(c.userPais)}👤 ${tgoEsc(c.userNombre)}`,
     busca: [busca],
     ofrece,
     notas: c.notas ? tgoEsc(c.notas) : '',
     extra: contactoPublicoHtml(c),
-    borrar: showDelete ? `<button class="trueque-delete-btn" onclick="tgoEliminar('${c.id}')">${esAdmin ? '✕ Eliminar (admin)' : '🗑️ Eliminar (ya se cerró el trueque)'}</button>` : ''
+    borrar: showDelete ? `${tgoDoneBtnHtml(c)}<button class="trueque-delete-btn" onclick="tgoEliminar('${c.id}')">${esAdmin ? '✕ Eliminar (admin)' : '🗑️ Eliminar (ya se cerró el trueque)'}</button>` : ''
   });
 }
 
@@ -15436,6 +15449,28 @@ function tgoHydrate(container) {
     if (fila && !fila.open) return; // se cargará al abrir la fila
     if (!im.getAttribute('src')) tgoLoadSprite(im, im.dataset.name, im.dataset.shiny === '1', null, im.dataset.slug || '');
   });
+}
+
+// ── Marca de «intercambio realizado» (la pone quien publicó) ───────────────
+function tgoDoneBtnHtml(c) {
+  return `<button type="button" class="tgo-done-btn${c.realizado ? ' on' : ''}" onclick="tgoToggleRealizado('${c.id}')">${c.realizado ? '✅ Intercambio realizado (tocar para quitar)' : '☑️ Marcar como realizado'}</button>`;
+}
+async function tgoToggleRealizado(cardId) {
+  if (!window._fbDb) return;
+  const u = tgoUser();
+  const c = tgoCards.find(x => x.id === cardId);
+  if (!c) return;
+  if ((!u || c.userId !== u.id) && !tgoAdminUnlocked) return;
+  const nuevo = !c.realizado;
+  try {
+    await window._fbDb.collection(TGO_COL).doc(cardId).update({ realizado: nuevo });
+    c.realizado = nuevo;
+    tgoRender();
+    showToast(nuevo ? '✅ Marcado como realizado. Ya puedes eliminarlo cuando quieras' : '↩️ Marca quitada');
+  } catch (e) {
+    console.error(e);
+    showToast('❌ No se pudo marcar. Revisa que las reglas de Firestore permitan actualizar "trueques_go".', true);
+  }
 }
 
 // ── MURO DE BÚSQUEDAS (GO) ─────────────────────────────────────────────────
@@ -15465,7 +15500,7 @@ function tgoTileHtml(g) {
   const it = tgoBuscaDe(g);
   const n = g.cards.length;
   return `<button type="button" class="tgo-tile" data-key="${tgoEsc(g.key)}" onclick="tgoToggleTile(this)" title="${tgoEsc(it.resumen)} · ${n} ${n === 1 ? 'oferta' : 'ofertas'}" aria-expanded="false">
-    ${it.sprite}${n > 1 ? `<span class="t-count">${n}</span>` : ''}
+    ${it.sprite}${n > 1 ? `<span class="t-count">${n}</span>` : ''}${g.cards.every(c => c.realizado) ? '<span class="t-done" title="Realizado">✓</span>' : ''}
     <span class="t-name">${tgoEsc(it.nombre)}</span>
   </button>`;
 }
@@ -15474,13 +15509,16 @@ function tgoPanelHtml(g) {
   const n = g.cards.length;
   const ofertas = g.cards.map(c => {
     const of = c.ofrece && c.ofrece.pokemon ? tgoItemFila(c.ofrece) : null;
-    const borrar = tgoAdminUnlocked
-      ? `<button class="trueque-delete-btn" onclick="tgoEliminar('${c.id}')">✕ Eliminar (admin)</button>` : '';
-    return `<div class="tgo-offer">
+    const yo = tgoUser();
+    const esMia = !!(yo && c.userId === yo.id);
+    const borrar = ((esMia || tgoAdminUnlocked) ? tgoDoneBtnHtml(c) : '') +
+      (tgoAdminUnlocked ? `<button class="trueque-delete-btn" onclick="tgoEliminar('${c.id}')">✕ Eliminar (admin)</button>` : '');
+    return `<div class="tgo-offer${c.realizado ? ' done' : ''}">
       <div class="o-give">${of ? of.grande : '<span class="x-none">—</span>'}</div>
       <div class="o-info">
         <div class="o-lbl">🎁 OFRECE A CAMBIO</div>
         <div class="o-who">${banderaHtml(c.userPais)}👤 ${tgoEsc(c.userNombre)}</div>
+        ${c.realizado ? '<div class="tgo-done-tag">✅ Realizado</div>' : ''}
         ${c.notas ? `<div class="x-notes">${tgoEsc(c.notas)}</div>` : ''}
         ${contactoPublicoHtml(c)}
         ${borrar}
