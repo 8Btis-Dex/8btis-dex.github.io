@@ -3497,6 +3497,15 @@
   .tgo-offer.done .o-give { opacity: 0.55; }
   .tgo-tile .t-done { position: absolute; left: 4px; top: 54%; width: 19px; height: 19px; border-radius: 50%; background: #2e7d32; color: #fff;
     font-size: 0.7rem; display: flex; align-items: center; justify-content: center; box-shadow: 0 1px 4px rgba(0,0,0,0.6); }
+  /* ── Muro de TCG Pocket (misma idea que el de GO, con cartas verticales) ── */
+  .tcg-wall { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  @media (min-width: 700px) { .tcg-wall { grid-template-columns: repeat(auto-fill, minmax(112px, 1fr)); } }
+  .tcg-wall .tgo-tile img.tile-card, .tcg-wall .tgo-tile .trueque-noimg { display: block; width: 100%; max-width: 92px; aspect-ratio: 5 / 7; object-fit: cover; border-radius: 5px; margin: 0 auto; }
+  .tcg-wall .tgo-tile .t-count { top: 50%; }
+  .tcg-wall .tgo-tile .t-done { top: 50%; }
+  .tgo-offer.multi { flex-direction: column; align-items: stretch; gap: 6px; }
+  .tgo-offer.multi .o-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(64px, 84px)); gap: 8px; }
+  .tgo-offer.multi.done .o-cards { opacity: 0.55; }
   .vo-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 8px 4px; border-top: 1px solid rgba(255,255,255,0.08); font-size: 0.85rem; }
   .vo-row .vo-ico { width: 32px; height: 32px; object-fit: contain; flex: 0 0 auto; }
   .vo-row .vo-none { display: inline-flex; align-items: center; justify-content: center; border-radius: 6px; background: rgba(255,255,255,0.08); color: var(--muted); }
@@ -4088,8 +4097,7 @@
           <button class="btn" id="trueque-admin-btn" style="padding:4px 10px;font-size:0.72rem" onclick="trueqeAdminToggle()">🔑 Admin</button>
         </h3>
         <div class="trueque-filters">
-          <button class="active" data-tf="todos" onclick="trueqeFiltrar('todos', this)">Todos</button>
-          <button data-tf="busca" onclick="trueqeFiltrar('busca', this)">🔍 Buscan</button>
+          <button class="active" data-tf="busca" onclick="trueqeFiltrar('busca', this)">🔍 Buscan</button>
           <button data-tf="ofrece" onclick="trueqeFiltrar('ofrece', this)">🎁 Ofrecen</button>
           <input class="trueque-input" id="trueque-search" type="text" placeholder="Buscar carta o usuario..." oninput="trueqeRenderBinder()">
         </div>
@@ -14088,7 +14096,7 @@ async function eliminarUsuario(id) {
 
 let trueqeUser = null; // se toma de la sesión de la app (ver loadTrueques)
 let trueqeCards = [];
-let trueqeFilter = 'todos';
+let trueqeFilter = 'busca';   // 'busca' = grilla de cartas buscadas · 'ofrece' = grilla de cartas ofrecidas
 
 function trueqeEsc(s) {
   return (s || '').replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
@@ -14758,12 +14766,13 @@ function trueqeSleeveHtml(c, showDelete, esAdmin) {
     </div>`
   });
   return xFilaHtml({
-    quien: `${banderaHtml(c.userPais)}👤 ${trueqeEsc(c.userNombre)}`,
+    cls: c.realizado ? 'x-done' : '',
+    quien: `${c.realizado ? '✅ ' : ''}${banderaHtml(c.userPais)}👤 ${trueqeEsc(c.userNombre)}`,
     busca: t.busca.map(mk),
     ofrece: t.ofrece.map(mk),
     notas: c.notas ? trueqeEsc(c.notas) : '',
     extra: contactoPublicoHtml(c),
-    borrar: showDelete ? `<button class="trueque-delete-btn" onclick="trueqeEliminarCarta('${c.id}')">${esAdmin ? '✕ Eliminar (admin)' : '🗑️ Eliminar (ya se cerró el trueque)'}</button>` : ''
+    borrar: showDelete ? `${tgoDoneBtnHtml(c, 'trueqeToggleRealizado')}<button class="trueque-delete-btn" onclick="trueqeEliminarCarta('${c.id}')">${esAdmin ? '✕ Eliminar (admin)' : '🗑️ Eliminar (ya se cerró el trueque)'}</button>` : ''
   });
 }
 
@@ -14784,23 +14793,141 @@ async function trueqeEliminarCarta(cardId) {
   }
 }
 
+// ── MURO DE CARTAS (TCG Pocket) ─────────────────────────────────────────────
+// Igual que en GO: una grilla con las cartas que se buscan (o, con «Ofrecen», las
+// que se ofrecen). Al tocar una carta se abre un panel debajo de su fila con quién
+// la busca y qué ofrece a cambio (o al revés). Una publicación con varias cartas
+// aparece en la ficha de cada una de ellas.
+let trueqeGroupsMap = new Map();
+let trueqeOpenKey = null;
+
+async function trueqeToggleRealizado(cardId) {
+  if (!window._fbDb) return;
+  const c = trueqeCards.find(x => x.id === cardId);
+  if (!c) return;
+  if ((!trueqeUser || c.userId !== trueqeUser.id) && !trueqeAdminUnlocked) return;
+  const nuevo = !c.realizado;
+  try {
+    await window._fbDb.collection('trueques_cartas').doc(cardId).update({ realizado: nuevo });
+    c.realizado = nuevo;
+    trueqeRenderBinder();
+    trueqeRenderMine();
+    showToast(nuevo ? '✅ Marcado como realizado. Ya puedes eliminarlo cuando quieras' : '↩️ Marca quitada');
+  } catch (e) {
+    console.error(e);
+    showToast('❌ No se pudo marcar. Revisa que las reglas de Firestore permitan actualizar "trueques_cartas".', true);
+  }
+}
+
+function trueqeGroups(posts, side) {
+  const m = new Map();
+  posts.forEach(x => {
+    const vistas = new Set();
+    (x.t[side] || []).forEach(card => {
+      const k = side + '|' + trueqeCardKey(card);
+      if (vistas.has(k)) return;
+      vistas.add(k);
+      if (!m.has(k)) m.set(k, { key: k, card, side, posts: [] });
+      m.get(k).posts.push(x);
+    });
+  });
+  return [...m.values()];
+}
+function trueqeTileHtml(g) {
+  const n = g.posts.length;
+  const titulo = g.card.name + (g.card.setName ? ' · ' + g.card.setName : '') + ' · ' + n + (n === 1 ? ' oferta' : ' ofertas');
+  return `<button type="button" class="tgo-tile" data-key="${trueqeEsc(g.key)}" onclick="trueqeToggleTile(this)" title="${trueqeEsc(titulo)}" aria-expanded="false">
+    ${trueqeImgHtml(g.card, true, 'tile-card')}${n > 1 ? `<span class="t-count">${n}</span>` : ''}${g.posts.every(x => x.c.realizado) ? '<span class="t-done" title="Realizado">✓</span>' : ''}
+    <span class="t-name">${trueqeEsc(g.card.name)}</span>
+  </button>`;
+}
+function trueqePanelHtml(g) {
+  const n = g.posts.length;
+  const otro = g.side === 'busca' ? 'ofrece' : 'busca';
+  const lbl = g.side === 'busca' ? '🎁 OFRECE A CAMBIO' : '🔍 BUSCA A CAMBIO';
+  const mini = x => `<div class="trade-mini" title="${trueqeEsc(x.name)}">
+      ${trueqeImgHtml(x, true)}
+      <div class="tm-name">${trueqeEsc(x.name)}</div>
+      ${x.setName ? `<div class="tm-set">${trueqeEsc(x.setName)}</div>` : ''}
+    </div>`;
+  const ofertas = g.posts.map(({ c, t }) => {
+    const esMia = !!(trueqeUser && c.userId === trueqeUser.id);
+    const botones = ((esMia || trueqeAdminUnlocked) ? tgoDoneBtnHtml(c, 'trueqeToggleRealizado') : '') +
+      (trueqeAdminUnlocked ? `<button class="trueque-delete-btn" onclick="trueqeEliminarCarta('${c.id}')">✕ Eliminar (admin)</button>` : '');
+    return `<div class="tgo-offer multi${c.realizado ? ' done' : ''}">
+      <div class="o-info">
+        <div class="o-lbl">${lbl}</div>
+        <div class="o-who">${banderaHtml(c.userPais)}👤 ${trueqeEsc(c.userNombre)}</div>
+        ${c.realizado ? '<div class="tgo-done-tag">✅ Realizado</div>' : ''}
+      </div>
+      <div class="o-cards">${t[otro].length ? t[otro].map(mini).join('') : '<div class="trade-none">—</div>'}</div>
+      <div class="o-info">
+        ${c.notas ? `<div class="x-notes">${trueqeEsc(c.notas)}</div>` : ''}
+        ${contactoPublicoHtml(c)}
+        ${botones}
+      </div>
+    </div>`;
+  }).join('');
+  return `<div class="tp-head"><span>${g.side === 'busca' ? '🔍' : '🎁'} <b>${trueqeEsc(g.card.name)}</b></span>
+      <span class="x-more">${g.card.setName ? trueqeEsc(g.card.setName) + ' · ' : ''}${n} ${n === 1 ? 'oferta' : 'ofertas'}</span>
+      <button type="button" class="tp-close" onclick="trueqeClosePanel()">Cerrar ✕</button></div>${ofertas}`;
+}
+function trueqeToggleTile(btn) {
+  const key = btn.dataset.key;
+  trueqeOpenKey = (trueqeOpenKey === key) ? null : key;
+  trueqePlacePanel(true);
+}
+function trueqeClosePanel() {
+  trueqeOpenKey = null;
+  trueqePlacePanel();
+}
+function trueqePlacePanel(scroll) {
+  const binder = document.getElementById('trueque-binder');
+  if (!binder) return;
+  binder.querySelectorAll('.tgo-panel').forEach(p => p.remove());
+  binder.querySelectorAll('.tgo-tile.open').forEach(t => { t.classList.remove('open'); t.setAttribute('aria-expanded', 'false'); });
+  if (!trueqeOpenKey) return;
+  const g = trueqeGroupsMap.get(trueqeOpenKey);
+  const tile = [...binder.querySelectorAll('.tgo-tile')].find(t => t.dataset.key === trueqeOpenKey);
+  if (!g || !tile) { trueqeOpenKey = null; return; }
+  tile.classList.add('open');
+  tile.setAttribute('aria-expanded', 'true');
+  let last = tile, nx = tile.nextElementSibling;
+  while (nx && nx.classList.contains('tgo-tile') && nx.offsetTop === tile.offsetTop) { last = nx; nx = nx.nextElementSibling; }
+  const panel = document.createElement('div');
+  panel.className = 'tgo-panel';
+  panel.innerHTML = trueqePanelHtml(g);
+  last.insertAdjacentElement('afterend', panel);
+  const pr = panel.getBoundingClientRect(), tr = tile.getBoundingClientRect();
+  panel.style.setProperty('--caret-x', Math.round(tr.left + tr.width / 2 - pr.left) + 'px');
+  if (scroll) panel.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+}
+window.addEventListener('resize', () => {
+  clearTimeout(window._trueqeRzT);
+  window._trueqeRzT = setTimeout(() => { if (trueqeOpenKey) trueqePlacePanel(); }, 120);
+});
+
 function trueqeRenderBinder() {
   const term = trueqeNormalizeSearch(document.getElementById('trueque-search').value || '');
-  let list = trueqeCards.map(c => ({ c, t: trueqeNormCard(c) }));
-  if (trueqeFilter === 'busca') list = list.filter(x => x.t.busca.length);
-  else if (trueqeFilter === 'ofrece') list = list.filter(x => x.t.ofrece.length);
+  const side = trueqeFilter === 'ofrece' ? 'ofrece' : 'busca';
+  let list = trueqeCards.map(c => ({ c, t: trueqeNormCard(c) })).filter(x => x.t[side].length);
   if (term) {
     const coincide = l => l.some(x => trueqeNormalizeSearch(x.name).includes(term));
-    list = list.filter(({ c, t }) => {
-      if (trueqeNormalizeSearch(c.userNombre || '').includes(term)) return true;
-      if (trueqeFilter === 'busca') return coincide(t.busca);
-      if (trueqeFilter === 'ofrece') return coincide(t.ofrece);
-      return coincide(t.busca) || coincide(t.ofrece);
-    });
+    list = list.filter(({ c, t }) => trueqeNormalizeSearch(c.userNombre || '').includes(term) || coincide(t.busca) || coincide(t.ofrece));
   }
   document.getElementById('trueque-count').textContent = trueqeCards.length;
   const binder = document.getElementById('trueque-binder');
-  binder.innerHTML = list.length ? list.map(x => trueqeSleeveHtml(x.c, trueqeAdminUnlocked, true)).join('') : '<div class="mazo-empty-hint">Nada por aquí todavía. Sé el primero en publicar un intercambio.</div>';
+  if (list.length) {
+    const groups = trueqeGroups(list, side);
+    trueqeGroupsMap = new Map(groups.map(g => [g.key, g]));
+    binder.innerHTML = `<div class="tgo-wall-hint">${side === 'busca' ? 'Toca una carta para ver quién la busca y qué ofrece a cambio.' : 'Toca una carta para ver quién la ofrece y qué busca a cambio.'}</div>` +
+      `<div class="tgo-wall tcg-wall">${groups.map(trueqeTileHtml).join('')}</div>`;
+    trueqePlacePanel();
+  } else {
+    trueqeGroupsMap = new Map();
+    trueqeOpenKey = null;
+    binder.innerHTML = '<div class="mazo-empty-hint">Nada por aquí todavía. Sé el primero en publicar un intercambio.</div>';
+  }
 }
 
 function trueqeRenderMine() {
@@ -15457,8 +15584,8 @@ function tgoHydrate(container) {
 }
 
 // ── Marca de «intercambio realizado» (la pone quien publicó) ───────────────
-function tgoDoneBtnHtml(c) {
-  return `<button type="button" class="tgo-done-btn${c.realizado ? ' on' : ''}" onclick="tgoToggleRealizado('${c.id}')">${c.realizado ? '✅ Intercambio realizado (tocar para quitar)' : '☑️ Marcar como realizado'}</button>`;
+function tgoDoneBtnHtml(c, fn) {
+  return `<button type="button" class="tgo-done-btn${c.realizado ? ' on' : ''}" onclick="${fn || 'tgoToggleRealizado'}('${c.id}')">${c.realizado ? '✅ Intercambio realizado (tocar para quitar)' : '☑️ Marcar como realizado'}</button>`;
 }
 async function tgoToggleRealizado(cardId) {
   if (!window._fbDb) return;
