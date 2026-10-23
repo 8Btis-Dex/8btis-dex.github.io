@@ -14101,8 +14101,8 @@ function trueqeNormWa(v) { return (v || '').replace(/\D/g, ''); }
 // expansión y logo de la expansión) consultando la misma API que ya usa el
 // resto de la app. Se guarda en localStorage para no volver a descargarlo
 // cada vez que se abre la sección de trueques.
-const TRUEQUE_CARD_INDEX_CACHE_KEY = 'trueque_card_index_v5';
-try { localStorage.removeItem('trueque_card_index_v3'); localStorage.removeItem('trueque_card_index_v4'); } catch (e) { /* cachés viejos */ }
+const TRUEQUE_CARD_INDEX_CACHE_KEY = 'trueque_card_index_v6';
+try { localStorage.removeItem('trueque_card_index_v3'); localStorage.removeItem('trueque_card_index_v4'); localStorage.removeItem('trueque_card_index_v5'); } catch (e) { /* cachés viejos */ }
 const TRUEQUE_CARD_INDEX_MAX_AGE = 1000 * 60 * 60 * 24 * 3; // 3 días
 let TRUEQUE_CARD_INDEX = null; // null = todavía no cargado
 let trueqeCardIndexLoading = null; // Promise en curso, para no duplicar pedidos
@@ -14195,7 +14195,6 @@ async function trueqeBuildCardIndex() {
       if (!image || /pokemon-tcg-pocket-database/.test(image)) {
         image = trueqePdImage(s.id, card.localId) || image;
       }
-      if (!image) return;
       index.push({
         name: card.name,
         image,
@@ -14301,6 +14300,10 @@ function trueqeImageCandidates(c) {
     add(`https://assets.tcgdex.net/en/tcgp/${c.setId}/${pad}/low.webp`);
     add(`https://assets.tcgdex.net/en/tcgp/${c.setId}/${pad}/high.webp`);
     add(`https://cdn.jsdelivr.net/gh/flibustier/pokemon-tcg-pocket-database@main/dist/cards-by-set/${c.setId}/${id}.webp`);
+    // Respaldo extra (Limitless): sirve las cartas de arriba del conteo oficial (secretas, a pantalla completa, etc.)
+    const lim = String(c.setId).replace(/^Promo-([AB])$/i, 'P-$1');
+    add(`https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/pocket/${lim}/${lim}_${pad}_EN_SM.webp`);
+    add(`https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/pocket/${lim}/${lim}_${pad}_EN.webp`);
   }
   if (dudosa) add(img);
   return out;
@@ -14309,7 +14312,8 @@ function trueqeImageCandidates(c) {
 function trueqeImgHtml(c, lazy, cls) {
   const cands = trueqeImageCandidates(c);
   if (!cands.length) return `<div class="trueque-noimg ${cls || ''}">Sin imagen</div>`;
-  return `<img ${lazy ? 'loading="lazy" ' : ''}${cls ? `class="${cls}" ` : ''}src="${trueqeEsc(cands[0])}" alt="" data-alt="${trueqeEsc(cands.slice(1).join('|'))}" onerror="trueqeImgFail(this)">`;
+  const etiqueta = (c.setId || '') + ((c.localId !== undefined && c.localId !== '') ? ' #' + c.localId : '');
+  return `<img ${lazy ? 'loading="lazy" ' : ''}${cls ? `class="${cls}" ` : ''}src="${trueqeEsc(cands[0])}" alt="" data-card="${trueqeEsc(etiqueta)}" data-alt="${trueqeEsc(cands.slice(1).join('|'))}" onerror="trueqeImgFail(this)">`;
 }
 
 function trueqeImgFail(img) {
@@ -14321,7 +14325,8 @@ function trueqeImgFail(img) {
   }
   const ph = document.createElement('div');
   ph.className = 'trueque-noimg ' + (img.className || '');
-  ph.textContent = 'Sin imagen';
+  ph.textContent = 'Sin imagen' + (img.dataset.card ? ' · ' + img.dataset.card : '');
+  ph.title = ph.textContent;
   img.replaceWith(ph);
 }
 
